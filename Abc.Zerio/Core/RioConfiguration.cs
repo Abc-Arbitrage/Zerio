@@ -1,22 +1,10 @@
 ﻿using System;
 
-namespace Abc.Zerio.Client
+namespace Abc.Zerio.Core
 {
-    public class ClientConfiguration : IClientConfiguration
+    public class RioConfiguration : ISessionConfiguration, IWorkerConfiguration
     {
-        public int ReceivingBufferCount { get; set; }
-        public int SendingBufferCount { get; set; }
-        public int ReceivingBufferLength { get; set; }
-        public int SendingBufferLength { get; set; }
-        public int MaxOutstandingSends { get; set; }
-        public int MaxOutstandingReceives { get; set; }
-        public int MaxCompletionResults { get; set; }
-        public int CompletionQueueSize { get; set; }
-        public TimeSpan BufferAcquisitionTimeout { get; set; }
-
-        public static readonly ClientConfiguration Default = new ClientConfiguration();
-
-        private ClientConfiguration()
+        public RioConfiguration()
         {
             const int allocationGranularity = 65536;
             const int oneMegabyte = allocationGranularity * 16;
@@ -32,7 +20,17 @@ namespace Abc.Zerio.Client
             MaxCompletionResults = 2048;
         }
 
-        private int ComputeBufferCount(int sizeInBytes, int bufferLength)
+        public int ReceivingBufferCount { get; set; }
+        public int SendingBufferCount { get; set; }
+        public int ReceivingBufferLength { get; set; }
+        public int SendingBufferLength { get; set; }
+        public int MaxOutstandingSends { get; set; }
+        public int MaxOutstandingReceives { get; set; }
+        public TimeSpan BufferAcquisitionTimeout { get; set; }
+        public int MaxCompletionResults { get; set; }
+        public int CompletionQueueSize { get; set; }
+
+        private static int ComputeBufferCount(int sizeInBytes, int bufferLength)
         {
             return sizeInBytes / bufferLength;
         }

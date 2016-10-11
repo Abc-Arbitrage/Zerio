@@ -55,7 +55,6 @@
     <Compile Include="Serializers\PlaceOrderMessageSerializer.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ServerConfiguration.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

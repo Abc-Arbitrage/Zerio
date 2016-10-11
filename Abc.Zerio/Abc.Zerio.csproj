@@ -43,7 +43,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ClientConfiguration.cs" />
     <Compile Include="Core\IMessageBufferSegmentProvider.cs" />
+    <Compile Include="Core\RioConfiguration.cs" />
     <Compile Include="Framing\IBufferSegmentProvider.cs" />
     <Compile Include="IClientConfiguration.cs" />
     <Compile Include="Core\ICompletionHandler.cs" />
@@ -83,6 +85,7 @@
     <Compile Include="Serialization\SerializationMapping.cs" />
     <Compile Include="Serialization\SerializationRegistry.cs" />
     <Compile Include="Core\SessionManager.cs" />
+    <Compile Include="ServerConfiguration.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

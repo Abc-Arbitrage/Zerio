@@ -12,7 +12,6 @@ namespace Abc.Zerio.Server
     {
         private const int _port = 15698;
         private static int _receivedMessageCount;
-        private const int _messageCount = 10 * 1000 * 1000;
 
         private static readonly SimpleMessagePool<PlaceOrderMessage> _allocator = new SimpleMessagePool<PlaceOrderMessage>(65536);
 
@@ -27,8 +26,8 @@ namespace Abc.Zerio.Server
 
         private static void RunRioServer()
         {
-            var configuration = ServerConfiguration.Default;
-            configuration.ListeningPort = _port;
+            var configuration = new ServerConfiguration(_port);
+
             using (var server = CreateServer(configuration))
             {
                 server.ClientConnected += clientId => OnClientConnected(server, clientId);
