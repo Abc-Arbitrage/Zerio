@@ -215,3 +215,7 @@ Windows Registered I/O (RIO) requires you to register and manage the buffers tha
 ## Framing and deserialization
 
 When a receive operation completes on the session socket, the received bytes are offered to the `MessageFramer`. The message framer is able to frame messages and to reference the underlying RIO buffers contening them. Typically, a receive operation and its associated RIO buffer segment concerns one or many messages. But if a message spans across several buffer segments, the `MessageFramer` is able to keep track of all of them, and a specific `UnsafeBinaryReader` is used by the serialization engine to materialize the message from the multiple buffer segments, avoiding any extra copy. The buffer segments are automatically released as soon as possible by the message framer.
+
+## Zero allocation
+
+Both `RioClient` and `RioServer` can be used to communicate with each other without allocating any .NET object instances on the heap, thus avoiding any garbage collection to be triggered. However, the connection phase between a client and a server is not garbage free. To prevent any allocation from happening, you have to implement your binary serializer the correct way, as well as to handle message pooling and releasing properly.
