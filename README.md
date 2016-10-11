@@ -51,7 +51,8 @@ You need to write a binary serializer for your message, implementing the `IBinar
 
 ## Client
 
-This is how you create a client, connect to a server, and use it to send a message. We'll see what the required `SerializationEngine` is in a minute. Note that the API offers different C# events you can register to, in order to receive messages from the server for example.
+### Creation
+This is how you create a client and to connect to a server. We'll see what the required `SerializationEngine` is in a minute. Note that the API offers different C# events you can register to, in order to receive messages from the server for example.
 
 ```csharp
     var serializationEngine = CreateSerializationEngine();
@@ -70,9 +71,37 @@ This is how you create a client, connect to a server, and use it to send a messa
     }
 ```
 
+### Sending a message
+
+Just instanciate a message (or pool, or reuse an existing instance), and send it:
+
+```csharp
+    var message = new PlaceOrderMessage();
+    client.Send(message);
+```
+
+### Receiving a message
+
+By subscribing to the `OnMessageReceived` event, you can be notified on message reception:
+
+```csharp
+    private static void OnMessageReceived(object message)
+    {
+        var placeOrderMessage = message as PlaceOrderMessage;
+        if (placeOrderMessage != null)
+        {
+            // do something with the message
+        }
+    }
+```
+
+Again, the API is minimalist, and non-generic. You'll have to handle the message type dispatch yourself if needed.
+
 ## Server
 
-Similarily, to create a server you just have to do the following: 
+### Creation
+
+Similarily to the client, to create a server you just have to do the following: 
 
 ```csharp
     using (var server = new RioServer(configuration, new SessionManager(configuration), serializationEngine))
@@ -85,6 +114,40 @@ Similarily, to create a server you just have to do the following:
     }
 ```
 
+### Sending a message
+
+To send a message, you'll need the id of the client you want to send the message to. This id can be retreived on the client connection:
+
+```csharp
+    private static void OnClientDisconnected(int clientId)
+    {
+    }
+ ```
+ 
+Then you simply have to instanciate a message (or pool, or reuse an existing instance), and send it:
+
+```csharp
+    var message = new PlaceOrderMessage();
+    server.Send(clientId, message);
+```
+
+### Receiving a message
+
+By subscribing to the `OnMessageReceived` event, you can be notified on message reception. The client from which the message is received is provided as an event argument:
+
+```csharp
+    private static void OnMessageReceived(int clientId, object message)
+    {
+        var placeOrderMessage = message as PlaceOrderMessage;
+        if (placeOrderMessage != null)
+        {
+            // do something with the message
+        }
+    }
+```
+
+
+
 ## SerializationEngine
 
 When creating a `RioClient`or a `RioServer` you need to pass a properly configured `SerializationEngine` which is a component that knows all existing messages, and how to serialize and deserialize them.
@@ -96,3 +159,18 @@ Here is how you create a serialization engine:
     serializationRegistry.AddMapping<PlaceOrderMessage, PlaceOrderMessageSerializer>();
     var serializationEngine = new SerializationEngine(serializationRegistry);
 ```
+
+The registry is where you can register messages and their corresponding serializer.
+
+## Allocators and releasers
+
+Because you may want to receive messages without generating garbage, Zerio provides you a way to register allocators and releasers for your messages, that will be used by the library at when handling incoming messages. You can optionally provide them when registering a message type in the `SerializationRegistry`. By default, Zerio will use a simple `HeapAllocator` and no releaser. You can also find in the project a `SimpleMessagePool`, which is both an allocator and a releaser:
+
+```csharp
+    var messagePool = new SimpleMessagePool<PlaceOrderMessage>(256);
+    var registry = new SerializationRegistry(Encoding.ASCII);
+    registry.AddMapping<PlaceOrderMessage, PlaceOrderMessageSerializer>(messagePool, messagePool);
+```
+
+If you provide an allocator, Zerio will use it upon message reception, to get a the instance that will be used for the deserialization. If you provide a releaser, Zerio will use it right after the message handling, that is, the `OnMessageReceived` event invocation. If you want to control when the received message need to be released, you can provide an allocator and no releaser; you'll then be in charge of releasing the received message.
+
