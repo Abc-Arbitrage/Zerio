@@ -6,7 +6,7 @@ Zerio is a small experimental project which aims to provide **a very basic TCP c
 
 ## Disclaimer
 
-Zerio is more a proof of concept than anything else at this stage, and is not production ready yet.
+**Zerio is more a proof of concept than anything else at this stage, and is not production ready yet.**
 
 ## Messages and serializers
 
@@ -120,7 +120,7 @@ Similarily to the client, to create a server you just have to do the following:
 
 ### Sending a message
 
-To send a message, you'll need the id of the client you want to send the message to. This id can be retreived on the client connection:
+To send a message, you'll need the id of the client you want to send the message to. This id can be retrieved on the client connection:
 
 ```csharp
     private static void OnClientDisconnected(int clientId)
@@ -164,7 +164,7 @@ Here is how you create a serialization engine:
     var serializationEngine = new SerializationEngine(serializationRegistry);
 ```
 
-The registry is where you can register messages and their corresponding serializer.
+The registry is where you can register messages and their corresponding serializers.
 
 ## Allocators and releasers
 
@@ -210,7 +210,7 @@ Windows Registered I/O (RIO) uses a programming model where all I/O operations a
 
 ## Buffer management and serialization
 
-Windows Registered I/O (RIO) requires you to register and manage the buffers that will be use for sends and receives on the sockets. You typically register a very large buffer and then refer to segments of it for your I/O operations. In Zerio, each `RioSession` has its own RIO registered buffer and slices it in segments. When a send occurs on the session, Zerio use as much segment buffers as needed. A simple message is usually way smaller than a buffer segment so only one is needed. However, the serialization engine is using a specific `UnsafeBinaryWriter' which can acquire several buffers if the serialized message data should span over multiple segments (several send operation would then logically be posted). The serialization of the message occurs directly to the RIO buffers and no unecessary copies is needed.
+Windows Registered I/O (RIO) requires you to register and manage the buffers that will be use for sends and receives on the sockets. You typically register a very large buffer and then refer to segments of it for your I/O operations. In Zerio, each `RioSession` has its own RIO registered buffer and slices it in fixed size segments. When a send occurs on the session, Zerio use as much segment buffers as needed. A simple message is usually way smaller than a buffer segment so only one is needed. However, the serialization engine is using a specific `UnsafeBinaryWriter` which can acquire several buffers if the serialized message data should span over multiple segments (several send operations would then logically be posted). The serialization of the message occurs directly to the underlying RIO buffers and no unecessary copies are needed.
 
 ## Framing and deserialization
 
