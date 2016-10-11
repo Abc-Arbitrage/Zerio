@@ -200,3 +200,18 @@ Frame body
 
 Right now, the message type id is an unsigned integer value that is supposed to uniquely identify a message type. The current implementation is pretty naive and computes a CRC32 hash of the message full type name by convention. Changing a message type name would be a breaking change.
 
+## Sessions and workers
+
+Windows Registered I/O (RIO) uses a programming model where all I/O operations are asynchronous. You enqueue sends and receives operations of one socket, and you can observe one or several completion queues to be notified when these operations are completed. In Zerio, we have the concept of session and workers.
+
+* A `RioSession` wraps a socket that is used for the bidirectional communication between a client and a server. A client has one active session, whereas a server has one session per client.
+
+* A `RioWorker` is a component responsible for handling asynchronous I/O operation completions. Since it's possible to share a RIO completion queue among several sockets, it's also possible to have a `RioWorker` instance responsible for several sessions I/O operation completions. A client only needs one `RioWorker` because it only has one session, but a Zerio server can be configured to use several workers. This allows to scale the handling of incoming messages. Typically, a worker wraps a RIO completion queue and has a background thread responsible for polling it and process completion notifications.
+
+## Buffer management and serialization
+
+Windows Registered I/O (RIO) requires you to register and manage the buffers that will be use for sends and receives on the sockets. You typically register a very large buffer and then refer to segments of it for your I/O operations. In Zerio, each `RioSession` has its own RIO registered buffer and slices it in segments. When a send occurs on the session, Zerio use as much segment buffers as needed. A simple message is usually way smaller than a buffer segment so only one is needed. However, the serialization engine is using a specific `UnsafeBinaryWriter' which can acquire several buffers if the serialized message data should span over multiple segments (several send operation would then logically be posted). The serialization of the message occurs directly to the RIO buffers and no unecessary copies is needed.
+
+## Framing and deserialization
+
+When a receive operation completes on the session socket, the received bytes are offered to the `MessageFramer`. The message framer is able to frame messages and to reference the underlying RIO buffers contening them. Typically, a receive operation and its associated RIO buffer segment concerns one or many messages. But if a message spans across several buffer segments, the `MessageFramer` is able to keep track of all of them, and a specific `UnsafeBinaryReader` is used by the serialization engine to materialize the message from the multiple buffer segments, avoiding any extra copy. The buffer segments are automatically released as soon as possible by the message framer.
