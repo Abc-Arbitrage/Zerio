@@ -33,7 +33,7 @@ namespace Abc.Zerio.Client
 
         private static void RunRioClient()
         {
-            var configuration = ClientConfiguration.Default;
+            var configuration = new ClientConfiguration();
             using (var client = CreateClient(configuration))
             {
                 client.Connected += OnClientConnected;
