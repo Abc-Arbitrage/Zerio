@@ -178,3 +178,25 @@ Because you may want to receive messages without generating garbage, Zerio provi
 
 If you provide an allocator, Zerio will use it upon message reception, to get a the instance that will be used for the deserialization. If you provide a releaser, Zerio will use it right after the message handling, that is, the `OnMessageReceived` event invocation. If you want to control when the received message need to be released, you can provide an allocator and no releaser; you'll then be in charge of releasing the received message.
 
+# Internals
+
+## Protocol
+
+The protocol is pretty basic. Each frame contening one message is length prefixed. The frame content contains the message type id, and the actual serialized message. The serialization is done by the provided custom binary serializer.
+
+Frame
+
+| Data          | Type          | Length (bytes) |
+| ------------- |---------------|----------------|
+| Frame length  | int           | 4              |
+| Frame body    | binary      |   Frame length |
+
+Frame body
+
+| Data                    | Type          | Length (bytes)   |
+| ------------------------|---------------|------------------|
+| Message type id         | uint          | 4                |
+| Serialized message      | binary        | Frame length - 4 |
+
+Right now, the message type id is an unsigned integer value that is supposed to uniquely identify a message type. The current implementation is pretty naive and computes a CRC32 hash of the message full type name by convention. Changing a message type name would be a breaking change.
+
