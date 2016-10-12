@@ -120,7 +120,7 @@ Similarily to the client, to create a server you just have to do the following:
 
 ### Sending a message
 
-To send a message, you'll need the id of the client you want to send the message to. This id can be retrieved on the client connection:
+To send a message, you'll need the id of the client you want to send the message to. This id can be retrieved during the client connection:
 
 ```csharp
     private static void OnClientDisconnected(int clientId)
@@ -168,7 +168,7 @@ The registry is where you can register messages and their corresponding serializ
 
 ## Allocators and releasers
 
-Because you may want to receive messages without generating garbage, Zerio provides you a way to register allocators and releasers for your messages, that will be used by the library at when handling incoming messages. You can optionally provide them when registering a message type in the `SerializationRegistry`. By default, Zerio will use a simple `HeapAllocator` and no releaser. You can also find in the project a `SimpleMessagePool`, which is both an allocator and a releaser:
+Because you may want to receive messages **without generating garbage**, Zerio provides you a way to register allocators and releasers for your messages, that will be used by the library at when handling incoming messages. You can optionally provide them when registering a message type in the `SerializationRegistry`. By default, Zerio will use a simple `HeapAllocator` and no releaser. You can also find in the project a `SimpleMessagePool`, which is both an allocator and a releaser:
 
 ```csharp
     var messagePool = new SimpleMessagePool<PlaceOrderMessage>(256);
@@ -176,7 +176,7 @@ Because you may want to receive messages without generating garbage, Zerio provi
     registry.AddMapping<PlaceOrderMessage, PlaceOrderMessageSerializer>(messagePool, messagePool);
 ```
 
-If you provide an allocator, Zerio will use it upon message reception, to get a the instance that will be used for the deserialization. If you provide a releaser, Zerio will use it right after the message handling, that is, the `OnMessageReceived` event invocation. If you want to control when the received message need to be released, you can provide an allocator and no releaser; you'll then be in charge of releasing the received message.
+If you provide an allocator, Zerio will use it upon message reception, to get the instance that will be used for the deserialization. If you provide a releaser, Zerio will use it right after the message handling, that is, the `OnMessageReceived` event invocation. If you want to control when the received message need to be released, you can provide an allocator and no releaser; you'll then be in charge of releasing the received message.
 
 # Internals
 
@@ -202,7 +202,7 @@ Right now, the message type id is an unsigned integer value that is supposed to 
 
 ## Sessions and workers
 
-Windows Registered I/O (RIO) uses a programming model where all I/O operations are asynchronous. You enqueue sends and receives operations of one socket, and you can observe one or several completion queues to be notified when these operations are completed. In Zerio, we have the concept of session and workers.
+Windows Registered I/O (RIO) uses a programming model where all I/O operations are asynchronous. You enqueue sends and receives operations of one socket, and you can observe one or several completion queues to be notified when these operations are completed. In Zerio, we have the concept of **sessions** and **workers**.
 
 * A `RioSession` wraps a socket that is used for the bidirectional communication between a client and a server. A client has one active session, whereas a server has one session per client.
 
@@ -210,12 +210,12 @@ Windows Registered I/O (RIO) uses a programming model where all I/O operations a
 
 ## Buffer management and serialization
 
-Windows Registered I/O (RIO) requires you to register and manage the buffers that will be use for sends and receives on the sockets. You typically register a very large buffer and then refer to segments of it for your I/O operations. In Zerio, each `RioSession` has its own RIO registered buffer and slices it in fixed size segments. When a send occurs on the session, Zerio use as much segment buffers as needed. A simple message is usually way smaller than a buffer segment so only one is needed. However, the serialization engine is using a specific `UnsafeBinaryWriter` which can acquire several buffers if the serialized message data should span over multiple segments (several send operations would then logically be posted). The serialization of the message occurs directly to the underlying RIO buffers and no unecessary copies are needed.
+Windows Registered I/O (RIO) requires you to register and manage the buffers that will be used for sends and receives on the sockets. You typically register a large buffer and then refer to segments of it for your I/O operations. In Zerio, each `RioSession` has its own RIO registered buffer and slices it in fixed size segments. When a send occurs on the session, Zerio use as much segment buffers as needed. A simple message is usually way smaller than a buffer segment so only one is needed. However, the serialization engine is using a specific `UnsafeBinaryWriter` which can acquire several buffers if the serialized message data should span over multiple segments (several send operations would then logically be enqueued). The serialization of the message occurs directly to the underlying RIO buffers and **no unecessary copies are needed**.
 
 ## Framing and deserialization
 
-When a receive operation completes on the session socket, the received bytes are offered to the `MessageFramer`. The message framer is able to frame messages and to reference the underlying RIO buffers contening them. Typically, a receive operation and its associated RIO buffer segment concerns one or many messages. But if a message spans across several buffer segments, the `MessageFramer` is able to keep track of all of them, and a specific `UnsafeBinaryReader` is used by the serialization engine to materialize the message from the multiple buffer segments, avoiding any extra copy. The buffer segments are automatically released as soon as possible by the message framer.
+When a receive operation completes on the session socket, the received bytes are offered to the `MessageFramer`. The message framer is able to frame messages and to reference the underlying RIO buffers contening them. Typically, a receive operation and its associated RIO buffer segment concerns one or many messages. But if a message spans across several buffer segments, the `MessageFramer` is able to keep track of all of them, and a specific `UnsafeBinaryReader` is used by the serialization engine to materialize the message from the multiple buffer segments, **avoiding any extra copy**. The buffer segments are automatically released as soon as possible by the message framer.
 
-## Zero allocation
+## ~~Zerio~~ Zero allocation
 
 Both `RioClient` and `RioServer` can be used to communicate with each other without allocating any .NET object instances on the heap, thus avoiding any garbage collection to be triggered. However, the connection phase between a client and a server is not garbage free. To prevent any allocation from happening, you have to implement your binary serializer the correct way, as well as to handle message pooling and releasing properly.
