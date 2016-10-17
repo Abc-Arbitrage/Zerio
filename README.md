@@ -13,44 +13,44 @@ Zerio is a small experimental project which aims to provide **a very basic TCP c
 A Zerio message is a simple C# class (POCO):
 
 ```csharp
-    public class PlaceOrderMessage
-    {
-        public int InstrumentId;
-        public double Price;
-        public double Quantity;
-        public OrderSide Side;
-    }
+public class PlaceOrderMessage
+{
+    public int InstrumentId;
+    public double Price;
+    public double Quantity;
+    public OrderSide Side;
+}
 
-    public enum OrderSide : byte
-    {
-        Buy,
-        Sell,
-    }
+public enum OrderSide : byte
+{
+    Buy,
+    Sell,
+}
 ```
 
 You need to write a binary serializer for your message, implementing the `IBinaryMessageSerializer` interface. The API is voluntarily low-level. Note that the `Deserialize` method already provide an instance of the message you need to initialize. Note that you may want to handle versionning here, as well as keeping your implementation allocation free.
 
 ```csharp
-    public class PlaceOrderMessageSerializer : IBinaryMessageSerializer
+public class PlaceOrderMessageSerializer : IBinaryMessageSerializer
+{
+    public void Serialize(object message, BinaryWriter binaryWriter)
     {
-        public void Serialize(object message, BinaryWriter binaryWriter)
-        {
-            var placeOrderMessage = (PlaceOrderMessage)message;
-            binaryWriter.Write(placeOrderMessage.InstrumentId);
-            binaryWriter.Write(placeOrderMessage.Price);
-            binaryWriter.Write(placeOrderMessage.Quantity);
-            binaryWriter.Write((byte)placeOrderMessage.Side);
-        }
-
-        public void Deserialize(object message, BinaryReader binaryReader)
-        {
-            var placeOrderMessage = (PlaceOrderMessage)message;
-            placeOrderMessage.InstrumentId = binaryReader.ReadInt32();
-            placeOrderMessage.Price = binaryReader.ReadDouble();
-            placeOrderMessage.Quantity = binaryReader.ReadDouble();
-            placeOrderMessage.Side = (OrderSide)binaryReader.ReadByte();
-        }
+        var placeOrderMessage = (PlaceOrderMessage)message;
+        binaryWriter.Write(placeOrderMessage.InstrumentId);
+        binaryWriter.Write(placeOrderMessage.Price);
+        binaryWriter.Write(placeOrderMessage.Quantity);
+        binaryWriter.Write((byte)placeOrderMessage.Side);
     }
+
+    public void Deserialize(object message, BinaryReader binaryReader)
+    {
+        var placeOrderMessage = (PlaceOrderMessage)message;
+        placeOrderMessage.InstrumentId = binaryReader.ReadInt32();
+        placeOrderMessage.Price = binaryReader.ReadDouble();
+        placeOrderMessage.Quantity = binaryReader.ReadDouble();
+        placeOrderMessage.Side = (OrderSide)binaryReader.ReadByte();
+    }
+}
 ```
 
 ## Client
@@ -59,20 +59,20 @@ You need to write a binary serializer for your message, implementing the `IBinar
 This is how you create a client and to connect to a server. We'll see what the required `SerializationEngine` is in a minute. Note that the API offers different C# events you can register to, in order to receive messages from the server for example.
 
 ```csharp
-    var serializationEngine = CreateSerializationEngine();
-    var configuration = ClientConfiguration.Default;
-    using (var client = new RioClient(configuration, serializationEngine))
-    {
-        client.Connected += OnClientConnected;
-        client.Disconnected += OnClientDisconnected;
-        client.MessageReceived += OnMessageReceived;
+var serializationEngine = CreateSerializationEngine();
+var configuration = ClientConfiguration.Default;
+using (var client = new RioClient(configuration, serializationEngine))
+{
+    client.Connected += OnClientConnected;
+    client.Disconnected += OnClientDisconnected;
+    client.MessageReceived += OnMessageReceived;
 
-        var endPoint = new IPEndPoint(IPAddress.Loopback, 12345);
-        client.Connect(endPoint);
+    var endPoint = new IPEndPoint(IPAddress.Loopback, 12345);
+    client.Connect(endPoint);
 
-        var message = new PlaceOrderMessage();
-        client.Send(message);
-    }
+    var message = new PlaceOrderMessage();
+    client.Send(message);
+}
 ```
 
 ### Sending a message
@@ -80,8 +80,8 @@ This is how you create a client and to connect to a server. We'll see what the r
 Just instanciate a message (or pool, or reuse an existing instance), and send it:
 
 ```csharp
-    var message = new PlaceOrderMessage();
-    client.Send(message);
+var message = new PlaceOrderMessage();
+client.Send(message);
 ```
 
 ### Receiving a message
@@ -89,14 +89,14 @@ Just instanciate a message (or pool, or reuse an existing instance), and send it
 By subscribing to the `OnMessageReceived` event, you can be notified on message reception:
 
 ```csharp
-    private static void OnMessageReceived(object message)
+private static void OnMessageReceived(object message)
+{
+    var placeOrderMessage = message as PlaceOrderMessage;
+    if (placeOrderMessage != null)
     {
-        var placeOrderMessage = message as PlaceOrderMessage;
-        if (placeOrderMessage != null)
-        {
-            // do something with the message
-        }
+        // do something with the message
     }
+}
 ```
 
 Again, the API is minimalist, and non-generic. You'll have to handle the message type dispatch yourself if needed.
@@ -108,14 +108,14 @@ Again, the API is minimalist, and non-generic. You'll have to handle the message
 Similarily to the client, to create a server you just have to do the following: 
 
 ```csharp
-    using (var server = new RioServer(configuration, new SessionManager(configuration), serializationEngine))
-    {
-            server.ClientConnected += OnClientConnected;
-            server.ClientDisconnected += OnClientDisconnected;
-            server.MessageReceived += OnMessageReceived;
-            server.Start();
+using (var server = new RioServer(configuration, new SessionManager(configuration), serializationEngine))
+{
+        server.ClientConnected += OnClientConnected;
+        server.ClientDisconnected += OnClientDisconnected;
+        server.MessageReceived += OnMessageReceived;
+        server.Start();
 
-    }
+}
 ```
 
 ### Sending a message
@@ -123,16 +123,16 @@ Similarily to the client, to create a server you just have to do the following:
 To send a message, you'll need the id of the client you want to send the message to. This id can be retrieved during the client connection:
 
 ```csharp
-    private static void OnClientDisconnected(int clientId)
-    {
-    }
+private static void OnClientDisconnected(int clientId)
+{
+}
  ```
  
 Then you simply have to instanciate a message (or pool, or reuse an existing instance), and send it:
 
 ```csharp
-    var message = new PlaceOrderMessage();
-    server.Send(clientId, message);
+var message = new PlaceOrderMessage();
+server.Send(clientId, message);
 ```
 
 ### Receiving a message
@@ -140,14 +140,14 @@ Then you simply have to instanciate a message (or pool, or reuse an existing ins
 By subscribing to the `OnMessageReceived` event, you can be notified on message reception. The client from which the message is received is provided as an event argument:
 
 ```csharp
-    private static void OnMessageReceived(int clientId, object message)
+private static void OnMessageReceived(int clientId, object message)
+{
+    var placeOrderMessage = message as PlaceOrderMessage;
+    if (placeOrderMessage != null)
     {
-        var placeOrderMessage = message as PlaceOrderMessage;
-        if (placeOrderMessage != null)
-        {
-            // do something with the message
-        }
+        // do something with the message
     }
+}
 ```
 
 
@@ -159,9 +159,9 @@ When creating a `RioClient`or a `RioServer` you need to pass a properly configur
 Here is how you create a serialization engine:
 
 ```csharp
-    var serializationRegistry = new SerializationRegistry(Encoding.ASCII);
-    serializationRegistry.AddMapping<PlaceOrderMessage, PlaceOrderMessageSerializer>();
-    var serializationEngine = new SerializationEngine(serializationRegistry);
+var serializationRegistry = new SerializationRegistry(Encoding.ASCII);
+serializationRegistry.AddMapping<PlaceOrderMessage, PlaceOrderMessageSerializer>();
+var serializationEngine = new SerializationEngine(serializationRegistry);
 ```
 
 The registry is where you can register messages and their corresponding serializers.
@@ -171,9 +171,9 @@ The registry is where you can register messages and their corresponding serializ
 Because you may want to receive messages **without generating garbage**, Zerio provides you a way to register allocators and releasers for your messages, that will be used by the library at when handling incoming messages. You can optionally provide them when registering a message type in the `SerializationRegistry`. By default, Zerio will use a simple `HeapAllocator` and no releaser. You can also find in the project a `SimpleMessagePool`, which is both an allocator and a releaser:
 
 ```csharp
-    var messagePool = new SimpleMessagePool<PlaceOrderMessage>(256);
-    var registry = new SerializationRegistry(Encoding.ASCII);
-    registry.AddMapping<PlaceOrderMessage, PlaceOrderMessageSerializer>(messagePool, messagePool);
+var messagePool = new SimpleMessagePool<PlaceOrderMessage>(256);
+var registry = new SerializationRegistry(Encoding.ASCII);
+registry.AddMapping<PlaceOrderMessage, PlaceOrderMessageSerializer>(messagePool, messagePool);
 ```
 
 If you provide an allocator, Zerio will use it upon message reception, to get the instance that will be used for the deserialization. If you provide a releaser, Zerio will use it right after the message handling, that is, the `OnMessageReceived` event invocation. If you want to control when the received message need to be released, you can provide an allocator and no releaser; you'll then be in charge of releasing the received message.
