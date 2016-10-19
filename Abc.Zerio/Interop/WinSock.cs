@@ -224,6 +224,7 @@ namespace Abc.Zerio.Interop
             public const int SOL_SOCKET = 0xffff;
             public const int SOMAXCONN = 0x7fffffff;
             public const uint RIO_CORRUPT_CQ = 0xFFFFFFFF;
+            public static readonly IntPtr RIO_INVALID_BUFFERID = new IntPtr(-1);
         }
 
         internal static void ThrowLastWsaError()
