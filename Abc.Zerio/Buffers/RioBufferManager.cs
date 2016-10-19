@@ -61,15 +61,18 @@ namespace Abc.Zerio.Buffers
 
         public RioBuffer AcquireBuffer(TimeSpan timeout)
         {
+            if (_isAcquiringCompleted)
+                throw new InvalidOperationException("Segment acquiring completed.");
+
             RioBuffer buffer;
 
             var spinWait = new SpinWait();
             var stopwatch = Stopwatch.StartNew();
 
             bool bufferAcquired;
-            while (!(bufferAcquired = TryAcquireBuffer(out buffer) && stopwatch.Elapsed < timeout))
+            while (!(bufferAcquired = TryAcquireBuffer(out buffer)) && stopwatch.Elapsed < timeout)
             {
-                if(_isAcquiringCompleted)
+                if (_isAcquiringCompleted)
                     throw new InvalidOperationException("Segment acquiring completed.");
 
                 spinWait.SpinOnce();
