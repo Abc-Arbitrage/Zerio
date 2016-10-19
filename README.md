@@ -6,7 +6,7 @@ Zerio is a small experimental project which aims to provide **a very basic TCP c
 
 ## Disclaimer
 
-**Zerio is more a proof of concept than anything else at this stage, and is not production ready yet.**
+**Zerio is very much a work in progress and more a proof of concept than anything else at this stage. It is not production ready yet.**
 
 ## Messages and serializers
 
@@ -219,3 +219,12 @@ When a receive operation completes on the session socket, the received bytes are
 ## ~~Zerio~~ Zero allocation
 
 Both `RioClient` and `RioServer` can be used to communicate with each other without allocating any .NET object instances on the heap, thus avoiding any garbage collection to be triggered. However, the connection phase between a client and a server is not garbage free. To prevent any allocation from happening, you have to implement your binary serializer the correct way, as well as to handle message pooling and releasing properly.
+
+## Queue sizing
+
+In Windows Registered I/O (RIO), there are two types of queues:
+ - **Request queues**: associated to a socket, the request queue is how you initiate asynchronous operations by enqueuing send and receive requests. Additionally, you can configure the maximum outstanding send operation count and the maximum outstanding receive operation count.
+ - **Completion queues**: each request queue needs be associated to a completion queue for the send operation completions, and to a completion queue for the receive opereration completions. The same completion queue can be used for both, and can even be shared among several request queues.
+ 
+In Zerio, the queue sizing policy is very naive for now. Each session has a socket, a request queue, and two buffer managers (one for sends and one for receives). Since the buffer managers are bounded and block on acquiring when no buffer is available, we use the send buffer count as the max outstanding send count, and the receive buffer count as the max outstanding receive count. Then, we just compute the completion queue size based on the total max outstanding request counts, and never resize it. If a completion queue is shared among several request queues, we take the session count into consideration.
+
