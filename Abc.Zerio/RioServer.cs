@@ -11,7 +11,7 @@ namespace Abc.Zerio
     public class RioServer : IDisposable, ICompletionHandler
     {
         private readonly IServerConfiguration _configuration;
-        private readonly ISessionManager _sessionManager;
+        private readonly SessionManager _sessionManager;
         private readonly IList<RioCompletionWorker> _workers;
 
         private readonly IntPtr _listeningSocket;
@@ -23,16 +23,16 @@ namespace Abc.Zerio
         public event Action<int> ClientConnected = delegate { };
         public event Action<int> ClientDisconnected = delegate { };
 
-        public RioServer(IServerConfiguration configuration, ISessionManager sessionManager, SerializationEngine serializationEngine)
+        public RioServer(IServerConfiguration configuration, SerializationEngine serializationEngine)
         {
             WinSock.EnsureIsInitialized();
 
             _configuration = configuration;
-            _sessionManager = sessionManager;
             _listeningSocket = CreateListeningSocket();
             _workers = CreateWorkers();
 
-            sessionManager.CreateSessions(_workers, serializationEngine);
+            _sessionManager = new SessionManager(configuration);
+            _sessionManager.CreateSessions(_workers, serializationEngine);
         }
 
         public void Start()

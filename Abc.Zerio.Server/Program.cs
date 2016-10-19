@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Text;
-using Abc.Zerio.Core;
 using Abc.Zerio.Serialization;
 using Abc.Zerio.Server.Messages;
 using Abc.Zerio.Server.Serializers;
@@ -70,9 +69,8 @@ namespace Abc.Zerio.Server
 
         private static RioServer CreateServer(IServerConfiguration configuration)
         {
-            var sessionManager = new SessionManager(configuration);
             var serializationEngine = CreateSerializationEngine();
-            return new RioServer(configuration, sessionManager, serializationEngine);
+            return new RioServer(configuration, serializationEngine);
         }
 
         private static SerializationEngine CreateSerializationEngine()

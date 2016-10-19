@@ -108,7 +108,7 @@ Again, the API is minimalist, and non-generic. You'll have to handle the message
 Similarily to the client, to create a server you just have to do the following: 
 
 ```csharp
-using (var server = new RioServer(configuration, new SessionManager(configuration), serializationEngine))
+using (var server = new RioServer(configuration, serializationEngine))
 {
         server.ClientConnected += OnClientConnected;
         server.ClientDisconnected += OnClientDisconnected;
@@ -168,7 +168,7 @@ The registry is where you can register messages and their corresponding serializ
 
 ## Allocators and releasers
 
-Because you may want to receive messages **without generating garbage**, Zerio provides you a way to register allocators and releasers for your messages, that will be used by the library at when handling incoming messages. You can optionally provide them when registering a message type in the `SerializationRegistry`. By default, Zerio will use a simple `HeapAllocator` and no releaser. You can also find in the project a `SimpleMessagePool`, which is both an allocator and a releaser:
+Because you may want to receive messages **without generating garbage**, Zerio provides you a way to register allocators and releasers that will be used by the library when handling incoming messages. You can optionally provide them when registering a message type in the `SerializationRegistry`. By default, Zerio will use a simple `HeapAllocator` and no releaser. You can also find in the project a `SimpleMessagePool`, which is both an allocator and a releaser:
 
 ```csharp
 var messagePool = new SimpleMessagePool<PlaceOrderMessage>(256);

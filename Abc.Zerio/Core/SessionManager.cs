@@ -5,7 +5,7 @@ using Abc.Zerio.Serialization;
 
 namespace Abc.Zerio.Core
 {
-    public class SessionManager : ISessionManager
+    public class SessionManager
     {
         private readonly IServerConfiguration _configuration;
         private readonly ConcurrentStack<RioSession> _sessions = new ConcurrentStack<RioSession>();

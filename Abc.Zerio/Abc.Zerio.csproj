@@ -69,7 +69,6 @@
     <Compile Include="Serialization\SimpleMessagePool.cs" />
     <Compile Include="IServerConfiguration.cs" />
     <Compile Include="Core\ISessionConfiguration.cs" />
-    <Compile Include="Core\ISessionManager.cs" />
     <Compile Include="Interop\Kernel32.cs" />
     <Compile Include="Interop\WinSock.cs" />
     <Compile Include="Buffers\RioBufferManager.cs" />
