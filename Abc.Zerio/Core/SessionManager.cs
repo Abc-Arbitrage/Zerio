@@ -42,13 +42,11 @@ namespace Abc.Zerio.Core
         public RioSession Acquire()
         {
             RioSession rioSession;
-            if (_sessions.TryPop(out rioSession))
-            {
-                _activeSessions.TryAdd(rioSession.Id, rioSession);
-                return rioSession;
-            }
+            if (!_sessions.TryPop(out rioSession))
+                throw new InvalidOperationException("No session available");
 
-            throw new InvalidOperationException("No session available");
+            _activeSessions.TryAdd(rioSession.Id, rioSession);
+            return rioSession;
         }
 
         public void Release(RioSession rioSession)

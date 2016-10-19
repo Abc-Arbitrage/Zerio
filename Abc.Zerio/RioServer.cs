@@ -222,6 +222,8 @@ namespace Abc.Zerio
                 {
                     worker.Dispose();
                 }
+
+                _sessionManager?.Dispose();
             }
             if (_listeningSocket != IntPtr.Zero)
                 WinSock.closesocket(_listeningSocket);
