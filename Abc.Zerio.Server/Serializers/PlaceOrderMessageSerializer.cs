@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Abc.Zerio.Framing;
 using Abc.Zerio.Serialization;
 using Abc.Zerio.Server.Messages;
 
@@ -9,7 +10,7 @@ namespace Abc.Zerio.Server.Serializers
     {
         private const byte _version = 1;
 
-        public void Serialize(object message, BinaryWriter binaryWriter)
+        public void Serialize(object message, UnsafeBinaryWriter binaryWriter)
         {
             binaryWriter.Write(_version);
 
@@ -21,7 +22,7 @@ namespace Abc.Zerio.Server.Serializers
             binaryWriter.Write((byte)placeOrderMessage.Side);
         }
 
-        public void Deserialize(object message, BinaryReader binaryReader)
+        public void Deserialize(object message, UnsafeBinaryReader binaryReader)
         {
             var version = binaryReader.ReadByte();
             if (version != _version)

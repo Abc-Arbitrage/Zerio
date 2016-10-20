@@ -1,12 +1,11 @@
 using System;
-using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Abc.Zerio.Framing
 {
-    public unsafe class UnsafeBinaryWriter : BinaryWriter
+    public unsafe class UnsafeBinaryWriter
     {
         private BufferSegment[] _buffers = new BufferSegment[1024];
         private int _bufferIndex;
@@ -78,7 +77,7 @@ namespace Abc.Zerio.Framing
             _bufferCount++;
         }
 
-        public override void Write(bool value)
+        public void Write(bool value)
         {
             if (!CurrentBufferHasEnoughBytes(sizeof(bool)))
             {
@@ -90,7 +89,7 @@ namespace Abc.Zerio.Framing
             _bufferPosition += sizeof(bool);
         }
 
-        public override void Write(byte value)
+        public void Write(byte value)
         {
             if (!CurrentBufferHasEnoughBytes(sizeof(byte)))
             {
@@ -102,7 +101,7 @@ namespace Abc.Zerio.Framing
             _bufferPosition += sizeof(byte);
         }
 
-        public override void Write(decimal value)
+        public void Write(decimal value)
         {
             if (!CurrentBufferHasEnoughBytes(sizeof(decimal)))
             {
@@ -121,7 +120,7 @@ namespace Abc.Zerio.Framing
             _bufferPosition += sizeof(int);
         }
 
-        public override void Write(double value)
+        public void Write(double value)
         {
             if (!CurrentBufferHasEnoughBytes(sizeof(double)))
             {
@@ -133,7 +132,7 @@ namespace Abc.Zerio.Framing
             _bufferPosition += sizeof(double);
         }
 
-        public override void Write(float value)
+        public void Write(float value)
         {
             if (!CurrentBufferHasEnoughBytes(sizeof(float)))
             {
@@ -145,7 +144,7 @@ namespace Abc.Zerio.Framing
             _bufferPosition += sizeof(float);
         }
 
-        public override void Write(int value)
+        public void Write(int value)
         {
             if (!CurrentBufferHasEnoughBytes(sizeof(int)))
             {
@@ -157,7 +156,7 @@ namespace Abc.Zerio.Framing
             _bufferPosition += sizeof(int);
         }
 
-        public override void Write(long value)
+        public void Write(long value)
         {
             if (!CurrentBufferHasEnoughBytes(sizeof(long)))
             {
@@ -169,7 +168,7 @@ namespace Abc.Zerio.Framing
             _bufferPosition += sizeof(long);
         }
 
-        public override void Write(sbyte value)
+        public void Write(sbyte value)
         {
             if (!CurrentBufferHasEnoughBytes(sizeof(sbyte)))
             {
@@ -181,7 +180,7 @@ namespace Abc.Zerio.Framing
             _bufferPosition += sizeof(sbyte);
         }
 
-        public override void Write(short value)
+        public void Write(short value)
         {
             if (!CurrentBufferHasEnoughBytes(sizeof(short)))
             {
@@ -193,7 +192,7 @@ namespace Abc.Zerio.Framing
             _bufferPosition += sizeof(short);
         }
 
-        public override void Write(uint value)
+        public void Write(uint value)
         {
             if (!CurrentBufferHasEnoughBytes(sizeof(uint)))
             {
@@ -205,7 +204,7 @@ namespace Abc.Zerio.Framing
             _bufferPosition += sizeof(uint);
         }
 
-        public override void Write(ulong value)
+        public void Write(ulong value)
         {
             if (!CurrentBufferHasEnoughBytes(sizeof(ulong)))
             {
@@ -217,7 +216,7 @@ namespace Abc.Zerio.Framing
             _bufferPosition += sizeof(ulong);
         }
 
-        public override void Write(ushort value)
+        public void Write(ushort value)
         {
             if (!CurrentBufferHasEnoughBytes(sizeof(ushort)))
             {
@@ -229,7 +228,7 @@ namespace Abc.Zerio.Framing
             _bufferPosition += sizeof(ushort);
         }
 
-        public override void Write(string value)
+        public void Write(string value)
         {
             var byteCount = _encoding.GetByteCount(value);
 
@@ -241,12 +240,24 @@ namespace Abc.Zerio.Framing
             }
         }
 
-        public override void Write(byte[] buffer)
+        private void Write7BitEncodedInt(int value)
+        {
+            var v = (uint)value;
+            while (v >= 0x80)
+            {
+                Write((byte)(v | 0x80));
+                v >>= 7;
+            }
+
+            Write((byte)v);
+        }
+
+        public void Write(byte[] buffer)
         {
             Write(buffer, 0, buffer.Length);
         }
 
-        public override void Write(byte[] buffer, int index, int count)
+        public void Write(byte[] buffer, int index, int count)
         {
             fixed (byte* pBytes = buffer)
             {
@@ -385,17 +396,17 @@ namespace Abc.Zerio.Framing
             return bytesToWrite;
         }
 
-        public override void Write(char ch)
+        public void Write(char ch)
         {
             WriteOverlappedChars(&ch, 0, 1);
         }
 
-        public override void Write(char[] chars)
+        public void Write(char[] chars)
         {
             Write(chars, 0, chars.Length);
         }
 
-        public override void Write(char[] chars, int index, int count)
+        public void Write(char[] chars, int index, int count)
         {
             fixed (char* pChars = chars)
             {

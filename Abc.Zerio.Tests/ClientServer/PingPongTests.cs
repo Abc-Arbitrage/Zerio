@@ -1,6 +1,6 @@
 ﻿using System.IO;
-using System.Net;
 using System.Threading.Tasks;
+using Abc.Zerio.Framing;
 using Abc.Zerio.Serialization;
 using NUnit.Framework;
 
@@ -43,25 +43,25 @@ namespace Abc.Zerio.Tests.ClientServer
 
         public class PingSerializer : IBinaryMessageSerializer
         {
-            public void Serialize(object message, BinaryWriter binaryWriter)
+            public void Serialize(object message, UnsafeBinaryWriter binaryWriter)
             {
                 binaryWriter.Write(((Ping)message).Id);
             }
 
-            public void Deserialize(object message, BinaryReader binaryReader)
+            public void Deserialize(object message, UnsafeBinaryReader binaryReader)
             {
-                ((Ping) message).Id = binaryReader.ReadInt32();
+                ((Ping)message).Id = binaryReader.ReadInt32();
             }
         }
 
         public class PongSerializer : IBinaryMessageSerializer
         {
-            public void Serialize(object message, BinaryWriter binaryWriter)
+            public void Serialize(object message, UnsafeBinaryWriter binaryWriter)
             {
                 binaryWriter.Write(((Pong)message).PingId);
             }
 
-            public void Deserialize(object message, BinaryReader binaryReader)
+            public void Deserialize(object message, UnsafeBinaryReader binaryReader)
             {
                 ((Pong)message).PingId = binaryReader.ReadInt32();
             }

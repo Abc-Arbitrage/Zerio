@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -9,7 +8,7 @@ using System.Text;
 
 namespace Abc.Zerio.Framing
 {
-    public unsafe class UnsafeBinaryReader : BinaryReader
+    public unsafe class UnsafeBinaryReader
     {
         private static readonly Func<Decoder, bool> _hasDecoderStateFunction = BuildHasDecoderStateFunction();
 
@@ -24,7 +23,6 @@ namespace Abc.Zerio.Framing
         private byte* _endOfBuffer;
 
         public UnsafeBinaryReader(Encoding encoding)
-            : base(Stream.Null)
         {
             _encoding = encoding;
             _decoder = _encoding.GetDecoder();
@@ -60,7 +58,7 @@ namespace Abc.Zerio.Framing
             _endOfBuffer = _position + currentSegment.Length;
         }
 
-        public override bool ReadBoolean()
+        public bool ReadBoolean()
         {
             if (!CurrentBufferHasEnoughBytes(sizeof(bool)))
                 return ReadOverlapped(sizeof(byte)) != 0;
@@ -70,7 +68,7 @@ namespace Abc.Zerio.Framing
             return value;
         }
 
-        public override byte ReadByte()
+        public byte ReadByte()
         {
             if (!CurrentBufferHasEnoughBytes(sizeof(byte)))
                 return (byte)ReadOverlapped(sizeof(byte));
@@ -80,7 +78,7 @@ namespace Abc.Zerio.Framing
             return value;
         }
 
-        public override sbyte ReadSByte()
+        public sbyte ReadSByte()
         {
             if (!CurrentBufferHasEnoughBytes(sizeof(sbyte)))
                 return (sbyte)ReadOverlapped(sizeof(sbyte));
@@ -90,7 +88,7 @@ namespace Abc.Zerio.Framing
             return value;
         }
 
-        public override short ReadInt16()
+        public short ReadInt16()
         {
             if (!CurrentBufferHasEnoughBytes(sizeof(short)))
                 return (short)ReadOverlapped(sizeof(short));
@@ -100,7 +98,7 @@ namespace Abc.Zerio.Framing
             return value;
         }
 
-        public override ushort ReadUInt16()
+        public ushort ReadUInt16()
         {
             if (!CurrentBufferHasEnoughBytes(sizeof(ushort)))
                 return (ushort)ReadOverlapped(sizeof(ushort));
@@ -110,7 +108,7 @@ namespace Abc.Zerio.Framing
             return value;
         }
 
-        public override int ReadInt32()
+        public int ReadInt32()
         {
             if (!CurrentBufferHasEnoughBytes(sizeof(int)))
                 return (int)ReadOverlapped(sizeof(int));
@@ -120,7 +118,7 @@ namespace Abc.Zerio.Framing
             return value;
         }
 
-        public override uint ReadUInt32()
+        public uint ReadUInt32()
         {
             if (!CurrentBufferHasEnoughBytes(sizeof(uint)))
                 return (uint)ReadOverlapped(sizeof(uint));
@@ -130,7 +128,7 @@ namespace Abc.Zerio.Framing
             return value;
         }
 
-        public override long ReadInt64()
+        public long ReadInt64()
         {
             if (!CurrentBufferHasEnoughBytes(sizeof(long)))
                 return (long)ReadOverlapped(sizeof(long));
@@ -140,7 +138,7 @@ namespace Abc.Zerio.Framing
             return value;
         }
 
-        public override ulong ReadUInt64()
+        public ulong ReadUInt64()
         {
             if (!CurrentBufferHasEnoughBytes(sizeof(ulong)))
                 return ReadOverlapped(sizeof(ulong));
@@ -150,7 +148,7 @@ namespace Abc.Zerio.Framing
             return value;
         }
 
-        public override float ReadSingle()
+        public float ReadSingle()
         {
             if (!CurrentBufferHasEnoughBytes(sizeof(float)))
             {
@@ -163,7 +161,7 @@ namespace Abc.Zerio.Framing
             return value;
         }
 
-        public override double ReadDouble()
+        public double ReadDouble()
         {
             if (!CurrentBufferHasEnoughBytes(sizeof(double)))
             {
@@ -176,7 +174,7 @@ namespace Abc.Zerio.Framing
             return value;
         }
 
-        public override decimal ReadDecimal()
+        public decimal ReadDecimal()
         {
             if (!CurrentBufferHasEnoughBytes(sizeof(decimal)))
                 return ReadOverlappedDecimal();
@@ -204,7 +202,7 @@ namespace Abc.Zerio.Framing
             internal int mid;
         }
 
-        public override string ReadString()
+        public string ReadString()
         {
             var byteCount = Read7BitEncodedInt();
 
@@ -218,7 +216,24 @@ namespace Abc.Zerio.Framing
             return value;
         }
 
-        public override int PeekChar()
+        private int Read7BitEncodedInt()
+        {
+            var count = 0;
+            var shift = 0;
+            byte b;
+            do
+            {
+                if (shift == 5 * 7)
+                    throw new FormatException("Too many bytes in what should have been a 7 bit encoded Int32.");
+
+                b = ReadByte();
+                count |= (b & 0x7F) << shift;
+                shift += 7;
+            } while ((b & 0x80) != 0);
+            return count;
+        }
+
+        public int PeekChar()
         {
             var ptr = _position;
             var read = Read();
@@ -226,7 +241,7 @@ namespace Abc.Zerio.Framing
             return read;
         }
 
-        public override char ReadChar()
+        public char ReadChar()
         {
             char value;
             var charCount = ReadOverlappedChars(&value, 0, 1);
@@ -237,14 +252,14 @@ namespace Abc.Zerio.Framing
             return value;
         }
 
-        public override int Read()
+        public int Read()
         {
             char value;
             var charCount = ReadOverlappedChars(&value, 0, 1);
             return charCount != 0 ? value : -1;
         }
 
-        public override int Read(char[] buffer, int index, int count)
+        public int Read(char[] buffer, int index, int count)
         {
             fixed (char* pChars = buffer)
             {
@@ -252,7 +267,7 @@ namespace Abc.Zerio.Framing
             }
         }
 
-        public override char[] ReadChars(int count)
+        public char[] ReadChars(int count)
         {
             var buffer = new char[count];
             var readChars = Read(buffer, 0, count);
@@ -267,7 +282,7 @@ namespace Abc.Zerio.Framing
             return copy;
         }
 
-        public override byte[] ReadBytes(int count)
+        public byte[] ReadBytes(int count)
         {
             var buffer = new byte[count];
             var readBytes = Read(buffer, 0, count);
@@ -282,7 +297,7 @@ namespace Abc.Zerio.Framing
             return copy;
         }
 
-        public override int Read(byte[] buffer, int index, int count)
+        public int Read(byte[] buffer, int index, int count)
         {
             fixed (byte* pBytes = buffer)
             {

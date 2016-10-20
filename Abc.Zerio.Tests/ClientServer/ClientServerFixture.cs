@@ -22,7 +22,7 @@ namespace Abc.Zerio.Tests.ClientServer
             ConfigureSerialization(serializationRegistries);
 
             Client = new RioClient(ClientConfiguration, new SerializationEngine(serializationRegistries.Client));
-            Server = new RioServer(ServerConfiguration, new SessionManager(ServerConfiguration), new SerializationEngine(serializationRegistries.Server));
+            Server = new RioServer(ServerConfiguration, new SerializationEngine(serializationRegistries.Server));
         }
 
         protected virtual void ConfigureSerialization(SerializationRegistries registries)
