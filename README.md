@@ -160,7 +160,7 @@ Here is how you create a serialization engine:
 
 ```csharp
 var serializationRegistry = new SerializationRegistry(Encoding.ASCII);
-serializationRegistry.AddMapping<PlaceOrderMessage, PlaceOrderMessageSerializer>();
+serializationRegistry.Register<PlaceOrderMessage, PlaceOrderMessageSerializer>();
 var serializationEngine = new SerializationEngine(serializationRegistry);
 ```
 
@@ -173,7 +173,7 @@ Because you may want to receive messages **without generating garbage**, Zerio p
 ```csharp
 var messagePool = new SimpleMessagePool<PlaceOrderMessage>(256);
 var registry = new SerializationRegistry(Encoding.ASCII);
-registry.AddMapping<PlaceOrderMessage, PlaceOrderMessageSerializer>(messagePool, messagePool);
+registry.Register<PlaceOrderMessage, PlaceOrderMessageSerializer>(messagePool, messagePool);
 ```
 
 If you provide an allocator, Zerio will use it upon message reception, to get the instance that will be used for the deserialization. If you provide a releaser, Zerio will use it right after the message handling, that is, the `OnMessageReceived` event invocation. If you want to control when the received message need to be released, you can provide an allocator and no releaser; you'll then be in charge of releasing the received message.

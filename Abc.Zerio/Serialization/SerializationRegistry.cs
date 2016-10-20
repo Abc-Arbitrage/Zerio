@@ -15,7 +15,7 @@ namespace Abc.Zerio.Serialization
             Encoding = encoding;
         }
 
-        public SerializationRegistry AddMapping<TMessage, TSerializer>(IMessageAllocator allocator = null, IMessageReleaser releaser = null)
+        public SerializationRegistry Register<TMessage, TSerializer>(IMessageAllocator allocator = null, IMessageReleaser releaser = null)
             where TMessage : new()
             where TSerializer : IBinaryMessageSerializer
         {

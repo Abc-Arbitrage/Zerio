@@ -92,8 +92,8 @@ namespace Abc.Zerio.Client
         private static SerializationEngine CreateSerializationEngine()
         {
             var serializationRegistry = new SerializationRegistry(Encoding.ASCII);
-            serializationRegistry.AddMapping<PlaceOrderMessage, PlaceOrderMessageSerializer>();
-            serializationRegistry.AddMapping<OrderAckMessage, OrderAckMessageSerializer>(_orderAckMessagePool, _orderAckMessagePool);
+            serializationRegistry.Register<PlaceOrderMessage, PlaceOrderMessageSerializer>();
+            serializationRegistry.Register<OrderAckMessage, OrderAckMessageSerializer>(_orderAckMessagePool, _orderAckMessagePool);
             var serializationEngine = new SerializationEngine(serializationRegistry);
             return serializationEngine;
         }

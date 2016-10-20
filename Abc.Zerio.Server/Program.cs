@@ -76,8 +76,8 @@ namespace Abc.Zerio.Server
         private static SerializationEngine CreateSerializationEngine()
         {
             var serializationRegistry = new SerializationRegistry(Encoding.ASCII);
-            serializationRegistry.AddMapping<PlaceOrderMessage, PlaceOrderMessageSerializer>(_allocator);
-            serializationRegistry.AddMapping<OrderAckMessage, OrderAckMessageSerializer>();
+            serializationRegistry.Register<PlaceOrderMessage, PlaceOrderMessageSerializer>(_allocator);
+            serializationRegistry.Register<OrderAckMessage, OrderAckMessageSerializer>();
             var serializationEngine = new SerializationEngine(serializationRegistry);
             return serializationEngine;
         }

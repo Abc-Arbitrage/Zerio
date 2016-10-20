@@ -27,8 +27,8 @@ namespace Abc.Zerio.Tests.ClientServer
 
         protected override void ConfigureSerialization(SerializationRegistries registries)
         {
-            registries.ForBoth(r => r.AddMapping<Ping, PingSerializer>());
-            registries.ForBoth(r => r.AddMapping<Pong, PongSerializer>());
+            registries.ForBoth(r => r.Register<Ping, PingSerializer>());
+            registries.ForBoth(r => r.Register<Pong, PongSerializer>());
         }
 
         public class Ping
