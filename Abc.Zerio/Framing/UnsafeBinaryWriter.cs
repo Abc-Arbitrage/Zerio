@@ -258,7 +258,7 @@ namespace Abc.Zerio.Framing
                     remainingCount -= byteCount;
                     if (remainingCount == 0)
                         return;
-                    
+
                     index += byteCount;
                 }
             }
@@ -271,7 +271,7 @@ namespace Abc.Zerio.Framing
             {
                 if (TryWriteAllCharsInCurrentBuffer(pChars, index, remainingCount))
                     return;
-                
+
                 var writtenChars = BulkWriteAllPossibleCharsInCurrentBuffer(pChars, index);
                 remainingCount = remainingCount - writtenChars;
                 index += writtenChars;
@@ -331,8 +331,9 @@ namespace Abc.Zerio.Framing
                 writtenChars++;
 
                 _bufferPosition += byteCount;
-                availableData = (int) (_endOfBuffer - _bufferPosition);
+                availableData = (int)(_endOfBuffer - _bufferPosition);
             }
+
             return writtenChars;
         }
 
@@ -342,7 +343,7 @@ namespace Abc.Zerio.Framing
             var availableData = (int)(_endOfBuffer - _bufferPosition);
 
             var maxCharByteCount = _encoding.GetMaxByteCount(1);
-            var charCount = (int) ((_endOfBuffer - _bufferPosition) / maxCharByteCount);
+            var charCount = (int)((_endOfBuffer - _bufferPosition) / maxCharByteCount);
 
             if (charCount <= 0)
                 return writtenChars;
@@ -374,8 +375,6 @@ namespace Abc.Zerio.Framing
 
             return false;
         }
-        
-
 
         private int WriteBytesInCurrentBuffer(byte* pBytes, int index, int remainingCount)
         {
