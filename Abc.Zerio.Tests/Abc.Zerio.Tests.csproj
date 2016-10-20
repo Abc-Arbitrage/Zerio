@@ -47,12 +47,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ClientServer\ClientServerFixture.cs" />
+    <Compile Include="ClientServer\PingPongTests.cs" />
     <Compile Include="MessageFramerTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RioBufferManagerTests.cs" />
     <Compile Include="SendingBufferProviderTests.cs" />
     <Compile Include="UnsafeBinaryReaderTests.cs" />
     <Compile Include="UnsafeBinaryWriterTests.cs" />
+    <Compile Include="Utils\TcpUtil.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Abc.Zerio\Abc.Zerio.csproj">
