@@ -258,8 +258,7 @@ namespace Abc.Zerio.Framing
                     remainingCount -= byteCount;
                     if (remainingCount == 0)
                         return;
-
-                    SwitchToNextBuffer();
+                    
                     index += byteCount;
                 }
             }
@@ -268,36 +267,115 @@ namespace Abc.Zerio.Framing
         private void WriteOverlappedChars(char* pChars, int index, int count)
         {
             var remainingCount = count;
-            while (true)
+            while (remainingCount > 0)
             {
-                var charCount = WriteCharsInCurrentBuffer(pChars, index, remainingCount);
-
-                remainingCount -= charCount;
-                if (remainingCount == 0)
+                if (TryWriteAllCharsInCurrentBuffer(pChars, index, remainingCount))
                     return;
+                
+                var writtenChars = BulkWriteAllPossibleCharsInCurrentBuffer(pChars, index);
+                remainingCount = remainingCount - writtenChars;
+                index += writtenChars;
 
-                SwitchToNextBuffer();
-                index += charCount;
+                writtenChars = WriteCharsOneByOneUntilNoSpaceLeft(pChars, index, remainingCount);
+                remainingCount = remainingCount - writtenChars;
+                index += writtenChars;
+
+                var availableData = (int)(_endOfBuffer - _bufferPosition);
+                if (availableData != 0 && remainingCount != 0)
+                {
+                    var pCharWithOffset = pChars + index;
+                    WriteOneOverlappedChar(pCharWithOffset);
+                    remainingCount--;
+                    index++;
+                }
+                else if (remainingCount != 0)
+                {
+                    SwitchToNextBuffer();
+                }
             }
         }
 
-        private int WriteCharsInCurrentBuffer(char* pChars, int index, int remainingCount)
+        private void WriteOneOverlappedChar(char* pChars)
         {
+            var maxCharByteCount = _encoding.GetMaxByteCount(1);
+            var lastCharRemainingByte = stackalloc byte[maxCharByteCount];
+
+            var lastCharRemainingByteCount = _encoding.GetBytes(pChars, 1, lastCharRemainingByte, maxCharByteCount);
+            var lastCharWrittenByteCount = 0;
+
+            while (lastCharWrittenByteCount < lastCharRemainingByteCount)
+            {
+                if (_bufferPosition == _endOfBuffer)
+                    SwitchToNextBuffer();
+
+                *_bufferPosition++ = lastCharRemainingByte[lastCharWrittenByteCount];
+                ++lastCharWrittenByteCount;
+            }
+        }
+
+        private int WriteCharsOneByOneUntilNoSpaceLeft(char* pChars, int index, int remainingCount)
+        {
+            var writtenChars = 0;
             var availableData = (int)(_endOfBuffer - _bufferPosition);
 
+            while (writtenChars < remainingCount && availableData > 0)
+            {
+                var pCharWithOffset = pChars + index + writtenChars;
+                var byteCount = _encoding.GetByteCount(pCharWithOffset, 1);
+
+                if (_bufferPosition + byteCount > _endOfBuffer)
+                    break;
+
+                _encoding.GetBytes(pCharWithOffset, 1, _bufferPosition, availableData);
+
+                writtenChars++;
+
+                _bufferPosition += byteCount;
+                availableData = (int) (_endOfBuffer - _bufferPosition);
+            }
+            return writtenChars;
+        }
+
+        private int BulkWriteAllPossibleCharsInCurrentBuffer(char* pChars, int index)
+        {
+            var writtenChars = 0;
+            var availableData = (int)(_endOfBuffer - _bufferPosition);
+
+            var maxCharByteCount = _encoding.GetMaxByteCount(1);
+            var charCount = (int) ((_endOfBuffer - _bufferPosition) / maxCharByteCount);
+
+            if (charCount <= 0)
+                return writtenChars;
+
+            var pCharWithOffset = pChars + index;
+            var writtenBytes = _encoding.GetBytes(pCharWithOffset, charCount, _bufferPosition, availableData);
+
+            writtenChars += charCount;
+
+            _bufferPosition += writtenBytes;
+
+            return writtenChars;
+        }
+
+        private bool TryWriteAllCharsInCurrentBuffer(char* pChars, int index, int remainingCount)
+        {
+            var availableData = (int)(_endOfBuffer - _bufferPosition);
             var pCharWithOffset = pChars + index;
 
-            var byteCount = _encoding.GetByteCount(pCharWithOffset, remainingCount);
+            var totalCharsByteCount = _encoding.GetByteCount(pCharWithOffset, remainingCount);
 
-            if (_bufferPosition + byteCount > _endOfBuffer)
-                throw new InvalidOperationException("overlapped char writes not supported yet");
+            if (_bufferPosition + totalCharsByteCount < _endOfBuffer)
+            {
+                _encoding.GetBytes(pCharWithOffset, remainingCount, _bufferPosition, availableData);
+                _bufferPosition += totalCharsByteCount;
 
-            _encoding.GetBytes(pCharWithOffset, remainingCount, _bufferPosition, availableData);
+                return true;
+            }
 
-            _bufferPosition += byteCount;
-
-            return remainingCount;
+            return false;
         }
+        
+
 
         private int WriteBytesInCurrentBuffer(byte* pBytes, int index, int remainingCount)
         {

@@ -75,19 +75,19 @@ namespace Abc.Zerio.Tests
             }
         }
 
-        // UnsafeBinaryWriter is not yet capable to handle string/chars writes over multiple buffers
-        private static IEnumerable<int> GetCharRelatedTestsBufferSegmentSizes
-        {
-            get
-            {
-                yield return 128;
-                yield return 200;
-                yield return 512;
-                yield return 1024;
-                yield return 4096;
-                yield return 10 * 1024;
-            }
-        }
+        //// UnsafeBinaryWriter is not yet capable to handle string/chars writes over multiple buffers
+        //private static IEnumerable<int> GetCharRelatedTestsBufferSegmentSizes
+        //{
+        //    get
+        //    {
+        //        yield return 128;
+        //        yield return 200;
+        //        yield return 512;
+        //        yield return 1024;
+        //        yield return 4096;
+        //        yield return 10 * 1024;
+        //    }
+        //}
 
         private static IEnumerable<Encoding> GetEncodings
         {
@@ -101,6 +101,17 @@ namespace Abc.Zerio.Tests
             }
         }
 
+        private static IEnumerable<Encoding> GetVariableLenghtEncodings
+        {
+            get
+            {
+                yield return Encoding.UTF8;
+                yield return Encoding.UTF32;
+                yield return Encoding.GetEncoding("UTF-16LE");
+                yield return Encoding.GetEncoding("UTF-16BE");
+            }
+        }
+        
         [Test]
         public void should_write_numeric_values([ValueSource(nameof(GetBufferSegmentSizes))] int bufferSegmentSize)
         {
@@ -221,7 +232,7 @@ namespace Abc.Zerio.Tests
 
         [Test, Combinatorial]
         public void should_write_chars([ValueSource(nameof(GetEncodings))] Encoding encoding,
-                                       [ValueSource(nameof(GetCharRelatedTestsBufferSegmentSizes))] int bufferSegmentSize)
+                                       [ValueSource(nameof(GetBufferSegmentSizes))] int bufferSegmentSize)
         {
             CreateContext(encoding, bufferSegmentSize);
 
@@ -235,21 +246,35 @@ namespace Abc.Zerio.Tests
 
         [Test, Combinatorial]
         public void should_write_char_array([ValueSource(nameof(GetEncodings))] Encoding encoding,
-                                            [ValueSource(nameof(GetCharRelatedTestsBufferSegmentSizes))] int bufferSegmentSize)
+                                            [ValueSource(nameof(GetBufferSegmentSizes))] int bufferSegmentSize)
         {
             CreateContext(encoding, bufferSegmentSize);
 
             var chars = "Hello World!".ToCharArray();
             _writer.Write(chars, 0, chars.Length);
             _writer.Write(_marker);
+            
+            Assert.AreEqual("Hello World!", new string(_reader.ReadChars(chars.Length)));
+            Assert.AreEqual(_marker, _reader.ReadUInt32());
+        }
 
-            Assert.AreEqual(chars, _reader.ReadChars(chars.Length));
+        [Test, Combinatorial]
+        public void should_write_char_array_containing_multibyte_chars([ValueSource(nameof(GetVariableLenghtEncodings))] Encoding encoding,
+                                            [ValueSource(nameof(GetBufferSegmentSizes))] int bufferSegmentSize)
+        {
+            CreateContext(encoding, bufferSegmentSize);
+
+            var chars = "إن شاء الله‎‎".ToCharArray();
+            _writer.Write(chars, 0, chars.Length);
+            _writer.Write(_marker);
+
+            Assert.AreEqual("إن شاء الله‎‎", new string(_reader.ReadChars(chars.Length)));
             Assert.AreEqual(_marker, _reader.ReadUInt32());
         }
 
         [Test, Combinatorial]
         public void should_write_char_array_with_buffer([ValueSource(nameof(GetEncodings))] Encoding encoding,
-                                                        [ValueSource(nameof(GetCharRelatedTestsBufferSegmentSizes))] int bufferSegmentSize)
+                                                        [ValueSource(nameof(GetBufferSegmentSizes))] int bufferSegmentSize)
         {
             CreateContext(encoding, bufferSegmentSize);
 
@@ -282,7 +307,7 @@ namespace Abc.Zerio.Tests
 
         [Test, Combinatorial]
         public void should_write_string([ValueSource(nameof(GetEncodings))] Encoding encoding,
-                                        [ValueSource(nameof(GetCharRelatedTestsBufferSegmentSizes))] int bufferSegmentSize)
+                                        [ValueSource(nameof(GetBufferSegmentSizes))] int bufferSegmentSize)
         {
             CreateContext(encoding, bufferSegmentSize);
 
