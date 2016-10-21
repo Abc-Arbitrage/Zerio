@@ -28,27 +28,25 @@ public enum OrderSide : byte
 }
 ```
 
-You need to write a binary serializer for your message, implementing the `IBinaryMessageSerializer` interface. The API is voluntarily low-level. Note that the `Deserialize` method already provide an instance of the message you need to initialize. Note that you may want to handle versionning here, as well as keeping your implementation allocation free.
+You need to write a binary serializer for your message, implementing the `IBinaryMessageSerializer<T>` interface. An abstract base class, `BinaryMessageSerializer<T>` is also provided and is generally what you want to inherit from most of the time. The API is voluntarily low-level. Note that the `Deserialize` method already provide an instance of the message you need to initialize. You may want to handle versionning here, as well as keeping your implementation allocation free.
 
 ```csharp
-public class PlaceOrderMessageSerializer : IBinaryMessageSerializer
+public class PlaceOrderMessageSerializer : BinaryMessageSerializer<PlaceOrderMessage>
 {
-    public void Serialize(object message, BinaryWriter binaryWriter)
+    public void Serialize(PlaceOrderMessage message, BinaryWriter binaryWriter)
     {
-        var placeOrderMessage = (PlaceOrderMessage)message;
-        binaryWriter.Write(placeOrderMessage.InstrumentId);
-        binaryWriter.Write(placeOrderMessage.Price);
-        binaryWriter.Write(placeOrderMessage.Quantity);
-        binaryWriter.Write((byte)placeOrderMessage.Side);
+        binaryWriter.Write(message.InstrumentId);
+        binaryWriter.Write(message.Price);
+        binaryWriter.Write(message.Quantity);
+        binaryWriter.Write((byte)message.Side);
     }
 
-    public void Deserialize(object message, BinaryReader binaryReader)
+    public void Deserialize(PlaceOrderMessage message, BinaryReader binaryReader)
     {
-        var placeOrderMessage = (PlaceOrderMessage)message;
-        placeOrderMessage.InstrumentId = binaryReader.ReadInt32();
-        placeOrderMessage.Price = binaryReader.ReadDouble();
-        placeOrderMessage.Quantity = binaryReader.ReadDouble();
-        placeOrderMessage.Side = (OrderSide)binaryReader.ReadByte();
+        message.InstrumentId = binaryReader.ReadInt32();
+        message.Price = binaryReader.ReadDouble();
+        message.Quantity = binaryReader.ReadDouble();
+        message.Side = (OrderSide)binaryReader.ReadByte();
     }
 }
 ```

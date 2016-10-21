@@ -60,6 +60,8 @@
     <Compile Include="Framing\BufferSegment.cs" />
     <Compile Include="Framing\MessageFramer.cs" />
     <Compile Include="Framing\UnsafeBinaryReader.cs" />
+    <Compile Include="Serialization\BinaryMessageSerializer.cs" />
+    <Compile Include="Serialization\IBinaryMessageSerializer`1.cs" />
     <Compile Include="Serialization\IMessageAllocator`1.cs" />
     <Compile Include="Serialization\IMessageReleaser`1.cs" />
     <Compile Include="Serialization\IMessageReleaser.cs" />

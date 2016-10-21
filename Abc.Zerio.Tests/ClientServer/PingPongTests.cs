@@ -1,5 +1,4 @@
-﻿using System.IO;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Abc.Zerio.Framing;
 using Abc.Zerio.Serialization;
 using NUnit.Framework;
@@ -41,29 +40,29 @@ namespace Abc.Zerio.Tests.ClientServer
             public long PingId { get; set; }
         }
 
-        public class PingSerializer : IBinaryMessageSerializer
+        public class PingSerializer : BinaryMessageSerializer<Ping>
         {
-            public void Serialize(object message, UnsafeBinaryWriter binaryWriter)
+            public override void Serialize(Ping message, UnsafeBinaryWriter binaryWriter)
             {
-                binaryWriter.Write(((Ping)message).Id);
+                binaryWriter.Write(message.Id);
             }
 
-            public void Deserialize(object message, UnsafeBinaryReader binaryReader)
+            public override void Deserialize(Ping message, UnsafeBinaryReader binaryReader)
             {
-                ((Ping)message).Id = binaryReader.ReadInt32();
+                message.Id = binaryReader.ReadInt32();
             }
         }
 
-        public class PongSerializer : IBinaryMessageSerializer
+        public class PongSerializer : BinaryMessageSerializer<Pong>
         {
-            public void Serialize(object message, UnsafeBinaryWriter binaryWriter)
+            public override void Serialize(Pong message, UnsafeBinaryWriter binaryWriter)
             {
-                binaryWriter.Write(((Pong)message).PingId);
+                binaryWriter.Write(message.PingId);
             }
 
-            public void Deserialize(object message, UnsafeBinaryReader binaryReader)
+            public override void Deserialize(Pong message, UnsafeBinaryReader binaryReader)
             {
-                ((Pong)message).PingId = binaryReader.ReadInt32();
+                message.PingId = binaryReader.ReadInt32();
             }
         }
     }

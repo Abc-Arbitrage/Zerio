@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net;
 using System.Text;
-using Abc.Zerio.Core;
 using Abc.Zerio.Serialization;
 using Abc.Zerio.Tests.Utils;
 using NUnit.Framework;
