@@ -17,7 +17,7 @@ namespace Abc.Zerio.Serialization
 
         public SerializationRegistry Register<TMessage, TSerializer>(IMessageAllocator allocator = null, IMessageReleaser releaser = null)
             where TMessage : new()
-            where TSerializer : IBinaryMessageSerializer<TMessage>
+            where TSerializer : IBinaryMessageSerializer
         {
             _mappings.Add(new SerializationMapping
             {

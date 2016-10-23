@@ -2,7 +2,7 @@
 
 namespace Abc.Zerio.Serialization
 {
-    public abstract class BinaryMessageSerializer<T> : IBinaryMessageSerializer<T>
+    public abstract class BinaryMessageSerializer<T> : IBinaryMessageSerializer
     {
         void IBinaryMessageSerializer.Serialize(object message, UnsafeBinaryWriter binaryWriter)
         {

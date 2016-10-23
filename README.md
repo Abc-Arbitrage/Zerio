@@ -28,12 +28,12 @@ public enum OrderSide : byte
 }
 ```
 
-You need to write a binary serializer for your message, implementing the `IBinaryMessageSerializer<T>` interface. An abstract base class, `BinaryMessageSerializer<T>` is also provided and is generally what you want to inherit from most of the time. The API is voluntarily low-level. Note that the `Deserialize` method already provide an instance of the message you need to initialize. You may want to handle versionning here, as well as keeping your implementation allocation free.
+You need to write a binary serializer for your message, implementing the `IBinaryMessageSerializer` interface. An generic abstract base class, `BinaryMessageSerializer<T>` is also provided and is generally what you want to inherit from most of the time. The API is voluntarily low-level. Note that the `Deserialize` method already provide an instance of the message you need to initialize. You may want to handle versionning here, as well as keeping your implementation allocation free.
 
 ```csharp
 public class PlaceOrderMessageSerializer : BinaryMessageSerializer<PlaceOrderMessage>
 {
-    public void Serialize(PlaceOrderMessage message, BinaryWriter binaryWriter)
+    public void Serialize(PlaceOrderMessage message, UnsafeBinaryWriter binaryWriter)
     {
         binaryWriter.Write(message.InstrumentId);
         binaryWriter.Write(message.Price);
@@ -41,7 +41,7 @@ public class PlaceOrderMessageSerializer : BinaryMessageSerializer<PlaceOrderMes
         binaryWriter.Write((byte)message.Side);
     }
 
-    public void Deserialize(PlaceOrderMessage message, BinaryReader binaryReader)
+    public void Deserialize(PlaceOrderMessage message, UnsafeBinaryReader binaryReader)
     {
         message.InstrumentId = binaryReader.ReadInt32();
         message.Price = binaryReader.ReadDouble();
