@@ -24,6 +24,47 @@ namespace Abc.Zerio.Tests.ClientServer
             Assert.That(taskCompletionSource.Task.Result.PingId, Is.EqualTo(9876));
         }
 
+        [Test]
+        public void should_receive_many_pong_messages()
+        {
+            Server.MessageReceived += (clientId, m) => Server.Send(clientId, new Pong { PingId = ((Ping)m).Id });
+            Server.Start();
+
+            const int expectedMessageCount = 50 * 1000;
+
+            var lastMessageReceived = new TaskCompletionSource<object>();
+            var outOfOrderMessageReceived = new TaskCompletionSource<object>();
+            var expectedPingId = 1;
+            Client.MessageReceived += m =>
+            {
+                var pong = (Pong)m;
+                if (pong.PingId != expectedPingId)
+                {
+                    outOfOrderMessageReceived.TrySetResult(null);
+                    return;
+                }
+                if (pong.PingId == expectedMessageCount)
+                {
+                    lastMessageReceived.TrySetResult(null);
+                    return;
+                }
+                expectedPingId++;
+            };
+
+            Client.Connect(ServerEndPoint);
+
+            for (int pingId = 1; pingId <= expectedMessageCount; pingId++)
+            {
+                Client.Send(new Ping { Id = pingId });
+            }
+
+            var finished = Task.WhenAny(lastMessageReceived.Task, outOfOrderMessageReceived.Task);
+
+            Assert.That(finished.Wait(5000), Is.True, "Timeout");
+            Assert.That(outOfOrderMessageReceived.Task.IsCompleted, Is.False, "Out of order message received");
+            Assert.That(lastMessageReceived.Task.IsCompleted, Is.True, "Last message was not received");
+        }
+
         protected override void ConfigureSerialization(SerializationRegistries registries)
         {
             registries.ForBoth(r => r.Register<Ping, PingSerializer>());
