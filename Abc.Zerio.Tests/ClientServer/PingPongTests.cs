@@ -19,7 +19,7 @@ namespace Abc.Zerio.Tests.ClientServer
             Client.Connect(ServerEndPoint);
             Client.Send(new Ping { Id = 9876 });
 
-            var received = taskCompletionSource.Task.Wait(200);
+            var received = taskCompletionSource.Task.Wait(500);
             Assert.That(received, Is.True);
             Assert.That(taskCompletionSource.Task.Result.PingId, Is.EqualTo(9876));
         }

@@ -48,6 +48,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ClientServer\ClientServerFixture.cs" />
+    <Compile Include="ClientServer\ConnectionEventTests.cs" />
     <Compile Include="ClientServer\PingPongTests.cs" />
     <Compile Include="MessageFramerTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
