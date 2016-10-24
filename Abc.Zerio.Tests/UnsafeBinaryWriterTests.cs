@@ -1,60 +1,34 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Text;
 using Abc.Zerio.Framing;
+using Abc.Zerio.Tests.Utils;
 using NUnit.Framework;
 
 namespace Abc.Zerio.Tests
 {
-    public unsafe class UnsafeBinaryWriterTests
+    public class UnsafeBinaryWriterTests
     {
         private const uint _marker = 0xdeadbeef;
-        private const int _bufferLength = 32 * 1024;
 
+        private BufferSegmentProvider _segmentProvider;
         private UnsafeBinaryWriter _writer;
-        private byte[] _buffer;
-        private GCHandle _handle;
-        private byte* _pointer;
         private BinaryReader _reader;
-        private MemoryStream _readerStream;
 
-        [SetUp]
-        public void SetUp()
+        private void CreateContext(Encoding encoding, int bufferSegmentSize, int bufferSegmentCount = 512)
         {
-            _buffer = new byte[_bufferLength];
-            _handle = GCHandle.Alloc(_buffer, GCHandleType.Pinned);
-            _pointer = (byte*)_handle.AddrOfPinnedObject();
-        }
+            _segmentProvider = new BufferSegmentProvider(bufferSegmentCount, bufferSegmentSize);
 
-        private void CreateContext(Encoding encoding, int bufferSegmentSize)
-        {
             _writer = new UnsafeBinaryWriter(encoding);
-            _readerStream = new MemoryStream(_buffer);
-            _reader = new BinaryReader(_readerStream, encoding);
-
-            SetBuffers(bufferSegmentSize);
-        }
-
-        private void SetBuffers(int segmentSize)
-        {
-            var segments = new List<BufferSegment>();
-
-            var pointer = _pointer;
-            while (pointer <= _pointer + _buffer.Length - segmentSize)
-            {
-                segments.Add(new BufferSegment(pointer, segmentSize));
-                pointer += segmentSize;
-            }
-
-            _writer.SetBufferSegmentProvider(new BufferSegmentProvider(segments));
+            _writer.SetBufferSegmentProvider(_segmentProvider);
+            _reader = _segmentProvider.GetBinaryReader(encoding);
         }
 
         [TearDown]
         public void Teardown()
         {
-            _handle.Free();
+            _segmentProvider.Dispose();
         }
 
         private static IEnumerable<int> GetBufferSegmentSizes
@@ -246,7 +220,7 @@ namespace Abc.Zerio.Tests
 
         [Test, Combinatorial]
         public void should_write_char_array_containing_multibytes_chars([ValueSource(nameof(GetVariableLengthEncodings))] Encoding encoding,
-                                                                       [ValueSource(nameof(GetBufferSegmentSizes))] int bufferSegmentSize)
+                                                                        [ValueSource(nameof(GetBufferSegmentSizes))] int bufferSegmentSize)
         {
             CreateContext(encoding, bufferSegmentSize);
 
@@ -307,9 +281,8 @@ namespace Abc.Zerio.Tests
         [Test]
         public void should_write_value_with_exact_buffer_size()
         {
-            CreateContext(Encoding.UTF8, _bufferLength);
+            CreateContext(Encoding.UTF8, sizeof(int));
 
-            _writer.SetBufferSegmentProvider(new BufferSegmentProvider(_pointer, sizeof(int)));
             _writer.Write(56);
 
             Assert.AreEqual(56, _reader.ReadInt32());
@@ -331,72 +304,32 @@ namespace Abc.Zerio.Tests
             Assert.AreEqual(_marker, _reader.ReadUInt32());
         }
 
-        [Test]
-        public void should_fail_when_buffer_size_is_too_small([ValueSource(nameof(GetEncodings))] Encoding encoding)
+        private static IEnumerable<object[]> GetSmallBufferTestCases
         {
-            CreateContext(encoding, 64);
-
-            _writer.SetBufferSegmentProvider(new BufferSegmentProvider(_pointer, sizeof(int) - 1));
-            Assert.Throws<InvalidOperationException>(() => _writer.Write(default(int)));
-
-            _writer.SetBufferSegmentProvider(new BufferSegmentProvider(_pointer, sizeof(uint) - 1));
-            Assert.Throws<InvalidOperationException>(() => _writer.Write(default(uint)));
-
-            _writer.SetBufferSegmentProvider(new BufferSegmentProvider(_pointer, sizeof(short) - 1));
-            Assert.Throws<InvalidOperationException>(() => _writer.Write(default(short)));
-
-            _writer.SetBufferSegmentProvider(new BufferSegmentProvider(_pointer, sizeof(ushort) - 1));
-            Assert.Throws<InvalidOperationException>(() => _writer.Write(default(ushort)));
-
-            _writer.SetBufferSegmentProvider(new BufferSegmentProvider(_pointer, sizeof(long) - 1));
-            Assert.Throws<InvalidOperationException>(() => _writer.Write(default(long)));
-
-            _writer.SetBufferSegmentProvider(new BufferSegmentProvider(_pointer, sizeof(ulong) - 1));
-            Assert.Throws<InvalidOperationException>(() => _writer.Write(default(ulong)));
-
-            _writer.SetBufferSegmentProvider(new BufferSegmentProvider(_pointer, sizeof(byte) - 1));
-            Assert.Throws<InvalidOperationException>(() => _writer.Write(default(byte)));
-
-            _writer.SetBufferSegmentProvider(new BufferSegmentProvider(_pointer, sizeof(sbyte) - 1));
-            Assert.Throws<InvalidOperationException>(() => _writer.Write(default(sbyte)));
-
-            _writer.SetBufferSegmentProvider(new BufferSegmentProvider(_pointer, encoding.GetByteCount("X") - 1));
-            Assert.Throws<InvalidOperationException>(() => _writer.Write('X'));
-
-            _writer.SetBufferSegmentProvider(new BufferSegmentProvider(_pointer, sizeof(bool) - 1));
-            Assert.Throws<InvalidOperationException>(() => _writer.Write(default(bool)));
-
-            _writer.SetBufferSegmentProvider(new BufferSegmentProvider(_pointer, sizeof(float) - 1));
-            Assert.Throws<InvalidOperationException>(() => _writer.Write(default(float)));
-
-            _writer.SetBufferSegmentProvider(new BufferSegmentProvider(_pointer, sizeof(double) - 1));
-            Assert.Throws<InvalidOperationException>(() => _writer.Write(default(double)));
-
-            _writer.SetBufferSegmentProvider(new BufferSegmentProvider(_pointer, sizeof(decimal) - 1));
-            Assert.Throws<InvalidOperationException>(() => _writer.Write(default(decimal)));
-
-            _writer.SetBufferSegmentProvider(new BufferSegmentProvider(_pointer, encoding.GetByteCount("X") - 1));
-            Assert.Throws<InvalidOperationException>(() => _writer.Write("X"));
+            get
+            {
+                yield return new object[] { default(int), sizeof(int) - 1 };
+                yield return new object[] { default(uint), sizeof(uint) - 1 };
+                yield return new object[] { default(short), sizeof(short) - 1 };
+                yield return new object[] { default(ushort), sizeof(ushort) - 1 };
+                yield return new object[] { default(long), sizeof(long) - 1 };
+                yield return new object[] { default(ulong), sizeof(ulong) - 1 };
+                yield return new object[] { default(byte), sizeof(byte) - 1 };
+                yield return new object[] { default(sbyte), sizeof(sbyte) - 1 };
+                yield return new object[] { default(bool), sizeof(bool) - 1 };
+                yield return new object[] { default(float), sizeof(float) - 1 };
+                yield return new object[] { default(double), sizeof(double) - 1 };
+                yield return new object[] { default(decimal), sizeof(decimal) - 1 };
+                yield return new object[] { 'X', 0 };
+                yield return new object[] { "X", 0 };
+            }
         }
 
-        private class BufferSegmentProvider : IBufferSegmentProvider
+        [TestCaseSource(nameof(GetSmallBufferTestCases))]
+        public void should_fail_when_buffer_size_is_too_small(object value, int bufferSegmentSize)
         {
-            private readonly Queue<BufferSegment> _segments;
-
-            public BufferSegmentProvider(byte* data, int length)
-                : this(new[] { new BufferSegment(data, length) })
-            {
-            }
-
-            public BufferSegmentProvider(IEnumerable<BufferSegment> segments)
-            {
-                _segments = new Queue<BufferSegment>(segments);
-            }
-
-            public BufferSegment GetBufferSegment()
-            {
-                return _segments.Dequeue();
-            }
+            CreateContext(Encoding.ASCII, bufferSegmentSize, 1);
+            Assert.Throws<InvalidOperationException>(() => _writer.Write((dynamic)value));
         }
     }
 }

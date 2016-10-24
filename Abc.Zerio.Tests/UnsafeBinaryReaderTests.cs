@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
 using Abc.Zerio.Framing;
+using Abc.Zerio.Tests.Utils;
 using NUnit.Framework;
 
 namespace Abc.Zerio.Tests
@@ -13,52 +13,25 @@ namespace Abc.Zerio.Tests
     public unsafe class UnsafeBinaryReaderTests
     {
         private const uint _marker = 0xdeadbeef;
-        private const int _bufferLength = 32 * 1024;
 
-        private BinaryWriter _writer;
-        private byte[] _buffer;
-        private GCHandle _handle;
-        private byte* _pointer;
+        private BufferSegmentProvider _segmentProvider;
         private UnsafeBinaryReader _reader;
-        private MemoryStream _writerStream;
+        private BinaryWriter _writer;
 
-        [SetUp]
-        public void SetUp()
+        private void CreateContext(Encoding encoding, int bufferSegmentSize, int bufferSegmentCount = 512)
         {
-            _buffer = new byte[_bufferLength];
-            _handle = GCHandle.Alloc(_buffer, GCHandleType.Pinned);
-            _pointer = (byte*)_handle.AddrOfPinnedObject();
+            _segmentProvider = new BufferSegmentProvider(bufferSegmentCount, bufferSegmentSize);
 
-            CreateContext(Encoding.UTF8, _bufferLength);
-        }
-
-        private void CreateContext(Encoding encoding, int bufferSegmentSize)
-        {
             _reader = new UnsafeBinaryReader(encoding);
-            _writerStream = new MemoryStream(_buffer);
-            _writer = new BinaryWriter(_writerStream, encoding);
+            _reader.SetBuffers(_segmentProvider.GetBufferSegments());
 
-            SetBuffers(bufferSegmentSize);
-        }
-
-        private void SetBuffers(int segmentSize)
-        {
-            var segments = new List<BufferSegment>();
-
-            var pointer = _pointer;
-            while (pointer <= _pointer + _buffer.Length - segmentSize)
-            {
-                segments.Add(new BufferSegment(pointer, segmentSize));
-                pointer += segmentSize;
-            }
-
-            _reader.SetBuffers(segments);
+            _writer = _segmentProvider.GetBinaryWriter(encoding);
         }
 
         [TearDown]
         public void Teardown()
         {
-            _handle.Free();
+            _segmentProvider.Dispose();
         }
 
         private static IEnumerable<int> GetBufferSegmentSizes
@@ -285,7 +258,7 @@ namespace Abc.Zerio.Tests
 
             var charsSubstring = chars.Take(5).ToArray();
             var buffer = new char[5];
-            _reader.SetBuffer(_pointer, encoding.GetByteCount(charsSubstring));
+            _reader.SetBuffer(_segmentProvider.GetUnderlyingBufferPointer(), encoding.GetByteCount(charsSubstring));
 
             Assert.AreEqual(5, _reader.Read(buffer, 0, buffer.Length));
             Assert.AreEqual(charsSubstring, buffer);
@@ -297,7 +270,7 @@ namespace Abc.Zerio.Tests
         {
             CreateContext(encoding, bufferSegmentSize);
 
-            _reader.SetBuffer(_pointer, 0);
+            _reader.SetBuffer(_segmentProvider.GetUnderlyingBufferPointer(), 0);
 
             Assert.AreEqual(-1, _reader.Read());
             Assert.AreEqual(-1, _reader.PeekChar());
@@ -352,72 +325,40 @@ namespace Abc.Zerio.Tests
         [Test]
         public void should_read_value_with_exact_buffer_size()
         {
-            _reader.SetBuffer(_pointer, sizeof(int));
+            CreateContext(Encoding.UTF8, sizeof(int));
+
             _writer.Write(0);
 
             Assert.DoesNotThrow(() => _reader.ReadInt32());
         }
 
-        [Test]
-        public void should_fail_when_buffer_size_is_too_small([ValueSource(nameof(GetEncodings))] Encoding encoding)
+        private static IEnumerable<object[]> GetSmallBufferTestCases
         {
-            CreateContext(encoding, 64);
+            get
+            {
+                yield return new object[] { (Action<UnsafeBinaryReader>)(r => r.ReadInt32()), sizeof(int) - 1 };
+                yield return new object[] { (Action<UnsafeBinaryReader>)(r => r.ReadUInt32()), sizeof(uint) - 1 };
+                yield return new object[] { (Action<UnsafeBinaryReader>)(r => r.ReadInt16()), sizeof(short) - 1 };
+                yield return new object[] { (Action<UnsafeBinaryReader>)(r => r.ReadUInt16()), sizeof(ushort) - 1 };
+                yield return new object[] { (Action<UnsafeBinaryReader>)(r => r.ReadInt64()), sizeof(long) - 1 };
+                yield return new object[] { (Action<UnsafeBinaryReader>)(r => r.ReadUInt64()), sizeof(ulong) - 1 };
+                yield return new object[] { (Action<UnsafeBinaryReader>)(r => r.ReadByte()), sizeof(byte) - 1 };
+                yield return new object[] { (Action<UnsafeBinaryReader>)(r => r.ReadSByte()), sizeof(sbyte) - 1 };
+                yield return new object[] { (Action<UnsafeBinaryReader>)(r => r.ReadBoolean()), sizeof(bool) - 1 };
+                yield return new object[] { (Action<UnsafeBinaryReader>)(r => r.ReadSingle()), sizeof(float) - 1 };
+                yield return new object[] { (Action<UnsafeBinaryReader>)(r => r.ReadDouble()), sizeof(double) - 1 };
+                yield return new object[] { (Action<UnsafeBinaryReader>)(r => r.ReadDecimal()), sizeof(decimal) - 1 };
+                yield return new object[] { (Action<UnsafeBinaryReader>)(r => r.ReadChar()), 0 };
+                yield return new object[] { (Action<UnsafeBinaryReader>)(r => r.ReadString()), 0 };
+            }
+        }
 
-            _reader.SetBuffer(_pointer + _writerStream.Position, sizeof(int) - 1);
-            _writer.Write(default(int));
-            Assert.Throws<InvalidOperationException>(() => _reader.ReadInt32());
+        [TestCaseSource(nameof(GetSmallBufferTestCases))]
+        public void should_fail_when_buffer_size_is_too_small(Action<UnsafeBinaryReader> readerAction, int bufferSegmentSize)
+        {
+            CreateContext(Encoding.ASCII, bufferSegmentSize, 1);
 
-            _reader.SetBuffer(_pointer + _writerStream.Position, sizeof(uint) - 1);
-            _writer.Write(default(uint));
-            Assert.Throws<InvalidOperationException>(() => _reader.ReadUInt32());
-
-            _reader.SetBuffer(_pointer + _writerStream.Position, sizeof(short) - 1);
-            _writer.Write(default(short));
-            Assert.Throws<InvalidOperationException>(() => _reader.ReadInt16());
-
-            _reader.SetBuffer(_pointer + _writerStream.Position, sizeof(ushort) - 1);
-            _writer.Write(default(ushort));
-            Assert.Throws<InvalidOperationException>(() => _reader.ReadUInt16());
-
-            _reader.SetBuffer(_pointer + _writerStream.Position, sizeof(long) - 1);
-            _writer.Write(default(long));
-            Assert.Throws<InvalidOperationException>(() => _reader.ReadInt64());
-
-            _reader.SetBuffer(_pointer + _writerStream.Position, sizeof(ulong) - 1);
-            _writer.Write(default(ulong));
-            Assert.Throws<InvalidOperationException>(() => _reader.ReadUInt64());
-
-            _reader.SetBuffer(_pointer + _writerStream.Position, sizeof(byte) - 1);
-            _writer.Write(default(byte));
-            Assert.Throws<InvalidOperationException>(() => _reader.ReadByte());
-
-            _reader.SetBuffer(_pointer + _writerStream.Position, sizeof(sbyte) - 1);
-            _writer.Write(default(sbyte));
-            Assert.Throws<InvalidOperationException>(() => _reader.ReadSByte());
-
-            _reader.SetBuffer(_pointer + _writerStream.Position, encoding.GetByteCount("X") - 1);
-            _writer.Write('X');
-            Assert.Throws<InvalidOperationException>(() => _reader.ReadChar());
-
-            _reader.SetBuffer(_pointer + _writerStream.Position, sizeof(bool) - 1);
-            _writer.Write(default(bool));
-            Assert.Throws<InvalidOperationException>(() => _reader.ReadBoolean());
-
-            _reader.SetBuffer(_pointer + _writerStream.Position, sizeof(float) - 1);
-            _writer.Write(default(float));
-            Assert.Throws<InvalidOperationException>(() => _reader.ReadSingle());
-
-            _reader.SetBuffer(_pointer + _writerStream.Position, sizeof(double) - 1);
-            _writer.Write(default(double));
-            Assert.Throws<InvalidOperationException>(() => _reader.ReadDouble());
-
-            _reader.SetBuffer(_pointer + _writerStream.Position, sizeof(decimal) - 1);
-            _writer.Write(default(decimal));
-            Assert.Throws<InvalidOperationException>(() => _reader.ReadDecimal());
-
-            _reader.SetBuffer(_pointer + _writerStream.Position, encoding.GetByteCount("X"));
-            _writer.Write("X");
-            Assert.Throws<InvalidOperationException>(() => _reader.ReadString());
+            Assert.Throws<InvalidOperationException>(() => readerAction(_reader));
         }
     }
 }

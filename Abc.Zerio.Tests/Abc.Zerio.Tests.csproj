@@ -47,6 +47,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Utils\BufferSegmentProvider.cs" />
     <Compile Include="ClientServer\ClientServerFixture.cs" />
     <Compile Include="ClientServer\ConnectionEventTests.cs" />
     <Compile Include="ClientServer\PingPongTests.cs" />
