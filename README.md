@@ -196,7 +196,14 @@ Frame body
 | Message type id         | uint          | 4                |
 | Serialized message      | binary        | Frame length - 4 |
 
-Right now, the message type id is an unsigned integer value that is supposed to uniquely identify a message type. The current implementation is pretty naive and computes a CRC32 hash of the message full type name by convention. Changing a message type name would be a breaking change.
+Right now, the message type id is a struct that wraps a simple unsigned integer value. This value is supposed to uniquely identify a message type. You can register specific ids for your types using static methods on the `MessageTypeId` struct:
+
+```csharp
+var messageTypeId = new MessageTypeId(42);
+MessageTypeId.Register(typeof(PlaceOrderMessage), messageId);
+```
+
+ If no specific id is registered for a type, it will be computed using a pretty naive method by default (a CRC32 hash of the message full type name by convention – changing a message type name would be a breaking change).
 
 ## Sessions and workers
 

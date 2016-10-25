@@ -47,6 +47,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="MessageTypeIdTests.cs" />
     <Compile Include="Utils\BufferSegmentProvider.cs" />
     <Compile Include="ClientServer\ClientServerFixture.cs" />
     <Compile Include="ClientServer\ConnectionEventTests.cs" />

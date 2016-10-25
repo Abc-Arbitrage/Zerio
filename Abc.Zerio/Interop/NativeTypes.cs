@@ -285,5 +285,13 @@ namespace Abc.Zerio.Interop
 
         [FieldOffset(3)]
         public byte B4;
+
+        public InAddr(byte[] addressbytes)
+        {
+            B1 = addressbytes[0];
+            B2 = addressbytes[1];
+            B3 = addressbytes[2];
+            B4 = addressbytes[3];
+        }
     }
 }

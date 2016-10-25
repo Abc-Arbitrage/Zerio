@@ -6,10 +6,10 @@ using Abc.Zerio.Framing;
 
 namespace Abc.Zerio.Serialization
 {
-    public unsafe class SerializationEngine
+    public class SerializationEngine
     {
         private readonly Dictionary<Type, MessageSerializationEngine> _messageEnginesByType = new Dictionary<Type, MessageSerializationEngine>();
-        private readonly Dictionary<uint, MessageSerializationEngine> _messageEnginesByTypeId = new Dictionary<uint, MessageSerializationEngine>();
+        private readonly Dictionary<MessageTypeId, MessageSerializationEngine> _messageEnginesByTypeId = new Dictionary<MessageTypeId, MessageSerializationEngine>();
 
         public readonly Encoding Encoding;
 
@@ -41,7 +41,7 @@ namespace Abc.Zerio.Serialization
             var lengthPrefixPosition = binaryWriter.GetPosition();
             binaryWriter.Write(0); // length prefix
 
-            binaryWriter.Write(serializationEngine.MessageTypeId);
+            binaryWriter.Write((uint)serializationEngine.MessageTypeId);
 
             serializationEngine.Serializer.Serialize(message, binaryWriter);
 
@@ -56,7 +56,7 @@ namespace Abc.Zerio.Serialization
         public ReleasableMessage DeserializeWithLengthPrefix(List<BufferSegment> framedMessage, UnsafeBinaryReader binaryReader)
         {
             binaryReader.SetBuffers(framedMessage);
-            var messageTypeId = binaryReader.ReadUInt32();
+            var messageTypeId = new MessageTypeId(binaryReader.ReadUInt32());
 
             var serializationEngine = _messageEnginesByTypeId[messageTypeId];
             var message = serializationEngine.Allocator.Allocate();
@@ -79,13 +79,13 @@ namespace Abc.Zerio.Serialization
 
         private class MessageSerializationEngine
         {
-            public readonly uint MessageTypeId;
+            public readonly MessageTypeId MessageTypeId;
             public readonly Type MessageType;
             public readonly IBinaryMessageSerializer Serializer;
             public readonly IMessageAllocator Allocator;
             public readonly IMessageReleaser Releaser;
 
-            private MessageSerializationEngine(uint messageTypeId, Type messageType, IBinaryMessageSerializer messageSerializer, IMessageAllocator allocator, IMessageReleaser releaser)
+            private MessageSerializationEngine(MessageTypeId messageTypeId, Type messageType, IBinaryMessageSerializer messageSerializer, IMessageAllocator allocator, IMessageReleaser releaser)
             {
                 MessageTypeId = messageTypeId;
                 MessageType = messageType;
@@ -100,53 +100,11 @@ namespace Abc.Zerio.Serialization
                     throw new ArgumentNullException(nameof(serializationMapping));
 
                 var messageType = serializationMapping.MessageType;
-                var messageTypeId = CreateTypeId(messageType);
+                var messageTypeId = MessageTypeId.Get(messageType);
                 var messageSerializer = (IBinaryMessageSerializer)Activator.CreateInstance(serializationMapping.MessageSerializerType);
                 var messageEngine = new MessageSerializationEngine(messageTypeId, messageType, messageSerializer, serializationMapping.Allocator, serializationMapping.Releaser);
 
                 return messageEngine;
-            }
-
-            private static uint CreateTypeId(Type messageType)
-            {
-                // the type id is a crc32 of the type full name; we should allow a custom one by attribute usage
-
-                const uint poly = 0xedb88320;
-                const int tableLength = 256;
-
-                var table = stackalloc uint[tableLength];
-
-                for (uint i = 0; i < tableLength; ++i)
-                {
-                    var temp = i;
-                    for (var j = 8; j > 0; --j)
-                    {
-                        if ((temp & 1) == 1)
-                            temp = (temp >> 1) ^ poly;
-                        else
-                            temp >>= 1;
-                    }
-                    table[i] = temp;
-                }
-
-                var messageTypeFullName = messageType.FullName;
-                var fullNameLength = messageTypeFullName.Length;
-
-                var bytes = stackalloc byte[fullNameLength];
-
-                fixed (char* pChar = messageTypeFullName)
-                {
-                    var length = Encoding.ASCII.GetBytes(pChar, fullNameLength, bytes, fullNameLength);
-
-                    var crc = 0xffffffff;
-                    for (var i = 0; i < length; ++i)
-                    {
-                        var index = (byte)((crc & 0xff) ^ bytes[i]);
-                        crc = (crc >> 8) ^ table[index];
-                    }
-
-                    return ~crc;
-                }
             }
         }
     }

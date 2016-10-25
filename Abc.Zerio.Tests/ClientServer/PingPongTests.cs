@@ -30,7 +30,7 @@ namespace Abc.Zerio.Tests.ClientServer
             Server.MessageReceived += (clientId, m) => Server.Send(clientId, new Pong { PingId = ((Ping)m).Id });
             Server.Start();
 
-            const int expectedMessageCount = 50 * 1000;
+            const int expectedMessageCount = 10 * 1000;
 
             var lastMessageReceived = new TaskCompletionSource<object>();
             var outOfOrderMessageReceived = new TaskCompletionSource<object>();

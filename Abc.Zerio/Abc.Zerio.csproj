@@ -44,8 +44,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ClientConfiguration.cs" />
+    <Compile Include="Core\Crc32.cs" />
     <Compile Include="Core\IMessageBufferSegmentProvider.cs" />
     <Compile Include="Core\RioConfiguration.cs" />
+    <Compile Include="Core\MessageTypeId.cs" />
     <Compile Include="Framing\IBufferSegmentProvider.cs" />
     <Compile Include="IClientConfiguration.cs" />
     <Compile Include="Core\ICompletionHandler.cs" />

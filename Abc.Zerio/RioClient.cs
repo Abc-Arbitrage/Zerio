@@ -50,7 +50,7 @@ namespace Abc.Zerio
             return new RioCompletionWorker(0, _configuration, this);
         }
 
-        static unsafe IntPtr CreateSocket()
+        private static unsafe IntPtr CreateSocket()
         {
             var socketFlags = SocketFlags.WSA_FLAG_REGISTERED_IO | SocketFlags.WSA_FLAG_OVERLAPPED;
             var connectionSocket = WinSock.WSASocket(AddressFamilies.AF_INET, SocketType.SOCK_STREAM, Protocol.IPPROTO_TCP, IntPtr.Zero, 0, socketFlags);
@@ -86,13 +86,7 @@ namespace Abc.Zerio
         private static unsafe void Connect(IntPtr socket, IPEndPoint ipEndPoint)
         {
             var endPointAddressBytes = ipEndPoint.Address.GetAddressBytes();
-            var inAddress = new InAddr
-            {
-                B1 = endPointAddressBytes[0],
-                B2 = endPointAddressBytes[1],
-                B3 = endPointAddressBytes[2],
-                B4 = endPointAddressBytes[3]
-            };
+            var inAddress = new InAddr(endPointAddressBytes);
 
             var sa = new SockaddrIn
             {

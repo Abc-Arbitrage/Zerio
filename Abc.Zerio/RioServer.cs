@@ -158,13 +158,7 @@ namespace Abc.Zerio
         private static unsafe bool Bind(IntPtr listeningSocket, int listeningPort)
         {
             var endPointAddressBytes = IPAddress.Any.GetAddressBytes();
-            var inAddress = new InAddr
-            {
-                B1 = endPointAddressBytes[0],
-                B2 = endPointAddressBytes[1],
-                B3 = endPointAddressBytes[2],
-                B4 = endPointAddressBytes[3]
-            };
+            var inAddress = new InAddr(endPointAddressBytes);
 
             var sa = new SockaddrIn
             {
