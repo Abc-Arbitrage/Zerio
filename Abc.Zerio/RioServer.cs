@@ -19,7 +19,7 @@ namespace Abc.Zerio
         private volatile bool _isListening;
         private Thread _listeningThread;
 
-        public event Action<int, object> MessageReceived = delegate { };
+        public event Action<int, MessageTypeId, object> MessageReceived = delegate { };
         public event Action<int> ClientConnected = delegate { };
         public event Action<int> ClientDisconnected = delegate { };
 
@@ -93,9 +93,9 @@ namespace Abc.Zerio
             }
         }
 
-        private void OnClientSessionMessageReceived(RioSession rioSession, object message)
+        private void OnClientSessionMessageReceived(RioSession rioSession, MessageTypeId messageTypeId, object message)
         {
-            MessageReceived?.Invoke(rioSession.Id, message);
+            MessageReceived?.Invoke(rioSession.Id, messageTypeId, message);
         }
 
         private void OnClientSessionClosed(RioSession session)

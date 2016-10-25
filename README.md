@@ -8,7 +8,7 @@ Zerio is a small experimental project which aims to provide **a very basic TCP c
 
 **Zerio is very much a work in progress and more a proof of concept than anything else at this stage. It is not production ready yet.**
 
-## Messages and serializers
+## Messages and message types ids
 
 A Zerio message is a simple C# class (POCO):
 
@@ -28,7 +28,17 @@ public enum OrderSide : byte
 }
 ```
 
-You need to write a binary serializer for your message, implementing the `IBinaryMessageSerializer` interface. An generic abstract base class, `BinaryMessageSerializer<T>` is also provided and is generally what you want to inherit from most of the time. The API is voluntarily low-level. Note that the `Deserialize` method already provide an instance of the message you need to initialize. You may want to handle versionning here, as well as keeping your implementation allocation free.
+Each message type has an associated `MessageTypeId` in Zerio. Right now, the message type id is a struct that wraps a simple unsigned integer value and which is supposed to uniquely identify a message type. Zerio is able to generate message type ids for you but it is possible to register specific ids using static methods on the `MessageTypeId` struct:
+
+```csharp
+var messageTypeId = new MessageTypeId(42);
+MessageTypeId.Register(typeof(PlaceOrderMessage), messageId);
+```
+
+ If no specific id is registered for a type, it will be computed using a pretty naive method by default (a CRC32 hash of the message full type name by convention – changing a message type name would then be a breaking change).
+
+## Serializers
+You need to write a binary serializer for your message, implementing the `IBinaryMessageSerializer` interface. An generic abstract base class, `BinaryMessageSerializer<T>` is also provided and is generally what you want to inherit from most of the time. The API is voluntarily low-level. Note that the `Deserialize` method already provides an instance of the message you need to initialize. You may want to handle versionning here, as well as keeping your implementation allocation free.
 
 ```csharp
 public class PlaceOrderMessageSerializer : BinaryMessageSerializer<PlaceOrderMessage>
@@ -87,7 +97,7 @@ client.Send(message);
 By subscribing to the `OnMessageReceived` event, you can be notified on message reception:
 
 ```csharp
-private static void OnMessageReceived(object message)
+private static void OnMessageReceived(MessageTypeId messageTypeId, object message)
 {
     var placeOrderMessage = message as PlaceOrderMessage;
     if (placeOrderMessage != null)
@@ -97,7 +107,7 @@ private static void OnMessageReceived(object message)
 }
 ```
 
-Again, the API is minimalist, and non-generic. You'll have to handle the message type dispatch yourself if needed.
+Again, the API is minimalist, and non-generic. You'll have to handle the message type dispatch yourself if needed. The `messageTypeId` parameter uniquely identifies the message type.
 
 ## Server
 
@@ -108,11 +118,10 @@ Similarily to the client, to create a server you just have to do the following:
 ```csharp
 using (var server = new RioServer(configuration, serializationEngine))
 {
-        server.ClientConnected += OnClientConnected;
-        server.ClientDisconnected += OnClientDisconnected;
-        server.MessageReceived += OnMessageReceived;
-        server.Start();
-
+    server.ClientConnected += OnClientConnected;
+    server.ClientDisconnected += OnClientDisconnected;
+    server.MessageReceived += OnMessageReceived;
+    server.Start();
 }
 ```
 
@@ -138,7 +147,7 @@ server.Send(clientId, message);
 By subscribing to the `OnMessageReceived` event, you can be notified on message reception. The client from which the message is received is provided as an event argument:
 
 ```csharp
-private static void OnMessageReceived(int clientId, object message)
+private static void OnMessageReceived(int clientId, MessageTypeId messageTypeId, object message)
 {
     var placeOrderMessage = message as PlaceOrderMessage;
     if (placeOrderMessage != null)
@@ -147,8 +156,6 @@ private static void OnMessageReceived(int clientId, object message)
     }
 }
 ```
-
-
 
 ## SerializationEngine
 
@@ -180,7 +187,7 @@ If you provide an allocator, Zerio will use it upon message reception, to get th
 
 ## Protocol
 
-The protocol is pretty basic. Each frame contening one message is length prefixed. The frame content contains the message type id, and the actual serialized message. The serialization is done by the provided custom binary serializer.
+The protocol is pretty basic. Each frame contening one message is length prefixed. The frame content contains the message type id underlying value, and the actual serialized message. The serialization is done by the provided custom binary serializer.
 
 Frame
 
@@ -196,14 +203,6 @@ Frame body
 | Message type id         | uint          | 4                |
 | Serialized message      | binary        | Frame length - 4 |
 
-Right now, the message type id is a struct that wraps a simple unsigned integer value. This value is supposed to uniquely identify a message type. You can register specific ids for your types using static methods on the `MessageTypeId` struct:
-
-```csharp
-var messageTypeId = new MessageTypeId(42);
-MessageTypeId.Register(typeof(PlaceOrderMessage), messageId);
-```
-
- If no specific id is registered for a type, it will be computed using a pretty naive method by default (a CRC32 hash of the message full type name by convention – changing a message type name would be a breaking change).
 
 ## Sessions and workers
 

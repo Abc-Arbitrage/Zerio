@@ -62,16 +62,18 @@ namespace Abc.Zerio.Serialization
             var message = serializationEngine.Allocator.Allocate();
             serializationEngine.Serializer.Deserialize(message, binaryReader);
 
-            return new ReleasableMessage(message, serializationEngine.Releaser);
+            return new ReleasableMessage(messageTypeId, message, serializationEngine.Releaser);
         }
 
         public struct ReleasableMessage
         {
+            public readonly MessageTypeId MessageTypeId;
             public readonly object Message;
             public readonly IMessageReleaser Releaser;
 
-            public ReleasableMessage(object message, IMessageReleaser releaser)
+            public ReleasableMessage(MessageTypeId messageTypeId, object message, IMessageReleaser releaser)
             {
+                MessageTypeId = messageTypeId;
                 Message = message;
                 Releaser = releaser;
             }

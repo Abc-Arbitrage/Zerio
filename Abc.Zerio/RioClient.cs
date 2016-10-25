@@ -13,7 +13,7 @@ namespace Abc.Zerio
         private readonly RioCompletionWorker _completionWorker;
         private readonly RioSession _session;
 
-        public event Action<object> MessageReceived = delegate { };
+        public event Action<MessageTypeId, object> MessageReceived = delegate { };
         public event Action Connected = delegate { };
         public event Action Disconnected = delegate { };
 
@@ -40,9 +40,9 @@ namespace Abc.Zerio
             Disconnected();
         }
 
-        private void OnSessionMessageReceived(RioSession session, object message)
+        private void OnSessionMessageReceived(RioSession session, MessageTypeId messageTypeId, object message)
         {
-            MessageReceived?.Invoke(message);
+            MessageReceived?.Invoke(messageTypeId, message);
         }
 
         private RioCompletionWorker CreateWorker()

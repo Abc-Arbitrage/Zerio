@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using Abc.Zerio.Core;
 using Abc.Zerio.Serialization;
 using Abc.Zerio.Server.Messages;
 using Abc.Zerio.Server.Serializers;
@@ -70,7 +71,7 @@ namespace Abc.Zerio.Client
             Console.WriteLine("Connected");
         }
 
-        private static void OnMessageReceived(object message)
+        private static void OnMessageReceived(MessageTypeId messageTypeId, object message)
         {
             if (_receivedMessageCount == 0)
                 _sw.Start();

@@ -31,7 +31,7 @@ namespace Abc.Zerio.Server
             {
                 server.ClientConnected += clientId => OnClientConnected(server, clientId);
                 server.ClientDisconnected += clientId => OnClientDisconnected(server, clientId);
-                server.MessageReceived += (clientId, message) => OnMessageReceivedOnServer(server, clientId, message);
+                server.MessageReceived += (clientId, messageTypeId, message) => OnMessageReceivedOnServer(server, clientId, message);
                 server.Start();
 
                 Console.WriteLine("Press enter to quit.");
