@@ -4,7 +4,6 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
-using Abc.Zerio.Core;
 using Abc.Zerio.Dispatch;
 using Abc.Zerio.Serialization;
 using Abc.Zerio.Server.Messages;
@@ -40,6 +39,7 @@ namespace Abc.Zerio.Client
             {
                 client.Connected += OnClientConnected;
                 client.Disconnected += OnClientDisconnected;
+
                 using (client.Subscribe<OrderAckMessage>(OnMessageReceived))
                 {
                     var address = Dns.GetHostAddresses(Environment.MachineName).FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
@@ -58,6 +58,7 @@ namespace Abc.Zerio.Client
                         instance.Side = (OrderSide)(i % 2);
                         client.Send(instance);
                     }
+
                     Console.WriteLine($"{_messageCount:N0} in {sw.Elapsed} ({_messageCount / sw.Elapsed.TotalSeconds:N0}m/s)");
                 }
             }

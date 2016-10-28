@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Text;
+using Abc.Zerio.Dispatch;
 using Abc.Zerio.Serialization;
 using Abc.Zerio.Server.Messages;
 using Abc.Zerio.Server.Serializers;
-using Abc.Zerio.Dispatch;
 
 namespace Abc.Zerio.Server
 {
@@ -12,8 +12,9 @@ namespace Abc.Zerio.Server
     {
         private const int _port = 15698;
         private static int _receivedMessageCount;
+        private static readonly Stopwatch _sw = new Stopwatch();
 
-        private static readonly SimpleMessagePool<PlaceOrderMessage> _allocator = new SimpleMessagePool<PlaceOrderMessage>(65536);
+        private static readonly SimpleMessagePool<PlaceOrderMessage> _messagePool = new SimpleMessagePool<PlaceOrderMessage>(65536);
 
         private static void Main()
         {
@@ -30,29 +31,30 @@ namespace Abc.Zerio.Server
 
             using (var server = CreateServer(configuration))
             {
-                server.ClientConnected += clientId => OnClientConnected(server, clientId);
-                server.ClientDisconnected += clientId => OnClientDisconnected(server, clientId);
-                server.Subscribe<PlaceOrderMessage>(OnMessageReceivedOnServer);
-                server.Start();
+                server.ClientConnected += OnClientConnected;
+                server.ClientDisconnected += OnClientDisconnected;
 
-                Console.WriteLine("Press enter to quit.");
-                Console.ReadLine();
+                using (server.Subscribe<PlaceOrderMessage>(OnMessageReceived))
+                {
+                    server.Start();
+
+                    Console.WriteLine("Press enter to quit.");
+                    Console.ReadLine();
+                }
             }
         }
 
-        private static void OnClientDisconnected(RioServer server, int clientId)
+        private static void OnClientDisconnected(int clientId)
         {
             Console.WriteLine($"Client {clientId} disconnected.");
         }
 
-        private static void OnClientConnected(RioServer server, int clientId)
+        private static void OnClientConnected(int clientId)
         {
             Console.WriteLine($"Client {clientId} connected.");
         }
 
-        private static readonly Stopwatch _sw = new Stopwatch();
-
-        private static void OnMessageReceivedOnServer(int clientId, PlaceOrderMessage placeOrderMessage)
+        private static void OnMessageReceived(int clientId, PlaceOrderMessage placeOrderMessage)
         {
             if (_receivedMessageCount == 0)
                 _sw.Start();
@@ -63,7 +65,6 @@ namespace Abc.Zerio.Server
                 Console.WriteLine($"{_receivedMessageCount:N0} in {_sw.Elapsed} ({stepcount / _sw.Elapsed.TotalSeconds:N0}m/s)");
                 _sw.Restart();
             }
-            _allocator.Release(placeOrderMessage);
         }
 
         private static RioServer CreateServer(IServerConfiguration configuration)
@@ -75,7 +76,7 @@ namespace Abc.Zerio.Server
         private static SerializationEngine CreateSerializationEngine()
         {
             var serializationRegistry = new SerializationRegistry(Encoding.ASCII);
-            serializationRegistry.Register<PlaceOrderMessage, PlaceOrderMessageSerializer>(_allocator);
+            serializationRegistry.Register<PlaceOrderMessage, PlaceOrderMessageSerializer>(_messagePool, _messagePool);
             serializationRegistry.Register<OrderAckMessage, OrderAckMessageSerializer>();
             var serializationEngine = new SerializationEngine(serializationRegistry);
             return serializationEngine;
