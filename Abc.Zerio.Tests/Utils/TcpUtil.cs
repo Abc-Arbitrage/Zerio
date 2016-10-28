@@ -10,7 +10,7 @@ namespace Abc.Zerio.Tests.Utils
             var listener = new TcpListener(IPAddress.Loopback, 0);
             listener.Start();
 
-            var port = ((IPEndPoint) listener.LocalEndpoint).Port;
+            var port = ((IPEndPoint)listener.LocalEndpoint).Port;
 
             listener.Stop();
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading;
 using Abc.Zerio.Core;
+using Abc.Zerio.Dispatch;
 using Abc.Zerio.Interop;
 using Abc.Zerio.Serialization;
 
@@ -11,15 +12,14 @@ namespace Abc.Zerio
     public class RioServer : IDisposable, ICompletionHandler
     {
         private readonly IServerConfiguration _configuration;
+        private readonly MessageDispatcher _messageDispatcher;
         private readonly SessionManager _sessionManager;
         private readonly IList<RioCompletionWorker> _workers;
-
         private readonly IntPtr _listeningSocket;
 
         private volatile bool _isListening;
         private Thread _listeningThread;
 
-        public event Action<int, MessageTypeId, object> MessageReceived = delegate { };
         public event Action<int> ClientConnected = delegate { };
         public event Action<int> ClientDisconnected = delegate { };
 
@@ -30,6 +30,7 @@ namespace Abc.Zerio
             _configuration = configuration;
             _listeningSocket = CreateListeningSocket();
             _workers = CreateWorkers();
+            _messageDispatcher = new MessageDispatcher();
 
             _sessionManager = new SessionManager(configuration);
             _sessionManager.CreateSessions(_workers, serializationEngine);
@@ -48,6 +49,11 @@ namespace Abc.Zerio
                 return;
 
             session.EnqueueSend(message);
+        }
+
+        public IDisposable Subscribe<T>(IMessageHandler handler)
+        {
+            return _messageDispatcher.AddHandler<T>(handler);
         }
 
         private void StartListening()
@@ -95,7 +101,7 @@ namespace Abc.Zerio
 
         private void OnClientSessionMessageReceived(RioSession rioSession, MessageTypeId messageTypeId, object message)
         {
-            MessageReceived?.Invoke(rioSession.Id, messageTypeId, message);
+            _messageDispatcher.Dispatch(rioSession.Id, message);
         }
 
         private void OnClientSessionClosed(RioSession session)
@@ -219,6 +225,7 @@ namespace Abc.Zerio
 
                 _sessionManager?.Dispose();
             }
+
             if (_listeningSocket != IntPtr.Zero)
                 WinSock.closesocket(_listeningSocket);
         }

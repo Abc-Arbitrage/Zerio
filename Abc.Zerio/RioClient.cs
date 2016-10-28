@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using Abc.Zerio.Core;
+using Abc.Zerio.Dispatch;
 using Abc.Zerio.Interop;
 using Abc.Zerio.Serialization;
 
@@ -9,11 +10,11 @@ namespace Abc.Zerio
     public class RioClient : IDisposable, ICompletionHandler
     {
         private readonly IClientConfiguration _configuration;
+        private readonly MessageDispatcher _messageDispatcher;
         private readonly SerializationEngine _serializationEngine;
         private readonly RioCompletionWorker _completionWorker;
         private readonly RioSession _session;
 
-        public event Action<MessageTypeId, object> MessageReceived = delegate { };
         public event Action Connected = delegate { };
         public event Action Disconnected = delegate { };
 
@@ -24,7 +25,40 @@ namespace Abc.Zerio
             _configuration = configuration;
             _serializationEngine = serializationEngine;
             _completionWorker = CreateWorker();
+            _messageDispatcher = new MessageDispatcher();
+
             _session = CreateSession();
+        }
+
+        public void Connect(IPEndPoint endpoint)
+        {
+            _completionWorker.Start();
+
+            var socket = CreateSocket();
+            _session.Open(socket);
+
+            Connect(socket, endpoint);
+
+            _session.InitiateReceiving();
+
+            Connected();
+        }
+
+        public void Send(object message)
+        {
+            _session.EnqueueSend(message);
+        }
+
+        public void Disconnect()
+        {
+            _completionWorker.Stop();
+
+            _session.Close();
+        }
+
+        public IDisposable Subscribe<T>(IMessageHandler handler)
+        {
+            return _messageDispatcher.AddHandler<T>(handler);
         }
 
         private RioSession CreateSession()
@@ -42,7 +76,7 @@ namespace Abc.Zerio
 
         private void OnSessionMessageReceived(RioSession session, MessageTypeId messageTypeId, object message)
         {
-            MessageReceived?.Invoke(messageTypeId, message);
+            _messageDispatcher.Dispatch(0, message);
         }
 
         private RioCompletionWorker CreateWorker()
@@ -69,20 +103,6 @@ namespace Abc.Zerio
             return connectionSocket;
         }
 
-        public void Connect(IPEndPoint endpoint)
-        {
-            _completionWorker.Start();
-
-            var socket = CreateSocket();
-            _session.Open(socket);
-
-            Connect(socket, endpoint);
-
-            _session.InitiateReceiving();
-
-            Connected();
-        }
-
         private static unsafe void Connect(IntPtr socket, IPEndPoint ipEndPoint)
         {
             var endPointAddressBytes = ipEndPoint.Address.GetAddressBytes();
@@ -100,19 +120,7 @@ namespace Abc.Zerio
                 WinSock.ThrowLastWsaError();
         }
 
-        public void Send(object message)
-        {
-            _session.EnqueueSend(message);
-        }
-
-        public void Disconnect()
-        {
-            _completionWorker.Stop();
-
-            _session.Close();
-        }
-
-        public void OnRequestCompletion(int sessionId, RioRequestContextKey requestContextKey, int bytesTransferred)
+        void ICompletionHandler.OnRequestCompletion(int sessionId, RioRequestContextKey requestContextKey, int bytesTransferred)
         {
             _session.OnRequestCompletion(requestContextKey, bytesTransferred);
         }

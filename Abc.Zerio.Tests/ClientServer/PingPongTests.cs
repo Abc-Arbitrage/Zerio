@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Abc.Zerio.Dispatch;
 using Abc.Zerio.Framing;
 using Abc.Zerio.Serialization;
 using NUnit.Framework;
@@ -10,24 +11,27 @@ namespace Abc.Zerio.Tests.ClientServer
         [Test]
         public void should_receive_pong_message()
         {
-            Server.MessageReceived += (clientId, messageTypeId, message) => Server.Send(clientId, new Pong { PingId = ((Ping)message).Id });
-            Server.Start();
+            using (Server.Subscribe<Ping>((clientId, ping) => Server.Send(clientId, new Pong { PingId = ping.Id })))
+            {
+                Server.Start();
 
-            var taskCompletionSource = new TaskCompletionSource<Pong>();
-            Client.MessageReceived += (_, m) => taskCompletionSource.SetResult((Pong)m);
+                var taskCompletionSource = new TaskCompletionSource<Pong>();
+                using (Client.Subscribe<Pong>(pong => taskCompletionSource.SetResult(pong)))
+                {
+                    Client.Connect(ServerEndPoint);
+                    Client.Send(new Ping { Id = 9876 });
 
-            Client.Connect(ServerEndPoint);
-            Client.Send(new Ping { Id = 9876 });
-
-            var received = taskCompletionSource.Task.Wait(500);
-            Assert.That(received, Is.True);
-            Assert.That(taskCompletionSource.Task.Result.PingId, Is.EqualTo(9876));
+                    var received = taskCompletionSource.Task.Wait(500);
+                    Assert.That(received, Is.True);
+                    Assert.That(taskCompletionSource.Task.Result.PingId, Is.EqualTo(9876));
+                }
+            }
         }
 
         [Test]
         public void should_receive_many_pong_messages()
         {
-            Server.MessageReceived += (clientId, messageTypeId, message) => Server.Send(clientId, new Pong { PingId = ((Ping)message).Id });
+            Server.Subscribe<Ping>((clientId, ping) => Server.Send(clientId, new Pong { PingId = ping.Id }));
             Server.Start();
 
             const int expectedMessageCount = 10 * 1000;
@@ -35,9 +39,9 @@ namespace Abc.Zerio.Tests.ClientServer
             var lastMessageReceived = new TaskCompletionSource<object>();
             var outOfOrderMessageReceived = new TaskCompletionSource<object>();
             var expectedPingId = 1;
-            Client.MessageReceived += (_, m) =>
+
+            Client.Subscribe<Pong>(pong =>
             {
-                var pong = (Pong)m;
                 if (pong.PingId != expectedPingId)
                 {
                     outOfOrderMessageReceived.TrySetResult(null);
@@ -49,7 +53,7 @@ namespace Abc.Zerio.Tests.ClientServer
                     return;
                 }
                 expectedPingId++;
-            };
+            });
 
             Client.Connect(ServerEndPoint);
 

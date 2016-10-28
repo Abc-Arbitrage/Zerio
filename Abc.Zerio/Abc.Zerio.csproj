@@ -48,7 +48,11 @@
     <Compile Include="Core\IMessageBufferSegmentProvider.cs" />
     <Compile Include="Core\RioConfiguration.cs" />
     <Compile Include="Core\MessageTypeId.cs" />
+    <Compile Include="Dispatch\MessageDisptacher.cs" />
     <Compile Include="Framing\IBufferSegmentProvider.cs" />
+    <Compile Include="Dispatch\SubscriptionExtensions.cs" />
+    <Compile Include="Dispatch\MessageHandler.cs" />
+    <Compile Include="Dispatch\IMessageHandler.cs" />
     <Compile Include="IClientConfiguration.cs" />
     <Compile Include="Core\ICompletionHandler.cs" />
     <Compile Include="Interop\CompletionQueueHandle.cs" />

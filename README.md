@@ -8,7 +8,7 @@ Zerio is a small experimental project which aims to provide **a very basic TCP c
 
 **Zerio is very much a work in progress and more a proof of concept than anything else at this stage. It is not production ready yet.**
 
-## Messages and message types ids
+## Messages and message type ids
 
 A Zerio message is a simple C# class (POCO):
 
@@ -63,74 +63,52 @@ public class PlaceOrderMessageSerializer : BinaryMessageSerializer<PlaceOrderMes
 
 ## Client
 
-### Creation
 This is how you create a client and to connect to a server. We'll see what the required `SerializationEngine` is in a minute. Note that the API offers different C# events you can register to, in order to receive messages from the server for example.
 
 ```csharp
 var serializationEngine = CreateSerializationEngine();
-var configuration = ClientConfiguration.Default;
-using (var client = new RioClient(configuration, serializationEngine))
+using (var client = new RioClient(ClientConfiguration.Default, serializationEngine))
 {
-    client.Connected += OnClientConnected;
-    client.Disconnected += OnClientDisconnected;
-    client.MessageReceived += OnMessageReceived;
-
     var endPoint = new IPEndPoint(IPAddress.Loopback, 12345);
     client.Connect(endPoint);
 
-    var message = new PlaceOrderMessage();
-    client.Send(message);
+    // client is ready to be used
+    // ...
 }
 ```
 
-### Sending a message
+## Server
 
-Just instanciate a message (or pool, or reuse an existing instance), and send it:
+Similarily to the client, to create a server you just have to do the following: 
+
+```csharp
+var serializationEngine = CreateSerializationEngine();
+using (var server = new RioServer(ServerConfiguration.Default, serializationEngine))
+{
+    server.Start();
+
+    // server is ready to be used
+    // ...
+}
+```
+
+## Sending messages
+
+Using the client to send a message is dead simple: just instanciate a message (or pool, or reuse an existing instance), and send it:
 
 ```csharp
 var message = new PlaceOrderMessage();
 client.Send(message);
 ```
 
-### Receiving a message
-
-By subscribing to the `OnMessageReceived` event, you can be notified on message reception:
+From the server, it's very similar. The only difference is that you will need the id of the client you want to send the message to. This id can be retrieved during the client connection:
 
 ```csharp
-private static void OnMessageReceived(MessageTypeId messageTypeId, object message)
-{
-    var placeOrderMessage = message as PlaceOrderMessage;
-    if (placeOrderMessage != null)
-    {
-        // do something with the message
-    }
-}
-```
+server.ClientConnected += OnClientConnected;
 
-Again, the API is minimalist, and non-generic. You'll have to handle the message type dispatch yourself if needed. The `messageTypeId` parameter uniquely identifies the message type.
+// ...
 
-## Server
-
-### Creation
-
-Similarily to the client, to create a server you just have to do the following: 
-
-```csharp
-using (var server = new RioServer(configuration, serializationEngine))
-{
-    server.ClientConnected += OnClientConnected;
-    server.ClientDisconnected += OnClientDisconnected;
-    server.MessageReceived += OnMessageReceived;
-    server.Start();
-}
-```
-
-### Sending a message
-
-To send a message, you'll need the id of the client you want to send the message to. This id can be retrieved during the client connection:
-
-```csharp
-private static void OnClientDisconnected(int clientId)
+private static void OnClientConnected(int clientId)
 {
 }
  ```
@@ -142,20 +120,55 @@ var message = new PlaceOrderMessage();
 server.Send(clientId, message);
 ```
 
-### Receiving a message
+## Receiving messages
 
-By subscribing to the `OnMessageReceived` event, you can be notified on message reception. The client from which the message is received is provided as an event argument:
+Zerio uses the concept of *subscriptions* and *message handlers* to receive messages. A message handler is a type that implements the `IMessageHandler`, low level, non-generic interface. Most of the time you will prefer to inherit from the generic base class `MessageHandler<T>`:
 
 ```csharp
-private static void OnMessageReceived(int clientId, MessageTypeId messageTypeId, object message)
+public class PlaceOrderMessageHandler : MessageHandler<PlaceOrderMessage>
 {
-    var placeOrderMessage = message as PlaceOrderMessage;
-    if (placeOrderMessage != null)
+    protected override void Handle(int clientId, PlaceOrderMessage message)
     {
-        // do something with the message
+        // use the message
     }
 }
 ```
+
+The `clientId` parameter will hold the id of the client you are receiving the message from. (If that handler is used to receive messages from the server on the client side, the parameter can be ignored.)
+
+Once you have defined a handler, you can create a subscription very simply:
+
+```csharp
+var handler = new PlaceOrderMessageHandler();
+var subscription = server.Subscribe(handler);
+```
+
+The subscription API is identical for both the client and the server.
+
+A set of extension methods and generic message handlers allows you to subscribe using simple callbacks, as well as to hide the ignorable `clientId` parameter for client subscriptions:
+
+```csharp
+public void OnPlaceOrderMessageReceived(PlaceOrderMessage placeOrderMessage)
+{
+    // use the message
+}
+
+// ...
+
+var subscription1 = client.Subscribe<PlaceOrderMessage>(OnPlaceOrderMessageReceived);
+var subscription2 = server.Subscribe<PlaceOrderMessage>((clientId, message) => Console.WriteLine($"{clientId}: {message}"));
+```
+
+The object returned by the `Subscribe<T>` method represents the actual subscription, and only implements `IDisposable` for now so that you can dispose it and thus unregister the handler. After disposing the subscription, the handler will no longer receive any message.
+
+Some remarks about the subscription mechanism:
+
+* The subscribe operation is not allocation free.
+* The subscribe operation is thread safe.
+* If no handler is registered for a certain message type, messages of this type will be dropped on reception.
+* You can register multiple handlers for the same message type.
+* If you register several times the same handler, it won't have any effect.
+
 
 ## SerializationEngine
 

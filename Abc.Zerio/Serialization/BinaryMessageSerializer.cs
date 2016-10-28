@@ -6,6 +6,7 @@ namespace Abc.Zerio.Serialization
     {
         void IBinaryMessageSerializer.Serialize(object message, UnsafeBinaryWriter binaryWriter)
         {
+
             Serialize((T)message, binaryWriter);
         }
 

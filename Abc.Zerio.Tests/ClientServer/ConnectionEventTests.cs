@@ -29,7 +29,7 @@ namespace Abc.Zerio.Tests.ClientServer
         {
             var connected = new TaskCompletionSource<object>();
             var disconnected = new TaskCompletionSource<object>();
-            Client.Connected+= () => connected.SetResult(null);
+            Client.Connected += () => connected.SetResult(null);
             Client.Disconnected += () => disconnected.SetResult(null);
 
             Server.Start();

@@ -8,13 +8,13 @@ namespace Abc.Zerio.Core
     {
         private Thread _completionWorkerThread;
 
-        public RioCompletionQueue SendingCompletionQueue => _completionQueue;
-        public RioCompletionQueue ReceivingCompletionQueue => _completionQueue;
+        public RioCompletionQueue SendingCompletionQueue { get; }
+
+        public RioCompletionQueue ReceivingCompletionQueue => SendingCompletionQueue;
 
         private readonly int _workerId;
         private readonly IWorkerConfiguration _configuration;
         private readonly ICompletionHandler _completionHandler;
-        private readonly RioCompletionQueue _completionQueue;
 
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
 
@@ -23,7 +23,7 @@ namespace Abc.Zerio.Core
             _workerId = workerId;
             _configuration = configuration;
             _completionHandler = completionHandler;
-            _completionQueue = new RioCompletionQueue(configuration.CompletionQueueSize);
+            SendingCompletionQueue = new RioCompletionQueue(configuration.CompletionQueueSize);
         }
 
         public void Start()

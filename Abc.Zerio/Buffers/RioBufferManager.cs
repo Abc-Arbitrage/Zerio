@@ -36,7 +36,7 @@ namespace Abc.Zerio.Buffers
             _bufferDescriptors = Kernel32.VirtualAlloc(IntPtr.Zero, (uint)(Marshal.SizeOf<RIO_BUF>() * bufferCount), Kernel32.Consts.MEM_COMMIT | Kernel32.Consts.MEM_RESERVE, Kernel32.Consts.PAGE_READWRITE);
 
             _bufferId = WinSock.Extensions.RegisterBuffer(_underlyingBuffer, underlyingBufferLength);
-            if(_bufferId == WinSock.Consts.RIO_INVALID_BUFFERID)
+            if (_bufferId == WinSock.Consts.RIO_INVALID_BUFFERID)
                 WinSock.ThrowLastWsaError();
 
             _buffers = new RioBuffer[bufferCount];

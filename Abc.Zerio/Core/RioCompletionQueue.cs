@@ -12,7 +12,7 @@ namespace Abc.Zerio.Core
         {
             // we want to handle the polling manually, so we don't have to pass any RIO_NOTIFICATION_COMPLETION
             QueueHandle = WinSock.Extensions.CreateCompletionQueue((uint)size);
-            if(QueueHandle.IsInvalid)
+            if (QueueHandle.IsInvalid)
                 WinSock.ThrowLastWsaError();
         }
 

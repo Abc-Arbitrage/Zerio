@@ -289,7 +289,7 @@ namespace Abc.Zerio.Tests
             if (_bufferHandle.IsAllocated)
                 _bufferHandle.Free();
 
-            if(_segmentbufferHandle.IsAllocated)
+            if (_segmentbufferHandle.IsAllocated)
                 _segmentbufferHandle.Free();
         }
     }

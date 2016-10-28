@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using Abc.Zerio.Core;
+using Abc.Zerio.Dispatch;
 using Abc.Zerio.Serialization;
 using Abc.Zerio.Server.Messages;
 using Abc.Zerio.Server.Serializers;
@@ -39,25 +40,26 @@ namespace Abc.Zerio.Client
             {
                 client.Connected += OnClientConnected;
                 client.Disconnected += OnClientDisconnected;
-                client.MessageReceived += OnMessageReceived;
-
-                var address = Dns.GetHostAddresses(Environment.MachineName).FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
-                var endPoint = new IPEndPoint(address, _port);
-                client.Connect(endPoint);
-
-                var instance = new PlaceOrderMessage();
-
-                var sw = Stopwatch.StartNew();
-                for (var i = 0; i < _messageCount; i++)
+                using (client.Subscribe<OrderAckMessage>(OnMessageReceived))
                 {
-                    instance.Id = i;
-                    instance.InstrumentId = i;
-                    instance.Price = i;
-                    instance.Quantity = i;
-                    instance.Side = (OrderSide)(i % 2);
-                    client.Send(instance);
+                    var address = Dns.GetHostAddresses(Environment.MachineName).FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
+                    var endPoint = new IPEndPoint(address, _port);
+                    client.Connect(endPoint);
+
+                    var instance = new PlaceOrderMessage();
+
+                    var sw = Stopwatch.StartNew();
+                    for (var i = 0; i < _messageCount; i++)
+                    {
+                        instance.Id = i;
+                        instance.InstrumentId = i;
+                        instance.Price = i;
+                        instance.Quantity = i;
+                        instance.Side = (OrderSide)(i % 2);
+                        client.Send(instance);
+                    }
+                    Console.WriteLine($"{_messageCount:N0} in {sw.Elapsed} ({_messageCount / sw.Elapsed.TotalSeconds:N0}m/s)");
                 }
-                Console.WriteLine($"{_messageCount:N0} in {sw.Elapsed} ({_messageCount / sw.Elapsed.TotalSeconds:N0}m/s)");
             }
         }
 
@@ -71,7 +73,7 @@ namespace Abc.Zerio.Client
             Console.WriteLine("Connected");
         }
 
-        private static void OnMessageReceived(MessageTypeId messageTypeId, object message)
+        private static void OnMessageReceived(OrderAckMessage message)
         {
             if (_receivedMessageCount == 0)
                 _sw.Start();

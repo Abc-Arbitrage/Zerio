@@ -4,6 +4,7 @@ using System.Text;
 using Abc.Zerio.Serialization;
 using Abc.Zerio.Server.Messages;
 using Abc.Zerio.Server.Serializers;
+using Abc.Zerio.Dispatch;
 
 namespace Abc.Zerio.Server
 {
@@ -31,7 +32,7 @@ namespace Abc.Zerio.Server
             {
                 server.ClientConnected += clientId => OnClientConnected(server, clientId);
                 server.ClientDisconnected += clientId => OnClientDisconnected(server, clientId);
-                server.MessageReceived += (clientId, messageTypeId, message) => OnMessageReceivedOnServer(server, clientId, message);
+                server.Subscribe<PlaceOrderMessage>(OnMessageReceivedOnServer);
                 server.Start();
 
                 Console.WriteLine("Press enter to quit.");
@@ -51,10 +52,8 @@ namespace Abc.Zerio.Server
 
         private static readonly Stopwatch _sw = new Stopwatch();
 
-        private static void OnMessageReceivedOnServer(RioServer server, int clientId, object message)
+        private static void OnMessageReceivedOnServer(int clientId, PlaceOrderMessage placeOrderMessage)
         {
-            var placeOrderMessage = (PlaceOrderMessage)message;
-
             if (_receivedMessageCount == 0)
                 _sw.Start();
 

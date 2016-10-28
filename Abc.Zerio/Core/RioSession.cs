@@ -34,6 +34,7 @@ namespace Abc.Zerio.Core
         private int _pendingReceiveCount;
 
         public event Action<RioSession, MessageTypeId, object> MessageReceived = delegate { };
+        public event Action<RioSession, MessageTypeId, object, Exception> MessageHandlingFailed = delegate { };
         public event Action<RioSession> Closed = delegate { };
 
         public RioSession(int sessionId, ISessionConfiguration configuration, RioCompletionQueue sendingCompletionQueue, RioCompletionQueue receivingCompletionQueue, SerializationEngine serializationEngine)
@@ -186,8 +187,18 @@ namespace Abc.Zerio.Core
             while (_messageFramer.TryFrameNextMessage(buffer, out framedMessage))
             {
                 var releasableMessage = _serializationEngine.DeserializeWithLengthPrefix(framedMessage, receivingContext.BinaryReader);
-                MessageReceived(this,  releasableMessage.MessageTypeId, releasableMessage.Message);
-                releasableMessage.Releaser?.Release(releasableMessage.Message);
+                try
+                {
+                    MessageReceived(this, releasableMessage.MessageTypeId, releasableMessage.Message);
+                }
+                catch (Exception ex)
+                {
+                    MessageHandlingFailed(this, releasableMessage.MessageTypeId, releasableMessage.Message, ex);
+                }
+                finally
+                {
+                    releasableMessage.Releaser?.Release(releasableMessage.Message);
+                }
             }
         }
 
