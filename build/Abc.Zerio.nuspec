@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>Abc.Zerio</id>
+    <authors>Romain Verdier</authors>
+    <owners>rverdier</owners>
+    <licenseUrl>https://github.com/Abc-Arbitrage/zerio/blob/master/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/Abc-Arbitrage/zerio/</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+	  <title>Abc.Zerio</title>
+    <description>Basic performance-oriented TCP client/server messaging C# API based on Windows Registered I/O (RIO)</description>
+    <copyright>Copyright (c) 2017 ABC arbitrage</copyright>
+    <tags>networking registered-io tcp</tags>
+  </metadata>
+  <files>
+    <file src="Abc.Zerio.dll" target="lib\net461" />
+  </files>
+</package>
