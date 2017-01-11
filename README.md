@@ -1,4 +1,4 @@
-# Zerio
+# Zerio [![Build status](https://ci.appveyor.com/api/projects/status/9gpw4hmwhjmk70ed?svg=true)](https://ci.appveyor.com/project/TechABC/zerio)
 
 ## Overview
 
@@ -35,7 +35,7 @@ var messageTypeId = new MessageTypeId(42);
 MessageTypeId.Register(typeof(PlaceOrderMessage), messageId);
 ```
 
- If no specific id is registered for a type, it will be computed using a pretty naive method by default (a CRC32 hash of the message full type name by convention – changing a message type name would then be a breaking change).
+ If no specific id is registered for a type, it will be computed using a pretty naive method by default (a CRC32 hash of the message full type name by convention â€“ changing a message type name would then be a breaking change).
 
 ## Serializers
 You need to write a binary serializer for your message, implementing the `IBinaryMessageSerializer` interface. An generic abstract base class, `BinaryMessageSerializer<T>` is also provided and is generally what you want to inherit from most of the time. The API is voluntarily low-level. Note that the `Deserialize` method already provides an instance of the message you need to initialize. You may want to handle versionning here, as well as keeping your implementation allocation free.
