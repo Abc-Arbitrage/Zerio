@@ -1,4 +1,5 @@
 #tool nuget:?package=NUnit.ConsoleRunner&version=3.4.0
+#tool "nuget:?package=GitVersion.CommandLine"
 //////////////////////////////////////////////////////////////////////
 // ARGUMENTS
 //////////////////////////////////////////////////////////////////////
@@ -19,6 +20,21 @@ var paths = new {
 // TASKS
 //////////////////////////////////////////////////////////////////////
 
+Task("UpdateBuildVersionNumber").Does(() =>
+{
+    if(!AppVeyor.IsRunningOnAppVeyor)
+    {
+        Information("Not running under AppVeyor");
+        return;
+    }
+    
+    Information("Running under AppVeyor");
+    var version = System.IO.File.ReadAllText(paths.version);
+    var gitVersion = GitVersion();
+    version += "-" + gitVersion.Sha;
+    Information("Updating AppVeyor build version to " + version);
+    AppVeyor.UpdateBuildVersion(version);
+});
 Task("Clean").Does(() =>
 {
     CleanDirectory(paths.output.build);
@@ -58,6 +74,7 @@ Task("Nuget-Pack").Does(() =>
 //////////////////////////////////////////////////////////////////////
 
 Task("Build")
+    .IsDependentOn("UpdateBuildVersionNumber")
     .IsDependentOn("Clean")
     .IsDependentOn("Restore-NuGet-Packages")
     .IsDependentOn("MSBuild");
