@@ -34,31 +34,30 @@ public ContextInfo ReadContext(FilePath filepath)
 
 public void UpdateAppVeyorBuildVersionNumber()
 {
-    if(!AppVeyor.IsRunningOnAppVeyor)
-    {
-        Information("Not running under AppVeyor");
-        return;
-    }
+    // if(!AppVeyor.IsRunningOnAppVeyor)
+    // {
+    //     Information("Not running under AppVeyor");
+    //     return;
+    // }
     
     Information("Running under AppVeyor");
     Information("Updating AppVeyor build version to " + VersionContext.BuildVersion);
 
-    while(true)
+    var increment = 0;
+    while(increment < 10)
     {
-        int? increment = null;
         try
         {
             var version = VersionContext.BuildVersion;
-            if(increment.HasValue)
-                version += "-" + increment.Value;
+            if(increment > 0)
+                version += "-" + increment;
+            
             AppVeyor.UpdateBuildVersion(version);
             break;
         }
         catch
         {
             increment++;
-            if(increment <= 10)
-                continue;
         }
     }
 }
