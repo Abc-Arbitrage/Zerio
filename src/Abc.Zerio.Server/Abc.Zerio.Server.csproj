@@ -48,6 +48,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\SharedVersionInfo.cs">
+      <Link>Properties\SharedVersionInfo.cs</Link>
+    </Compile>
     <Compile Include="Messages\OrderAckMessage.cs" />
     <Compile Include="Messages\OrderSide.cs" />
     <Compile Include="Messages\PlaceOrderMessage.cs" />

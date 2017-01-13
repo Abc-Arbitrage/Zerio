@@ -43,6 +43,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\SharedVersionInfo.cs">
+      <Link>Properties\SharedVersionInfo.cs</Link>
+    </Compile>
     <Compile Include="ClientConfiguration.cs" />
     <Compile Include="Core\Crc32.cs" />
     <Compile Include="Core\IMessageBufferSegmentProvider.cs" />
