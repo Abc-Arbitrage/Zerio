@@ -33,16 +33,7 @@ public ContextInfo ReadContext(FilePath filepath)
 }
 
 public void UpdateAppVeyorBuildVersionNumber()
-{
-    // if(!AppVeyor.IsRunningOnAppVeyor)
-    // {
-    //     Information("Not running under AppVeyor");
-    //     return;
-    // }
-    
-    Information("Running under AppVeyor");
-    Information("Updating AppVeyor build version to " + VersionContext.BuildVersion);
-
+{   
     var increment = 0;
     while(increment < 10)
     {
