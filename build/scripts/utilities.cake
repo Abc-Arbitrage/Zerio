@@ -31,3 +31,34 @@ public ContextInfo ReadContext(FilePath filepath)
     _versionContext.Git = GitVersion();
     return _versionContext;
 }
+
+public void UpdateAppVeyorBuildVersionNumber()
+{
+    if(!AppVeyor.IsRunningOnAppVeyor)
+    {
+        Information("Not running under AppVeyor");
+        return;
+    }
+    
+    Information("Running under AppVeyor");
+    Information("Updating AppVeyor build version to " + VersionContext.BuildVersion);
+
+    while(true)
+    {
+        int? increment = null;
+        try
+        {
+            var version = VersionContext.BuildVersion;
+            if(increment.HasValue)
+                version += "-" + increment.Value;
+            AppVeyor.UpdateBuildVersion(version);
+            break;
+        }
+        catch
+        {
+            increment++;
+            if(increment <= 10)
+                continue;
+        }
+    }
+}

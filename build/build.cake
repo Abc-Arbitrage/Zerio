@@ -23,18 +23,7 @@ ReadContext(paths.version);
 // TASKS
 //////////////////////////////////////////////////////////////////////
 
-Task("UpdateBuildVersionNumber").Does(() =>
-{
-    if(!AppVeyor.IsRunningOnAppVeyor)
-    {
-        Information("Not running under AppVeyor");
-        return;
-    }
-    
-    Information("Running under AppVeyor");
-    Information("Updating AppVeyor build version to " + VersionContext.BuildVersion);
-    AppVeyor.UpdateBuildVersion(VersionContext.BuildVersion);
-});
+Task("UpdateBuildVersionNumber").Does(() => UpdateAppVeyorBuildVersionNumber());
 Task("Clean").Does(() =>
 {
     CleanDirectory(paths.output.build);
