@@ -1,4 +1,4 @@
-# Zerio [![Build status](https://ci.appveyor.com/api/projects/status/9gpw4hmwhjmk70ed?svg=true)](https://ci.appveyor.com/project/TechABC/zerio)
+# Zerio [![Build status](https://ci.appveyor.com/api/projects/status/9gpw4hmwhjmk70ed?svg=true)](https://ci.appveyor.com/project/Abc-Arbitrage/zerio)
 
 ## Overview
 
