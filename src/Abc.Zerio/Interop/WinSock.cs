@@ -57,7 +57,13 @@ namespace Abc.Zerio.Interop
         internal static extern ushort htons([In] ushort hostshort);
 
         [DllImport("WS2_32.dll", SetLastError = true)]
+        internal static extern ushort ntohs([In] ushort netshort);
+
+        [DllImport("WS2_32.dll", SetLastError = true)]
         internal static extern ulong htonl([In] ulong hostshort);
+
+        [DllImport("WS2_32.dll", SetLastError = true)]
+        internal static extern SocketError getsockname([In] IntPtr s, [Out] byte* socketAddress, [In, Out] ref int socketAddressSize);
 
         [DllImport("WS2_32.dll")]
         internal static extern int WSAGetLastError();

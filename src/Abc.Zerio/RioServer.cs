@@ -36,6 +36,8 @@ namespace Abc.Zerio
             _sessionManager.CreateSessions(_workers, serializationEngine);
         }
 
+        public int ListeningPort { get; private set; }
+
         public void Start()
         {
             StartWorkers();
@@ -60,20 +62,27 @@ namespace Abc.Zerio
         {
             _isListening = true;
 
-            _listeningThread = new Thread(Listen);
+            var listeningSignal = new ManualResetEventSlim();
+
+            _listeningThread = new Thread(() => ListenAndRunAcceptLoop(listeningSignal));
             _listeningThread.IsBackground = true;
             _listeningThread.Start();
+
+            listeningSignal.Wait(2000);
         }
 
-        private void Listen()
+        private void ListenAndRunAcceptLoop(ManualResetEventSlim listeningSignal)
         {
             Thread.CurrentThread.Name = "Server Listening Worker";
 
             if (!Bind(_listeningSocket, _configuration.ListeningPort))
                 return;
 
-            if (WinSock.listen(_listeningSocket, WinSock.Consts.SOMAXCONN) == WinSock.Consts.SOCKET_ERROR)
-                return;
+            ListeningPort = GetSocketPort();
+
+            Listen();
+
+            listeningSignal.Set();
 
             while (_isListening)
             {
@@ -97,6 +106,23 @@ namespace Abc.Zerio
 
                 ClientConnected(clientSession.Id);
             }
+        }
+
+        private void Listen()
+        {
+            if (WinSock.listen(_listeningSocket, WinSock.Consts.SOMAXCONN) != 0)
+                WinSock.ThrowLastWsaError();
+        }
+
+        private unsafe int GetSocketPort()
+        {
+            SockaddrIn sockaddr;
+            var sockaddrSize = sizeof(SockaddrIn);
+
+            if (WinSock.getsockname(_listeningSocket, (byte*)&sockaddr, ref sockaddrSize) != 0)
+                WinSock.ThrowLastWsaError();
+
+            return WinSock.ntohs(sockaddr.sin_port);
         }
 
         private void OnClientSessionMessageReceived(RioSession rioSession, MessageTypeId messageTypeId, object message)

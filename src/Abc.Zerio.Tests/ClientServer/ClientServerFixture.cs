@@ -2,7 +2,6 @@
 using System.Net;
 using System.Text;
 using Abc.Zerio.Serialization;
-using Abc.Zerio.Tests.Utils;
 using NUnit.Framework;
 
 namespace Abc.Zerio.Tests.ClientServer
@@ -14,8 +13,7 @@ namespace Abc.Zerio.Tests.ClientServer
         public virtual void Setup()
         {
             ClientConfiguration = new ClientConfiguration();
-            ServerConfiguration = new ServerConfiguration(TcpUtil.GetRandomUnusedPort());
-            ServerEndPoint = new IPEndPoint(IPAddress.Loopback, ServerConfiguration.ListeningPort);
+            ServerConfiguration = new ServerConfiguration(0);
 
             var serializationRegistries = new SerializationRegistries();
             ConfigureSerialization(serializationRegistries);
@@ -39,7 +37,7 @@ namespace Abc.Zerio.Tests.ClientServer
         protected ClientConfiguration ClientConfiguration { get; set; }
         protected RioClient Client { get; set; }
         protected RioServer Server { get; set; }
-        protected IPEndPoint ServerEndPoint { get; private set; }
+        protected IPEndPoint ServerEndPoint => new IPEndPoint(IPAddress.Loopback, Server.ListeningPort);
 
         protected class SerializationRegistries
         {
