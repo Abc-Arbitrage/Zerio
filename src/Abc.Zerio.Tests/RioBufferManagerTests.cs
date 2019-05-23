@@ -247,7 +247,7 @@ namespace Abc.Zerio.Tests
                             var buffers = new RioBuffer[10];
                             for (var k = 0; k < buffers.Length; k++)
                             {
-                                buffers[k] = bufferManager.AcquireBuffer(TimeSpan.FromMilliseconds(100));
+                                buffers[k] = bufferManager.AcquireBuffer(TimeSpan.FromMilliseconds(1000));
                             }
 
                             for (var k = 0; k < buffers.Length; k++)
@@ -259,7 +259,7 @@ namespace Abc.Zerio.Tests
                 }
 
                 // Assert
-                var allTaskAreCompleted = Task.WaitAll(tasks, TimeSpan.FromSeconds(3));
+                var allTaskAreCompleted = Task.WaitAll(tasks, TimeSpan.FromSeconds(10));
                 Assert.IsTrue(allTaskAreCompleted);
             }
         }

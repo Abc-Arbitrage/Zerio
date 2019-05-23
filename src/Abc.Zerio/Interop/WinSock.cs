@@ -134,6 +134,9 @@ namespace Abc.Zerio.Interop
 
         public static void EnsureIsInitialized()
         {
+            if (!Environment.Is64BitProcess)
+                throw new InvalidOperationException("32 bit processes are not supported");
+
             lock (_lock)
             {
                 if (!_initalized)
