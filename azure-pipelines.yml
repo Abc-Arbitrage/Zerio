@@ -20,8 +20,3 @@ jobs:
           command: test
           projects: src/**/*.Tests.csproj
           arguments: --configuration $(BuildConfiguration)
-
-      - task: PublishBuildArtifacts@1
-        displayName: Publish Artifacts
-        inputs:
-          ArtifactName: NuGet
