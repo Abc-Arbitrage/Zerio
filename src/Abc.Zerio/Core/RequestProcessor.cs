@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Data;
 using Abc.Zerio.Configuration;
 using Disruptor;
 
@@ -61,13 +62,13 @@ namespace Abc.Zerio.Core
             _flushableRequestQueues.Clear();
         }
 
-        private void OnReceivingRequest(RequestEntry data)
+        private unsafe void OnReceivingRequest(RequestEntry data)
         {
             if (!_sessionManager.TryGetSession(data.SessionId, out var session))
                 return;
 
             var buffer = session.ReadBuffer(data.BufferSegmentId);
-            session.RequestQueue.Receive(buffer);
+            session.RequestQueue.Receive(buffer, data.BufferSegmentId);
         }
     }
 }

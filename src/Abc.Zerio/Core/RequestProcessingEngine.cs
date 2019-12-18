@@ -12,7 +12,7 @@ namespace Abc.Zerio.Core
     internal class RequestProcessingEngine : IDisposable
     {
         private readonly IZerioConfiguration _configuration;
-        private readonly RequestEntryBuffer _requestEntryBuffer;
+        private readonly UnmanagedRioBuffer<RequestEntry> _unmanagedRioBuffer;
 
         private readonly ValueRingBuffer<RequestEntry> _ringBuffer;
         private readonly ValueDisruptor<RequestEntry> _disruptor;
@@ -20,7 +20,7 @@ namespace Abc.Zerio.Core
         public RequestProcessingEngine(IZerioConfiguration configuration, RioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
         {
             _configuration = configuration;
-            _requestEntryBuffer = new RequestEntryBuffer(_configuration.SendingBufferCount, _configuration.SendingBufferLength);
+            _unmanagedRioBuffer = new UnmanagedRioBuffer<RequestEntry>(_configuration.SendingBufferCount, _configuration.SendingBufferLength);
 
             _disruptor = CreateDisruptor(sendingCompletionQueue, sessionManager);
             _ringBuffer = _disruptor.RingBuffer;
@@ -88,7 +88,7 @@ namespace Abc.Zerio.Core
         {
             Stop();
 
-            _requestEntryBuffer?.Dispose();
+            _unmanagedRioBuffer?.Dispose();
         }
 
         private class ThreadPerTaskScheduler : TaskScheduler

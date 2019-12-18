@@ -21,11 +21,9 @@ namespace Abc.Zerio.Core
             return new RioRequestQueue(requestQueue);
         }
 
-        public unsafe void Receive(RioBuffer buffer)
+        public unsafe void Receive(RioBufferSegment* bufferSegment, int bufferSegmentId)
         {
-            var requestContextKey = new RioRequestContextKey(buffer.Id, RequestType.Receive);
-
-            if (!WinSock.Extensions.Receive(_handle, buffer.BufferDescriptor, 1, RIO_RECEIVE_FLAGS.NONE, requestContextKey.ToRioRequestCorrelationId()))
+            if (!WinSock.Extensions.Receive(_handle, bufferSegment->GetRioBufferDescriptor(), 1, RIO_RECEIVE_FLAGS.NONE, bufferSegmentId))
                 WinSock.ThrowLastWsaError();
         }
 

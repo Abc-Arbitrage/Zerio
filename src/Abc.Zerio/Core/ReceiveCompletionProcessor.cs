@@ -53,14 +53,14 @@ namespace Abc.Zerio.Core
                 {
                     var result = results[i];
                     var sessionId = (int)result.ConnectionCorrelation;
-                    var requestContextKey = new RioRequestContextKey(result.RequestCorrelation);
+                    var bufferSegmentId = (int)result.RequestCorrelation;
 
-                    OnRequestCompletion(sessionId, requestContextKey, (int)result.BytesTransferred);
+                    OnRequestCompletion(sessionId, bufferSegmentId, (int)result.BytesTransferred);
                 }
             }
         }
 
-        private void OnRequestCompletion(int sessionId, RioRequestContextKey requestContextKey, int bytesTransferred)
+        private unsafe void OnRequestCompletion(int sessionId, int bufferSegmentId, int bytesTransferred)
         {
             if (bytesTransferred == 0)
             {
@@ -71,35 +71,34 @@ namespace Abc.Zerio.Core
             if (!_sessionManager.TryGetSession(sessionId, out var session))
                 return;
 
-            var buffer = session.ReadBuffer(requestContextKey.BufferId);
+            var bufferSegment = session.ReadBuffer(bufferSegmentId);
 
             try
             {
-                if (buffer.Length < bytesTransferred)
+                if (bufferSegment->RioBufferSegmentDescriptor.Length < bytesTransferred)
                     throw new InvalidOperationException("Received more bytes than expected");
 
-                buffer.DataLength = bytesTransferred;
-
-                OnReceiveComplete(sessionId, buffer);
+                OnReceiveComplete(sessionId, bufferSegment, bytesTransferred);
             }
             finally
             {
-                _requestProcessingEngine.RequestReceive(session.Id, buffer.Id);
+                _requestProcessingEngine.RequestReceive(session.Id, bufferSegmentId);
             }
         }
 
-        private unsafe void OnReceiveComplete(int sessionId, RioBuffer buffer)
+        private unsafe void OnReceiveComplete(int sessionId, RioBufferSegment* bufferSegment, int bytesTransferred)
         {
             var offset = 0;
 
-            while (buffer.DataLength - offset > 0)
+            var bufferSegmentStart = bufferSegment->GetBufferSegmentStart();
+            while (bytesTransferred - offset > 0)
             {
                 switch (_readState)
                 {
                     case ReadState.AccumulatingLength:
                     {
-                        var bytesToCopy = Math.Min(sizeof(int) - _readBytes, buffer.DataLength - offset);
-                        Unsafe.CopyBlockUnaligned(ref _buffer[_readBytes], ref buffer.Data[offset], (uint)bytesToCopy);
+                        var bytesToCopy = Math.Min(sizeof(int) - _readBytes, bytesTransferred - offset);
+                        Unsafe.CopyBlockUnaligned(ref _buffer[_readBytes], ref bufferSegmentStart[offset], (uint)bytesToCopy);
                         _readBytes += bytesToCopy;
 
                         if (_readBytes != sizeof(int))
@@ -116,8 +115,8 @@ namespace Abc.Zerio.Core
 
                     case ReadState.AccumulatingMessage:
                     {
-                        var bytesToCopy = Math.Min(_messageLength - _readBytes, buffer.DataLength - offset);
-                        Unsafe.CopyBlockUnaligned(ref _buffer[_readBytes], ref buffer.Data[offset], (uint)bytesToCopy);
+                        var bytesToCopy = Math.Min(_messageLength - _readBytes, bytesTransferred - offset);
+                        Unsafe.CopyBlockUnaligned(ref _buffer[_readBytes], ref bufferSegmentStart[offset], (uint)bytesToCopy);
                         _readBytes += bytesToCopy;
 
                         if (_readBytes != _messageLength)

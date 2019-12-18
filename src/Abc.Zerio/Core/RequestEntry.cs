@@ -6,7 +6,7 @@ using Abc.Zerio.Interop;
 namespace Abc.Zerio.Core
 {
     [StructLayout(LayoutKind.Explicit, Size = sizeof(RequestType) + sizeof(int) + sizeof(int) + RIO_BUF.Size)]
-    public unsafe struct RequestEntry
+    public unsafe struct RequestEntry : IRioBufferSegmentDescriptorContainer
     {
         [FieldOffset(0)]
         public RequestType Type;
@@ -18,28 +18,24 @@ namespace Abc.Zerio.Core
         public int BufferSegmentId;
 
         [FieldOffset(9)]
-        internal RIO_BUF RioBufferDescriptor;
+        internal RIO_BUF RioBufferSegmentDescriptor;
 
-        internal RIO_BUF* GetRioBufferDescriptor() => (RIO_BUF*)Unsafe.AsPointer(ref RioBufferDescriptor);
+        public RIO_BUF* GetRioBufferDescriptor() => (RIO_BUF*)Unsafe.AsPointer(ref RioBufferSegmentDescriptor);
+        
+        public byte* GetBufferSegmentStart() => (byte*)(GetRioBufferDescriptor() + 1);
 
         public void SetWriteRequest(int sessionId, ReadOnlySpan<byte> message)
         {
             Type = RequestType.Send;
             SessionId = sessionId;
 
-            // The start of the buffer segment is right behind the end of the current struct
-            var bufferSegmentStart = (byte*)(GetRioBufferDescriptor() + 1);
+            // The actual buffer segment is located right at the end of the current struct
+            var bufferSegmentStart = GetBufferSegmentStart();
 
             Unsafe.WriteUnaligned(ref bufferSegmentStart[0], message.Length);
             message.CopyTo(new Span<byte>(bufferSegmentStart + sizeof(int), message.Length));
 
-            RioBufferDescriptor.Length = sizeof(int) + message.Length;
-        }
-
-        public void Reset()
-        {
-            RioBufferDescriptor.Length = default;
-            SessionId = default;
+            RioBufferSegmentDescriptor.Length = sizeof(int) + message.Length;
         }
 
         public void SetReadRequest(int sessionId, int bufferSegmentId)
@@ -47,6 +43,12 @@ namespace Abc.Zerio.Core
             Type = RequestType.Receive;
             SessionId = sessionId;
             BufferSegmentId = bufferSegmentId;
+        }
+
+        public void Reset()
+        {
+            RioBufferSegmentDescriptor.Length = default;
+            SessionId = default;
         }
     }
 }

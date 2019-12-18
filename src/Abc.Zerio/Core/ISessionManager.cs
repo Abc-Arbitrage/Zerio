@@ -5,10 +5,10 @@ namespace Abc.Zerio.Core
     internal interface ISessionManager : IDisposable
     {
         bool TryGetRequestQueue(int sessionId, out RioRequestQueue requestQueue);
-        bool TryGetSessionByPeerId(string peerId, out ZerioSession session);
+        bool TryGetSessionByPeerId(string peerId, out Session session);
         
-        ZerioSession Acquire(string peerId);
-        void Release(ZerioSession session);
-        bool TryGetSession(int sessionId, out ZerioSession session);
+        Session Acquire(string peerId);
+        void Release(Session session);
+        bool TryGetSession(int sessionId, out Session session);
     }
 }

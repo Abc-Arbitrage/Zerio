@@ -92,7 +92,7 @@ namespace Abc.Zerio
 
         public void Send(string peerId, ReadOnlySpan<byte> message)
         {
-            if (!_sessionManager.TryGetSessionByPeerId(peerId, out ZerioSession session))
+            if (!_sessionManager.TryGetSessionByPeerId(peerId, out Session session))
                 return;
 
             _requestProcessingEngine.RequestSend(session.Id, message);
@@ -181,7 +181,7 @@ namespace Abc.Zerio
             return true;
         }
 
-        private void OnClientSessionClosed(ZerioSession session)
+        private void OnClientSessionClosed(Session session)
         {
             session.Closed -= OnClientSessionClosed;
 
