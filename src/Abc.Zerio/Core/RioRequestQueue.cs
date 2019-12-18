@@ -1,5 +1,4 @@
 using System;
-using Abc.Zerio.Buffers;
 using Abc.Zerio.Interop;
 
 namespace Abc.Zerio.Core
@@ -24,17 +23,23 @@ namespace Abc.Zerio.Core
 
         public unsafe void Receive(RioBuffer buffer)
         {
-            var requestContextKey = new RioRequestContextKey(buffer.Id, RioRequestType.Receive);
+            var requestContextKey = new RioRequestContextKey(buffer.Id, RequestType.Receive);
 
             if (!WinSock.Extensions.Receive(_handle, buffer.BufferDescriptor, 1, RIO_RECEIVE_FLAGS.NONE, requestContextKey.ToRioRequestCorrelationId()))
                 WinSock.ThrowLastWsaError();
         }
 
-        public unsafe void Send(RioBuffer buffer)
+        public unsafe void Send(long sequence, RIO_BUF* bufferSegmentDescriptor, bool flush)
         {
-            var requestContextKey = new RioRequestContextKey(buffer.Id, RioRequestType.Send);
+            var rioSendFlags = flush ? RIO_SEND_FLAGS.NONE : RIO_SEND_FLAGS.DEFER;
 
-            if (!WinSock.Extensions.Send(_handle, buffer.BufferDescriptor, 1, RIO_SEND_FLAGS.NONE, requestContextKey.ToRioRequestCorrelationId()))
+            if (!WinSock.Extensions.Send(_handle, bufferSegmentDescriptor, 1, rioSendFlags, sequence))
+                WinSock.ThrowLastWsaError();
+        }
+
+        public unsafe void Flush()
+        {
+            if (!WinSock.Extensions.Send(_handle, null, 1, RIO_SEND_FLAGS.COMMIT_ONLY, 0))
                 WinSock.ThrowLastWsaError();
         }
     }

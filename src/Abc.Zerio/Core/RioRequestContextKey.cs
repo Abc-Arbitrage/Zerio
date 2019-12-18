@@ -9,9 +9,9 @@ namespace Abc.Zerio.Core
         public readonly int BufferId;
 
         [FieldOffset(4)]
-        public readonly RioRequestType RequestType;
+        public readonly RequestType RequestType;
 
-        public RioRequestContextKey(int bufferId, RioRequestType requestType)
+        public RioRequestContextKey(int bufferId, RequestType requestType)
             : this()
         {
             BufferId = bufferId;

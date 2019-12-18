@@ -1,24 +1,28 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using Abc.Zerio.Serialization;
+using Abc.Zerio.Configuration;
 
 namespace Abc.Zerio.Core
 {
-    public class SessionManager
+    internal class SessionManager : ISessionManager
     {
-        private readonly IServerConfiguration _configuration;
-        private readonly ConcurrentStack<RioSession> _sessions = new ConcurrentStack<RioSession>();
-        private readonly ConcurrentDictionary<int, RioSession> _activeSessions = new ConcurrentDictionary<int, RioSession>();
+        private readonly IZerioConfiguration _configuration;
+        private readonly CompletionQueues _completionQueues;
+        private readonly ConcurrentStack<ZerioSession> _sessions = new ConcurrentStack<ZerioSession>();
+        private readonly ConcurrentDictionary<int, ZerioSession> _activeSessions = new ConcurrentDictionary<int, ZerioSession>();
+        private readonly ConcurrentDictionary<string, ZerioSession> _activeSessionsByPeerId = new ConcurrentDictionary<string, ZerioSession>();
 
         private int _sessionCount;
 
-        public SessionManager(IServerConfiguration configuration)
+        public SessionManager(IZerioConfiguration configuration, CompletionQueues completionQueues)
         {
             _configuration = configuration;
+            _completionQueues = completionQueues;
+
+            CreateSessions();
         }
 
-        public void CreateSessions(IList<RioCompletionWorker> workers, SerializationEngine serializationEngine)
+        private void CreateSessions()
         {
             if (_configuration.SessionCount <= 0)
                 throw new ArgumentOutOfRangeException(nameof(_configuration.SessionCount));
@@ -28,44 +32,56 @@ namespace Abc.Zerio.Core
 
             for (var i = 0; i < _sessionCount; i++)
             {
-                var worker = workers[i % workers.Count];
-                AddNewSession(i, worker, serializationEngine);
+                var clientSession = new ZerioSession(i, _configuration, _completionQueues);
+                _sessions.Push(clientSession);
             }
         }
 
-        private void AddNewSession(int sessionId, RioCompletionWorker completionWorker, SerializationEngine serializationEngine)
+        public ZerioSession Acquire(string peerId)
         {
-            var clientSession = new RioSession(sessionId, _configuration, completionWorker.SendingCompletionQueue, completionWorker.ReceivingCompletionQueue, serializationEngine);
-            _sessions.Push(clientSession);
-        }
-
-        public RioSession Acquire()
-        {
-            RioSession rioSession;
-            if (!_sessions.TryPop(out rioSession))
+            if (!_sessions.TryPop(out var rioSession))
                 throw new InvalidOperationException("No session available");
 
+            rioSession.PeerId = peerId;
+            _activeSessionsByPeerId.TryAdd(rioSession.PeerId, rioSession);
             _activeSessions.TryAdd(rioSession.Id, rioSession);
             return rioSession;
         }
 
-        public void Release(RioSession rioSession)
+        public void Release(ZerioSession rioSession)
         {
-            RioSession unused;
-            _activeSessions.TryRemove(rioSession.Id, out unused);
+            _activeSessions.TryRemove(rioSession.Id, out _);
+            _activeSessionsByPeerId.TryRemove(rioSession.PeerId, out _);
+            rioSession.PeerId = null;
             _sessions.Push(rioSession);
         }
 
-        public bool TryGetSession(int sessionId, out RioSession rioSession)
+        public bool TryGetSession(int sessionId, out ZerioSession rioSession)
         {
             return _activeSessions.TryGetValue(sessionId, out rioSession);
         }
 
+        public bool TryGetSessionByPeerId(string peerId, out ZerioSession rioSession)
+        {
+            return _activeSessionsByPeerId.TryGetValue(peerId, out rioSession);
+        }
+
+        public bool TryGetRequestQueue(int sessionId, out RioRequestQueue requestQueue)
+        {
+            requestQueue = default;
+
+            if (!_activeSessions.TryGetValue(sessionId, out var session))
+                return false;
+
+            requestQueue = session.RequestQueue;
+            return true;
+        }
+
         public void Dispose()
         {
-            foreach (var clientSession in _sessions)
+            foreach (var session in _sessions)
             {
-                clientSession.Dispose();
+                session.Dispose();
             }
         }
     }

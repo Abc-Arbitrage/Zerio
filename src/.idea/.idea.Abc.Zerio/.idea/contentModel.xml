@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ContentModelStore">
+    <e p="C:\dev\zerio\LICENSE.md" t="Include" />
+    <e p="C:\dev\zerio\README.md" t="Include" />
+    <e p="C:\dev\zerio\src" t="IncludeFlat">
+      <e p="Abc.Zerio" t="IncludeRecursive">
+        <e p="Abc.Zerio.csproj" t="IncludeRecursive" />
+        <e p="bin" t="ExcludeRecursive" />
+        <e p="Configuration" t="Include">
+          <e p="IZerioConfiguration.cs" t="Include" />
+          <e p="ZerioConfiguration.cs" t="Include" />
+        </e>
+        <e p="Core" t="Include">
+          <e p="CompletionQueues.cs" t="Include" />
+          <e p="IFeedClient.cs" t="Include" />
+          <e p="IFeedServer.cs" t="Include" />
+          <e p="ISessionManager.cs" t="Include" />
+          <e p="ReceiveCompletionProcessor.cs" t="Include" />
+          <e p="RequestEntry.cs" t="Include" />
+          <e p="RequestEntryBuffer.cs" t="Include" />
+          <e p="RequestProcessingEngine.cs" t="Include" />
+          <e p="RequestProcessor.cs" t="Include" />
+          <e p="RequestType.cs" t="Include" />
+          <e p="RioBuffer.cs" t="Include" />
+          <e p="RioBufferManager.cs" t="Include" />
+          <e p="RioCompletionQueue.cs" t="Include" />
+          <e p="RioRequestContextKey.cs" t="Include" />
+          <e p="RioRequestQueue.cs" t="Include" />
+          <e p="SendCompletionProcessor.cs" t="Include" />
+          <e p="SessionManager.cs" t="Include" />
+          <e p="ZerioSession.cs" t="Include" />
+        </e>
+        <e p="Interop" t="Include">
+          <e p="CompletionQueueHandle.cs" t="Include" />
+          <e p="Kernel32.cs" t="Include" />
+          <e p="NativeTypes.cs" t="Include" />
+          <e p="WinSock.cs" t="Include" />
+        </e>
+        <e p="obj" t="ExcludeRecursive">
+          <e p="Debug" t="Include">
+            <e p="netcoreapp3.0" t="Include">
+              <e p="Abc.Zerio.AssemblyInfo.cs" t="Include" />
+            </e>
+          </e>
+        </e>
+        <e p="ZerioClient.cs" t="Include" />
+        <e p="ZerioServer.cs" t="Include" />
+      </e>
+      <e p="Abc.Zerio.Client" t="IncludeRecursive">
+        <e p="Abc.Zerio.Client.csproj" t="IncludeRecursive" />
+        <e p="App.config" t="Include" />
+        <e p="bin" t="ExcludeRecursive" />
+        <e p="obj" t="ExcludeRecursive">
+          <e p="Debug" t="Include">
+            <e p="netcoreapp3.0" t="Include">
+              <e p="Abc.Zerio.Client.AssemblyInfo.cs" t="Include" />
+            </e>
+          </e>
+        </e>
+        <e p="Program.cs" t="Include" />
+      </e>
+      <e p="Abc.Zerio.Server" t="IncludeRecursive">
+        <e p="Abc.Zerio.Server.csproj" t="IncludeRecursive" />
+        <e p="App.config" t="Include" />
+        <e p="bin" t="ExcludeRecursive" />
+        <e p="obj" t="ExcludeRecursive">
+          <e p="Debug" t="Include">
+            <e p="netcoreapp3.0" t="Include">
+              <e p="Abc.Zerio.Server.AssemblyInfo.cs" t="Include" />
+            </e>
+          </e>
+        </e>
+        <e p="Program.cs" t="Include" />
+      </e>
+      <e p="Abc.Zerio.sln" t="IncludeFlat" />
+      <e p="Abc.Zerio.Tests" t="IncludeRecursive">
+        <e p="Abc.Zerio.Tests.csproj" t="IncludeRecursive" />
+        <e p="bin" t="ExcludeRecursive" />
+        <e p="obj" t="ExcludeRecursive">
+          <e p="Debug" t="Include">
+            <e p="netcoreapp3.0" t="Include">
+              <e p="Abc.Zerio.Tests.AssemblyInfo.cs" t="Include" />
+            </e>
+          </e>
+        </e>
+      </e>
+      <e p="Directory.Build.props" t="Include" />
+      <e p="Misc" t="Include" />
+      <e p="packages" t="ExcludeRecursive" />
+    </e>
+    <e p="C:\Users\r.verdier\.Rider2019.2\config\consoles\db" t="IncludeRecursive" />
+    <e p="C:\Users\r.verdier\.Rider2019.2\config\extensions" t="IncludeRecursive" />
+    <e p="C:\Users\r.verdier\.Rider2019.2\system\extResources" t="IncludeRecursive" />
+    <e p="C:\Users\r.verdier\.Rider2019.2\system\resharper-host\local\Transient\ReSharperHost\v192\SolutionCaches\_Abc.Zerio.-2077728984.00" t="ExcludeRecursive" />
+  </component>
+</project>

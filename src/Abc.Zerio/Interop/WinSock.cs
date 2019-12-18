@@ -141,7 +141,7 @@ namespace Abc.Zerio.Interop
             {
                 if (!_initalized)
                 {
-                    Initalize();
+                    Initialize();
                     _initalized = true;
                 }
             }
@@ -150,7 +150,7 @@ namespace Abc.Zerio.Interop
                 throw new InvalidOperationException("Unable to initialize WinSock", _initalizationException);
         }
 
-        private static void Initalize()
+        private static void Initialize()
         {
             var version = new Version(2, 2);
             WSAData data;

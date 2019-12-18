@@ -20,16 +20,12 @@ namespace Abc.Zerio.Core
         {
             var completionQueue = QueueHandle;
 
-            var spinwait = new SpinWait();
             while (!cancellationToken.IsCancellationRequested)
             {
                 var resultCount = WinSock.Extensions.DequeueCompletion(completionQueue, results, (uint)maxCompletionResults);
 
                 if (resultCount == 0)
-                {
-                    spinwait.SpinOnce();
                     continue;
-                }
 
                 if (resultCount == WinSock.Consts.RIO_CORRUPT_CQ)
                 {
