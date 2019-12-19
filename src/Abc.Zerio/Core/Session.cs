@@ -5,7 +5,7 @@ using Abc.Zerio.Interop;
 
 namespace Abc.Zerio.Core
 {
-    internal class Session : IDisposable
+    internal class Session
     {
         public int Id { get; }
         public string PeerId { get; set; }
@@ -13,8 +13,7 @@ namespace Abc.Zerio.Core
 
         private readonly IZerioConfiguration _configuration;
         private readonly CompletionQueues _completionQueues;
-        private readonly UnmanagedRioBuffer<RioBufferSegment> _receivingBuffer;
-
+        
         private RioRequestQueue _requestQueue;
         private IntPtr _socket;
 
@@ -23,7 +22,6 @@ namespace Abc.Zerio.Core
             Id = sessionId;
             _configuration = configuration;
             _completionQueues = completionQueues;
-            _receivingBuffer = new UnmanagedRioBuffer<RioBufferSegment>(configuration.ReceivingBufferCount, _configuration.ReceivingBufferLength);
         }
 
         public void Open(IntPtr socket)
@@ -51,22 +49,12 @@ namespace Abc.Zerio.Core
 
         public event Action<Session> Closed;
 
-        public unsafe RioBufferSegment* ReadBuffer(int bufferSegmentId)
-        {
-            return _receivingBuffer[bufferSegmentId];
-        }
-
         public void InitiateReceiving(RequestProcessingEngine requestProcessingEngine)
         {
             for (var bufferSegmentId = 0; bufferSegmentId < _configuration.ReceivingBufferCount; bufferSegmentId++)
             {
                 requestProcessingEngine.RequestReceive(Id, bufferSegmentId);
             }
-        }
-
-        public void Dispose()
-        {
-            _receivingBuffer?.Dispose();
         }
     }
 }

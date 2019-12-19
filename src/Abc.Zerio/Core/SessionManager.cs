@@ -79,13 +79,5 @@ namespace Abc.Zerio.Core
             requestQueue = session.RequestQueue;
             return true;
         }
-
-        public void Dispose()
-        {
-            foreach (var session in _sessions)
-            {
-                session.Dispose();
-            }
-        }
     }
 }

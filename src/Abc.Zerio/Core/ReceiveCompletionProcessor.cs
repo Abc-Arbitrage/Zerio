@@ -21,14 +21,16 @@ namespace Abc.Zerio.Core
         private int _messageLength;
         private readonly byte[] _buffer = new byte[64 * 1024];
 
+        private readonly UnmanagedRioBuffer<RioBufferSegment> _receivingBuffer;
         private readonly RequestProcessingEngine _requestProcessingEngine;
 
-        public ReceiveCompletionProcessor(IZerioConfiguration configuration, RioCompletionQueue receivingCompletionQueue, ISessionManager sessionManager, RequestProcessingEngine requestProcessingEngine)
+        public ReceiveCompletionProcessor(IZerioConfiguration configuration, RioCompletionQueue receivingCompletionQueue, ISessionManager sessionManager, RequestProcessingEngine requestProcessingEngine, RegisteredBuffers registeredBuffers)
         {
             _configuration = configuration;
             _receivingCompletionQueue = receivingCompletionQueue;
             _sessionManager = sessionManager;
             _requestProcessingEngine = requestProcessingEngine;
+            _receivingBuffer = registeredBuffers.ReceivingBuffer;
         }
 
         public void Start()
@@ -71,7 +73,7 @@ namespace Abc.Zerio.Core
             if (!_sessionManager.TryGetSession(sessionId, out var session))
                 return;
 
-            var bufferSegment = session.ReadBuffer(bufferSegmentId);
+            var bufferSegment = _receivingBuffer[bufferSegmentId];
 
             try
             {
@@ -135,12 +137,6 @@ namespace Abc.Zerio.Core
             }
         }
 
-        private enum ReadState
-        {
-            AccumulatingLength,
-            AccumulatingMessage,
-        }
-
         public void Stop()
         {
             _cancellationTokenSource.Cancel();
@@ -151,7 +147,14 @@ namespace Abc.Zerio.Core
         {
             Stop();
 
+            _receivingBuffer?.Dispose();
             _cancellationTokenSource?.Dispose();
+        }
+
+        private enum ReadState
+        {
+            AccumulatingLength,
+            AccumulatingMessage,
         }
     }
 }

@@ -18,6 +18,7 @@
           <e p="IRioBufferSegmentDescriptorContainer.cs" t="Include" />
           <e p="ISessionManager.cs" t="Include" />
           <e p="ReceiveCompletionProcessor.cs" t="Include" />
+          <e p="RegisteredBuffers.cs" t="Include" />
           <e p="RequestEntry.cs" t="Include" />
           <e p="RequestProcessingEngine.cs" t="Include" />
           <e p="RequestProcessor.cs" t="Include" />

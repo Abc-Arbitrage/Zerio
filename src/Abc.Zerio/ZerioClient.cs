@@ -12,6 +12,7 @@ namespace Abc.Zerio
     {
         private readonly IPEndPoint _serverEndpoint;
         private readonly CompletionQueues _completionQueues;
+        private readonly RegisteredBuffers _registeredBuffers;
         private readonly ISessionManager _sessionManager;
         private readonly IZerioConfiguration _configuration;
         private readonly Session _session;
@@ -34,6 +35,8 @@ namespace Abc.Zerio
 
             _configuration = CreateConfiguration();
             _completionQueues = CreateCompletionQueues();
+            _registeredBuffers = CreateRegisteredBuffers();
+            
             _sessionManager = CreateSessionManager();
 
             _requestProcessingEngine = CreateRequestProcessingEngine();
@@ -43,6 +46,8 @@ namespace Abc.Zerio
 
             _session.Closed += OnSessionClosed;
         }
+
+        private RegisteredBuffers CreateRegisteredBuffers() => new RegisteredBuffers(_configuration);
 
         private ISessionManager CreateSessionManager()
         {
@@ -56,7 +61,7 @@ namespace Abc.Zerio
 
         private ReceiveCompletionProcessor CreateReceiveCompletionProcessor()
         {
-            var receiver = new ReceiveCompletionProcessor(_configuration, _completionQueues.ReceivingQueue, _sessionManager, _requestProcessingEngine);
+            var receiver = new ReceiveCompletionProcessor(_configuration, _completionQueues.ReceivingQueue, _sessionManager, _requestProcessingEngine, _registeredBuffers);
             receiver.MessageReceived += OnMessageReceived;
             return receiver;
         }
@@ -68,7 +73,7 @@ namespace Abc.Zerio
 
         private RequestProcessingEngine CreateRequestProcessingEngine()
         {
-            return new RequestProcessingEngine(_configuration, _completionQueues.SendingQueue, _sessionManager);
+            return new RequestProcessingEngine(_configuration, _completionQueues.SendingQueue, _sessionManager, _registeredBuffers);
         }
 
         public void Send(ReadOnlySpan<byte> message)
@@ -159,7 +164,7 @@ namespace Abc.Zerio
             _completionQueues?.Dispose();
             _requestProcessingEngine?.Dispose();
             _receiveCompletionProcessor?.Dispose();
-            _sessionManager?.Dispose();
+            _registeredBuffers?.Dispose();
         }
     }
 }

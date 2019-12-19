@@ -8,14 +8,16 @@ namespace Abc.Zerio.Core
     internal class RequestProcessor : IValueEventHandler<RequestEntry>
     {
         private readonly ISessionManager _sessionManager;
+        private UnmanagedRioBuffer<RioBufferSegment> _receivingBuffers;
         private readonly int _maxSendBatchSize;
 
         private int _currentBatchSize;
         private readonly Dictionary<int, RioRequestQueue> _flushableRequestQueues = new Dictionary<int, RioRequestQueue>();
 
-        public RequestProcessor(IZerioConfiguration configuration, ISessionManager sessionManager)
+        public RequestProcessor(IZerioConfiguration configuration, ISessionManager sessionManager, RegisteredBuffers registeredBuffers)
         {
             _sessionManager = sessionManager;
+            _receivingBuffers = registeredBuffers.ReceivingBuffer;
             _maxSendBatchSize = _maxSendBatchSize = configuration.MaxSendBatchSize;
         }
 
@@ -67,7 +69,7 @@ namespace Abc.Zerio.Core
             if (!_sessionManager.TryGetSession(data.SessionId, out var session))
                 return;
 
-            var buffer = session.ReadBuffer(data.BufferSegmentId);
+            var buffer = _receivingBuffers[data.BufferSegmentId];
             session.RequestQueue.Receive(buffer, data.BufferSegmentId);
         }
     }
