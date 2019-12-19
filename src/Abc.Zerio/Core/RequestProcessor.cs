@@ -38,16 +38,16 @@ namespace Abc.Zerio.Core
         {
             var shouldFlush = endOfBatch || _maxSendBatchSize == _currentBatchSize;
 
-            var requestQueueExists = _sessionManager.TryGetRequestQueue(data.SessionId, out var requestQueue);
-            if (requestQueueExists)
-                requestQueue.Send(sequence, data.GetRioBufferDescriptor(), shouldFlush);
+            var sessionIsActive = _sessionManager.TryGetSession(data.SessionId, out var session);
+            if (sessionIsActive)
+                session.RequestQueue.Send(sequence, data.GetRioBufferDescriptor(), shouldFlush);
 
             if (!shouldFlush)
             {
                 _currentBatchSize++;
 
-                if(requestQueueExists)
-                    _flushableRequestQueues[data.SessionId] = requestQueue;
+                if(sessionIsActive)
+                    _flushableRequestQueues[data.SessionId] = session.RequestQueue;
 
                 return;
             }

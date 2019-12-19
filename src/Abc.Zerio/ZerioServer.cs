@@ -92,7 +92,7 @@ namespace Abc.Zerio
 
         public void Send(string peerId, ReadOnlySpan<byte> message)
         {
-            if (!_sessionManager.TryGetSessionByPeerId(peerId, out Session session))
+            if (!_sessionManager.TryGetSession(peerId, out Session session))
                 return;
 
             _requestProcessingEngine.RequestSend(session.Id, message);

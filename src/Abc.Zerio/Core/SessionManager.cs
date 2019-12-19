@@ -8,8 +8,8 @@ namespace Abc.Zerio.Core
     {
         private readonly IZerioConfiguration _configuration;
         private readonly RioObjects _rioObjects;
-        private readonly ConcurrentStack<Session> _sessions = new ConcurrentStack<Session>();
         
+        private readonly ConcurrentStack<Session> _sessions = new ConcurrentStack<Session>();
         private readonly ConcurrentDictionary<int, Session> _activeSessions = new ConcurrentDictionary<int, Session>();
         private readonly ConcurrentDictionary<string, Session> _activeSessionsByPeerId = new ConcurrentDictionary<string, Session>();
 
@@ -64,20 +64,9 @@ namespace Abc.Zerio.Core
             return _activeSessions.TryGetValue(sessionId, out rioSession);
         }
 
-        public bool TryGetSessionByPeerId(string peerId, out Session rioSession)
+        public bool TryGetSession(string peerId, out Session rioSession)
         {
             return _activeSessionsByPeerId.TryGetValue(peerId, out rioSession);
-        }
-
-        public bool TryGetRequestQueue(int sessionId, out RioRequestQueue requestQueue)
-        {
-            requestQueue = default;
-
-            if (!_activeSessions.TryGetValue(sessionId, out var session))
-                return false;
-
-            requestQueue = session.RequestQueue;
-            return true;
         }
     }
 }
