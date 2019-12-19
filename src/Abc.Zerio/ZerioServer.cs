@@ -10,8 +10,7 @@ namespace Abc.Zerio
 {
     public class ZerioServer : IFeedServer
     {
-        private readonly CompletionQueues _completionQueues;
-        private readonly RegisteredBuffers _registeredBuffers;
+        private readonly RioObjects _rioObjects;
         private readonly IZerioConfiguration _configuration;
         private readonly ISessionManager _sessionManager;
         private readonly int _listeningPort;
@@ -32,8 +31,7 @@ namespace Abc.Zerio
             _listeningPort = listeningPort;
 
             _configuration = CreateConfiguration();
-            _completionQueues = CreateCompletionQueues();
-            _registeredBuffers = CreateRegisteredBuffers();
+            _rioObjects = CreateRioObjects();
             _sessionManager = CreateSessionManager();
 
             _requestProcessingEngine = CreateRequestProcessingEngine();
@@ -42,21 +40,19 @@ namespace Abc.Zerio
             _listeningSocket = CreateListeningSocket();
         }
 
-        private RegisteredBuffers CreateRegisteredBuffers() => new RegisteredBuffers(_configuration);
-
         private ISessionManager CreateSessionManager()
         {
-            return new SessionManager(_configuration, _completionQueues);
+            return new SessionManager(_configuration, _rioObjects);
         }
 
-        private CompletionQueues CreateCompletionQueues()
+        private RioObjects CreateRioObjects()
         {
-            return new CompletionQueues(_configuration);
+            return new RioObjects(_configuration);
         }
 
         private ReceiveCompletionProcessor CreateReceiveCompletionProcessor()
         {
-            var receiver = new ReceiveCompletionProcessor(_configuration, _completionQueues.ReceivingQueue, _sessionManager, _requestProcessingEngine, _registeredBuffers);
+            var receiver = new ReceiveCompletionProcessor(_configuration, _rioObjects, _sessionManager, _requestProcessingEngine);
             receiver.MessageReceived += OnMessageReceived;
             return receiver;
         }
@@ -227,7 +223,7 @@ namespace Abc.Zerio
 
         private RequestProcessingEngine CreateRequestProcessingEngine()
         {
-            return new RequestProcessingEngine(_configuration, _completionQueues.SendingQueue, _sessionManager, _registeredBuffers);
+            return new RequestProcessingEngine(_configuration, _rioObjects, _sessionManager);
         }
 
         public bool IsRunning { get; }
@@ -256,10 +252,9 @@ namespace Abc.Zerio
             {
                 Stop();
 
-                _completionQueues?.Dispose();
                 _requestProcessingEngine?.Dispose();
                 _receiveCompletionProcessor?.Dispose();
-                _registeredBuffers?.Dispose();
+                _rioObjects?.Dispose();
             }
         }
 

@@ -12,19 +12,18 @@
           <e p="ZerioConfiguration.cs" t="Include" />
         </e>
         <e p="Core" t="Include">
-          <e p="CompletionQueues.cs" t="Include" />
           <e p="IFeedClient.cs" t="Include" />
           <e p="IFeedServer.cs" t="Include" />
           <e p="IRioBufferSegmentDescriptorContainer.cs" t="Include" />
           <e p="ISessionManager.cs" t="Include" />
           <e p="ReceiveCompletionProcessor.cs" t="Include" />
-          <e p="RegisteredBuffers.cs" t="Include" />
           <e p="RequestEntry.cs" t="Include" />
           <e p="RequestProcessingEngine.cs" t="Include" />
           <e p="RequestProcessor.cs" t="Include" />
           <e p="RequestType.cs" t="Include" />
           <e p="RioBufferSegment.cs" t="Include" />
           <e p="RioCompletionQueue.cs" t="Include" />
+          <e p="RioObjects.cs" t="Include" />
           <e p="RioRequestQueue.cs" t="Include" />
           <e p="SendCompletionProcessor.cs" t="Include" />
           <e p="Session.cs" t="Include" />

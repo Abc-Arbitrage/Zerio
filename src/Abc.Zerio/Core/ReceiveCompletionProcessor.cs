@@ -24,13 +24,13 @@ namespace Abc.Zerio.Core
         private readonly UnmanagedRioBuffer<RioBufferSegment> _receivingBuffer;
         private readonly RequestProcessingEngine _requestProcessingEngine;
 
-        public ReceiveCompletionProcessor(IZerioConfiguration configuration, RioCompletionQueue receivingCompletionQueue, ISessionManager sessionManager, RequestProcessingEngine requestProcessingEngine, RegisteredBuffers registeredBuffers)
+        public ReceiveCompletionProcessor(IZerioConfiguration configuration, RioObjects rioObjects, ISessionManager sessionManager, RequestProcessingEngine requestProcessingEngine)
         {
             _configuration = configuration;
-            _receivingCompletionQueue = receivingCompletionQueue;
             _sessionManager = sessionManager;
             _requestProcessingEngine = requestProcessingEngine;
-            _receivingBuffer = registeredBuffers.ReceivingBuffer;
+            _receivingCompletionQueue = rioObjects.ReceivingCompletionQueue;
+            _receivingBuffer = rioObjects.ReceivingBuffer;
         }
 
         public void Start()

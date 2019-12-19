@@ -7,7 +7,7 @@ namespace Abc.Zerio.Core
     internal class SessionManager : ISessionManager
     {
         private readonly IZerioConfiguration _configuration;
-        private readonly CompletionQueues _completionQueues;
+        private readonly RioObjects _rioObjects;
         private readonly ConcurrentStack<Session> _sessions = new ConcurrentStack<Session>();
         
         private readonly ConcurrentDictionary<int, Session> _activeSessions = new ConcurrentDictionary<int, Session>();
@@ -15,10 +15,10 @@ namespace Abc.Zerio.Core
 
         private int _sessionCount;
 
-        public SessionManager(IZerioConfiguration configuration, CompletionQueues completionQueues)
+        public SessionManager(IZerioConfiguration configuration, RioObjects rioObjects)
         {
             _configuration = configuration;
-            _completionQueues = completionQueues;
+            _rioObjects = rioObjects;
 
             CreateSessions();
         }
@@ -33,7 +33,7 @@ namespace Abc.Zerio.Core
 
             for (var i = 0; i < _sessionCount; i++)
             {
-                var clientSession = new Session(i, _configuration, _completionQueues);
+                var clientSession = new Session(i, _configuration, _rioObjects);
                 _sessions.Push(clientSession);
             }
         }

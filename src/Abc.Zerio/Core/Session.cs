@@ -12,16 +12,16 @@ namespace Abc.Zerio.Core
         public RioRequestQueue RequestQueue => _requestQueue;
 
         private readonly IZerioConfiguration _configuration;
-        private readonly CompletionQueues _completionQueues;
+        private readonly RioObjects _rioObjects;
         
         private RioRequestQueue _requestQueue;
         private IntPtr _socket;
 
-        public Session(int sessionId, IZerioConfiguration configuration, CompletionQueues completionQueues)
+        public Session(int sessionId, IZerioConfiguration configuration, RioObjects rioObjects)
         {
             Id = sessionId;
             _configuration = configuration;
-            _completionQueues = completionQueues;
+            _rioObjects = rioObjects;
         }
 
         public void Open(IntPtr socket)
@@ -33,7 +33,7 @@ namespace Abc.Zerio.Core
             var maxOutstandingReceives = (uint)_configuration.ReceivingBufferCount;
             var maxOutstandingSends = (uint)_configuration.SendingBufferCount;
 
-            _requestQueue = RioRequestQueue.Create(Id, socket, _completionQueues.SendingQueue, maxOutstandingSends, _completionQueues.ReceivingQueue, maxOutstandingReceives);
+            _requestQueue = RioRequestQueue.Create(Id, socket, _rioObjects.SendingCompletionQueue, maxOutstandingSends, _rioObjects.ReceivingCompletionQueue, maxOutstandingReceives);
         }
 
         private void Close()
