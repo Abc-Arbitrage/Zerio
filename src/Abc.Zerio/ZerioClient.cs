@@ -57,7 +57,7 @@ namespace Abc.Zerio
         private ReceiveCompletionProcessor CreateReceiveCompletionProcessor()
         {
             var receiver = new ReceiveCompletionProcessor(_configuration, _completionQueues.ReceivingQueue, _sessionManager, _requestProcessingEngine);
-            receiver.MessageReceived += OnSessionMessageReceived;
+            receiver.MessageReceived += OnMessageReceived;
             return receiver;
         }
 
@@ -136,7 +136,7 @@ namespace Abc.Zerio
             return connectionSocket;
         }
 
-        private void OnSessionMessageReceived(int sessionId, ArraySegment<byte> message)
+        private void OnMessageReceived(int sessionId, ArraySegment<byte> message)
         {
             MessageReceived?.Invoke(message);
         }

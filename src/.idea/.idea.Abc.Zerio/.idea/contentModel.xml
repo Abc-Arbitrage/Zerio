@@ -15,21 +15,20 @@
           <e p="CompletionQueues.cs" t="Include" />
           <e p="IFeedClient.cs" t="Include" />
           <e p="IFeedServer.cs" t="Include" />
+          <e p="IRioBufferSegmentDescriptorContainer.cs" t="Include" />
           <e p="ISessionManager.cs" t="Include" />
           <e p="ReceiveCompletionProcessor.cs" t="Include" />
           <e p="RequestEntry.cs" t="Include" />
-          <e p="RequestEntryBuffer.cs" t="Include" />
           <e p="RequestProcessingEngine.cs" t="Include" />
           <e p="RequestProcessor.cs" t="Include" />
           <e p="RequestType.cs" t="Include" />
-          <e p="RioBuffer.cs" t="Include" />
-          <e p="RioBufferManager.cs" t="Include" />
+          <e p="RioBufferSegment.cs" t="Include" />
           <e p="RioCompletionQueue.cs" t="Include" />
-          <e p="RioRequestContextKey.cs" t="Include" />
           <e p="RioRequestQueue.cs" t="Include" />
           <e p="SendCompletionProcessor.cs" t="Include" />
+          <e p="Session.cs" t="Include" />
           <e p="SessionManager.cs" t="Include" />
-          <e p="ZerioSession.cs" t="Include" />
+          <e p="UnmanagedRioBuffer.cs" t="Include" />
         </e>
         <e p="Interop" t="Include">
           <e p="CompletionQueueHandle.cs" t="Include" />
@@ -38,11 +37,17 @@
           <e p="WinSock.cs" t="Include" />
         </e>
         <e p="obj" t="ExcludeRecursive">
-          <e p="Debug" t="Include">
+          <e p="Release" t="Include">
             <e p="netcoreapp3.0" t="Include">
               <e p="Abc.Zerio.AssemblyInfo.cs" t="Include" />
             </e>
           </e>
+        </e>
+        <e p="Tcp" t="Include">
+          <e p="TcpFeedClient.cs" t="Include" />
+          <e p="TcpFeedServer.cs" t="Include" />
+          <e p="TcpFrameReceiver.cs" t="Include" />
+          <e p="TcpFrameSender.cs" t="Include" />
         </e>
         <e p="ZerioClient.cs" t="Include" />
         <e p="ZerioServer.cs" t="Include" />
@@ -52,7 +57,7 @@
         <e p="App.config" t="Include" />
         <e p="bin" t="ExcludeRecursive" />
         <e p="obj" t="ExcludeRecursive">
-          <e p="Debug" t="Include">
+          <e p="Release" t="Include">
             <e p="netcoreapp3.0" t="Include">
               <e p="Abc.Zerio.Client.AssemblyInfo.cs" t="Include" />
             </e>
@@ -65,7 +70,7 @@
         <e p="App.config" t="Include" />
         <e p="bin" t="ExcludeRecursive" />
         <e p="obj" t="ExcludeRecursive">
-          <e p="Debug" t="Include">
+          <e p="Release" t="Include">
             <e p="netcoreapp3.0" t="Include">
               <e p="Abc.Zerio.Server.AssemblyInfo.cs" t="Include" />
             </e>
@@ -78,7 +83,7 @@
         <e p="Abc.Zerio.Tests.csproj" t="IncludeRecursive" />
         <e p="bin" t="ExcludeRecursive" />
         <e p="obj" t="ExcludeRecursive">
-          <e p="Debug" t="Include">
+          <e p="Release" t="Include">
             <e p="netcoreapp3.0" t="Include">
               <e p="Abc.Zerio.Tests.AssemblyInfo.cs" t="Include" />
             </e>

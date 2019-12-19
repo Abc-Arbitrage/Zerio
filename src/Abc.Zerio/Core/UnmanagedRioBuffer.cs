@@ -36,7 +36,6 @@ namespace Abc.Zerio.Core
             //  |                                  | 20        | 1024      |                                                       | 1064      | 1024      |
             //                                       +---------------------^                                                         +---------------------^
             
-
             Length = bufferCount;
             var entryLength = sizeof(RequestEntry);
             EntryReservedSpaceSize = entryLength + bufferLength;

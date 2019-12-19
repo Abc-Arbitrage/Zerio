@@ -9,6 +9,7 @@ namespace Abc.Zerio.Core
         private readonly IZerioConfiguration _configuration;
         private readonly CompletionQueues _completionQueues;
         private readonly ConcurrentStack<Session> _sessions = new ConcurrentStack<Session>();
+        
         private readonly ConcurrentDictionary<int, Session> _activeSessions = new ConcurrentDictionary<int, Session>();
         private readonly ConcurrentDictionary<string, Session> _activeSessionsByPeerId = new ConcurrentDictionary<string, Session>();
 
@@ -52,7 +53,9 @@ namespace Abc.Zerio.Core
         {
             _activeSessions.TryRemove(rioSession.Id, out _);
             _activeSessionsByPeerId.TryRemove(rioSession.PeerId, out _);
+            
             rioSession.PeerId = null;
+            
             _sessions.Push(rioSession);
         }
 

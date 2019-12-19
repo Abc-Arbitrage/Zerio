@@ -53,7 +53,7 @@ namespace Abc.Zerio
         private ReceiveCompletionProcessor CreateReceiveCompletionProcessor()
         {
             var receiver = new ReceiveCompletionProcessor(_configuration, _completionQueues.ReceivingQueue, _sessionManager, _requestProcessingEngine);
-            receiver.MessageReceived += OnSessionMessageReceived;
+            receiver.MessageReceived += OnMessageReceived;
             return receiver;
         }
 
@@ -152,8 +152,8 @@ namespace Abc.Zerio
             var clientSession = _sessionManager.Acquire(Guid.NewGuid().ToString());
 
             clientSession.Closed += OnClientSessionClosed;
-            clientSession.Open(acceptSocket);
 
+            clientSession.Open(acceptSocket);
             clientSession.InitiateReceiving(_requestProcessingEngine);
 
             ClientConnected?.Invoke(clientSession.PeerId);
@@ -230,7 +230,7 @@ namespace Abc.Zerio
         public event Action<string> ClientConnected;
         public event Action<string> ClientDisconnected;
 
-        private void OnSessionMessageReceived(int sessionId, ArraySegment<byte> message)
+        private void OnMessageReceived(int sessionId, ArraySegment<byte> message)
         {
             if (!_sessionManager.TryGetSession(sessionId, out var session))
                 return;
