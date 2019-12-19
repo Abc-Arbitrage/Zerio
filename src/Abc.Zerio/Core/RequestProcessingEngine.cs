@@ -17,15 +17,16 @@ namespace Abc.Zerio.Core
         private readonly ValueRingBuffer<RequestEntry> _ringBuffer;
         private readonly ValueDisruptor<RequestEntry> _disruptor;
 
-        public RequestProcessingEngine(IZerioConfiguration configuration, RioObjects rioObjects, ISessionManager sessionManager)
+        public RequestProcessingEngine(IZerioConfiguration configuration, RioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
         {
             _configuration = configuration;
-            _unmanagedRioBuffer = rioObjects.SendingBuffer;
-            _disruptor = CreateDisruptor(rioObjects, sessionManager);
+            _unmanagedRioBuffer = new UnmanagedRioBuffer<RequestEntry>(_configuration.SendingBufferCount, _configuration.SendingBufferLength);
+
+            _disruptor = CreateDisruptor(sendingCompletionQueue, sessionManager);
             _ringBuffer = _disruptor.RingBuffer;
         }
 
-        private ValueDisruptor<RequestEntry> CreateDisruptor(RioObjects rioObjects, ISessionManager sessionManager)
+        private ValueDisruptor<RequestEntry> CreateDisruptor(RioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
         {
             // todo: use _requestingEntryBuffer with the next release of ValueDisruptor
             var disruptor = new ValueDisruptor<RequestEntry>(() => new RequestEntry() ,
@@ -36,8 +37,8 @@ namespace Abc.Zerio.Core
 
             var handlers = new IValueEventHandler<RequestEntry>[]
             {
-                new RequestProcessor(_configuration, sessionManager, rioObjects.ReceivingBuffer),
-                new SendCompletionProcessor(_configuration, rioObjects.SendingCompletionQueue)
+                new RequestProcessor(_configuration, sessionManager),
+                new SendCompletionProcessor(_configuration, sendingCompletionQueue)
             };
 
             disruptor.HandleEventsWith(handlers);

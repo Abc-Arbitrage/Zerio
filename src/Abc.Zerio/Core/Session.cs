@@ -5,23 +5,25 @@ using Abc.Zerio.Interop;
 
 namespace Abc.Zerio.Core
 {
-    internal class Session
+    internal class Session : IDisposable
     {
         public int Id { get; }
         public string PeerId { get; set; }
         public RioRequestQueue RequestQueue => _requestQueue;
 
         private readonly IZerioConfiguration _configuration;
-        private readonly RioObjects _rioObjects;
-        
+        private readonly CompletionQueues _completionQueues;
+        private readonly UnmanagedRioBuffer<RioBufferSegment> _receivingBuffer;
+
         private RioRequestQueue _requestQueue;
         private IntPtr _socket;
 
-        public Session(int sessionId, IZerioConfiguration configuration, RioObjects rioObjects)
+        public Session(int sessionId, IZerioConfiguration configuration, CompletionQueues completionQueues)
         {
             Id = sessionId;
             _configuration = configuration;
-            _rioObjects = rioObjects;
+            _completionQueues = completionQueues;
+            _receivingBuffer = new UnmanagedRioBuffer<RioBufferSegment>(configuration.ReceivingBufferCount, _configuration.ReceivingBufferLength);
         }
 
         public void Open(IntPtr socket)
@@ -33,7 +35,7 @@ namespace Abc.Zerio.Core
             var maxOutstandingReceives = (uint)_configuration.ReceivingBufferCount;
             var maxOutstandingSends = (uint)_configuration.SendingBufferCount;
 
-            _requestQueue = RioRequestQueue.Create(Id, socket, _rioObjects.SendingCompletionQueue, maxOutstandingSends, _rioObjects.ReceivingCompletionQueue, maxOutstandingReceives);
+            _requestQueue = RioRequestQueue.Create(Id, socket, _completionQueues.SendingQueue, maxOutstandingSends, _completionQueues.ReceivingQueue, maxOutstandingReceives);
         }
 
         private void Close()
@@ -49,12 +51,22 @@ namespace Abc.Zerio.Core
 
         public event Action<Session> Closed;
 
+        public unsafe RioBufferSegment* ReadBuffer(int bufferSegmentId)
+        {
+            return _receivingBuffer[bufferSegmentId];
+        }
+
         public void InitiateReceiving(RequestProcessingEngine requestProcessingEngine)
         {
             for (var bufferSegmentId = 0; bufferSegmentId < _configuration.ReceivingBufferCount; bufferSegmentId++)
             {
                 requestProcessingEngine.RequestReceive(Id, bufferSegmentId);
             }
+        }
+
+        public void Dispose()
+        {
+            _receivingBuffer?.Dispose();
         }
     }
 }

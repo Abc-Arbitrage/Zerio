@@ -1,6 +1,8 @@
+using System;
+
 namespace Abc.Zerio.Core
 {
-    internal interface ISessionManager
+    internal interface ISessionManager : IDisposable
     {
         Session Acquire(string peerId);
         void Release(Session session);

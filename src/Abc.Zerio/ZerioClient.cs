@@ -11,7 +11,7 @@ namespace Abc.Zerio
     public class ZerioClient : IFeedClient
     {
         private readonly IPEndPoint _serverEndpoint;
-        private readonly RioObjects _rioObjects;
+        private readonly CompletionQueues _completionQueues;
         private readonly ISessionManager _sessionManager;
         private readonly IZerioConfiguration _configuration;
         private readonly Session _session;
@@ -33,8 +33,7 @@ namespace Abc.Zerio
             WinSock.EnsureIsInitialized();
 
             _configuration = CreateConfiguration();
-            _rioObjects = CreateRioObjects();
-            
+            _completionQueues = CreateCompletionQueues();
             _sessionManager = CreateSessionManager();
 
             _requestProcessingEngine = CreateRequestProcessingEngine();
@@ -45,19 +44,19 @@ namespace Abc.Zerio
             _session.Closed += OnSessionClosed;
         }
 
-        private RioObjects CreateRioObjects()
-        {
-            return new RioObjects(_configuration);
-        }
-
         private ISessionManager CreateSessionManager()
         {
-            return new SessionManager(_configuration, _rioObjects);
+            return new SessionManager(_configuration, _completionQueues);
+        }
+
+        private CompletionQueues CreateCompletionQueues()
+        {
+            return new CompletionQueues(_configuration);
         }
 
         private ReceiveCompletionProcessor CreateReceiveCompletionProcessor()
         {
-            var receiver = new ReceiveCompletionProcessor(_configuration, _rioObjects, _sessionManager, _requestProcessingEngine);
+            var receiver = new ReceiveCompletionProcessor(_configuration, _completionQueues.ReceivingQueue, _sessionManager, _requestProcessingEngine);
             receiver.MessageReceived += OnMessageReceived;
             return receiver;
         }
@@ -69,7 +68,7 @@ namespace Abc.Zerio
 
         private RequestProcessingEngine CreateRequestProcessingEngine()
         {
-            return new RequestProcessingEngine(_configuration, _rioObjects, _sessionManager);
+            return new RequestProcessingEngine(_configuration, _completionQueues.SendingQueue, _sessionManager);
         }
 
         public void Send(ReadOnlySpan<byte> message)
@@ -157,9 +156,10 @@ namespace Abc.Zerio
         {
             Stop();
 
+            _completionQueues?.Dispose();
             _requestProcessingEngine?.Dispose();
             _receiveCompletionProcessor?.Dispose();
-            _rioObjects?.Dispose();
+            _sessionManager?.Dispose();
         }
     }
 }
