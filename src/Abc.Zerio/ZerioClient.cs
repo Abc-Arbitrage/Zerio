@@ -46,7 +46,9 @@ namespace Abc.Zerio
 
         private ISessionManager CreateSessionManager()
         {
-            return new SessionManager(_configuration, _completionQueues);
+            var sessionManager = new SessionManager(_configuration, _completionQueues);
+            sessionManager.MessageReceived += (peerId, message) => MessageReceived?.Invoke(message);
+            return sessionManager;
         }
 
         private CompletionQueues CreateCompletionQueues()
@@ -57,7 +59,6 @@ namespace Abc.Zerio
         private ReceiveCompletionProcessor CreateReceiveCompletionProcessor()
         {
             var receiver = new ReceiveCompletionProcessor(_configuration, _completionQueues.ReceivingQueue, _sessionManager, _requestProcessingEngine);
-            receiver.MessageReceived += OnMessageReceived;
             return receiver;
         }
 
@@ -134,11 +135,6 @@ namespace Abc.Zerio
             WinSock.setsockopt(connectionSocket, WinSock.Consts.SOL_SOCKET, WinSock.Consts.SO_REUSEADDR, (char*)&reuseAddr, sizeof(int));
 
             return connectionSocket;
-        }
-
-        private void OnMessageReceived(int sessionId, ArraySegment<byte> message)
-        {
-            MessageReceived?.Invoke(message);
         }
 
         private void OnSessionClosed(Session session)

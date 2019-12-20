@@ -15,6 +15,8 @@ namespace Abc.Zerio.Core
 
         private int _sessionCount;
 
+        public event ServerMessageReceivedDelegate MessageReceived;
+
         public SessionManager(IZerioConfiguration configuration, CompletionQueues completionQueues)
         {
             _configuration = configuration;
@@ -33,8 +35,9 @@ namespace Abc.Zerio.Core
 
             for (var i = 0; i < _sessionCount; i++)
             {
-                var clientSession = new Session(i, _configuration, _completionQueues);
-                _sessions.Push(clientSession);
+                var session = new Session(i, _configuration, _completionQueues);
+                session.MessageReceived += (peerId, message) => MessageReceived?.Invoke(peerId, message); 
+                _sessions.Push(session);
             }
         }
 
@@ -49,14 +52,14 @@ namespace Abc.Zerio.Core
             return rioSession;
         }
 
-        public void Release(Session rioSession)
+        public void Release(Session session)
         {
-            _activeSessions.TryRemove(rioSession.Id, out _);
-            _activeSessionsByPeerId.TryRemove(rioSession.PeerId, out _);
+            _activeSessions.TryRemove(session.Id, out _);
+            _activeSessionsByPeerId.TryRemove(session.PeerId, out _);
+
+            session.Reset();
             
-            rioSession.PeerId = null;
-            
-            _sessions.Push(rioSession);
+            _sessions.Push(session);
         }
 
         public bool TryGetSession(int sessionId, out Session rioSession)

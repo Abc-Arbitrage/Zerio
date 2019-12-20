@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using Abc.Zerio.Configuration;
 using Abc.Zerio.Interop;
@@ -11,17 +10,10 @@ namespace Abc.Zerio.Core
         private readonly IZerioConfiguration _configuration;
         private readonly RioCompletionQueue _receivingCompletionQueue;
         private readonly ISessionManager _sessionManager;
+        private readonly RequestProcessingEngine _requestProcessingEngine;
 
         private Thread _completionWorkerThread;
-        public event Action<int, ArraySegment<byte>> MessageReceived;
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
-
-        private ReadState _readState = ReadState.AccumulatingLength;
-        private int _readBytes;
-        private int _messageLength;
-        private readonly byte[] _buffer = new byte[64 * 1024];
-
-        private readonly RequestProcessingEngine _requestProcessingEngine;
 
         public ReceiveCompletionProcessor(IZerioConfiguration configuration, RioCompletionQueue receivingCompletionQueue, ISessionManager sessionManager, RequestProcessingEngine requestProcessingEngine)
         {
@@ -60,7 +52,7 @@ namespace Abc.Zerio.Core
             }
         }
 
-        private unsafe void OnRequestCompletion(int sessionId, int bufferSegmentId, int bytesTransferred)
+        private void OnRequestCompletion(int sessionId, int bufferSegmentId, int bytesTransferred)
         {
             if (bytesTransferred == 0)
             {
@@ -71,74 +63,14 @@ namespace Abc.Zerio.Core
             if (!_sessionManager.TryGetSession(sessionId, out var session))
                 return;
 
-            var bufferSegment = session.ReadBuffer(bufferSegmentId);
-
             try
             {
-                if (bufferSegment->RioBufferSegmentDescriptor.Length < bytesTransferred)
-                    throw new InvalidOperationException("Received more bytes than expected");
-
-                OnReceiveComplete(sessionId, bufferSegment, bytesTransferred);
+                session.OnBytesReceived(bufferSegmentId, bytesTransferred);
             }
             finally
             {
                 _requestProcessingEngine.RequestReceive(session.Id, bufferSegmentId);
             }
-        }
-
-        private unsafe void OnReceiveComplete(int sessionId, RioBufferSegment* bufferSegment, int bytesTransferred)
-        {
-            var offset = 0;
-
-            var bufferSegmentStart = bufferSegment->GetBufferSegmentStart();
-            while (bytesTransferred - offset > 0)
-            {
-                switch (_readState)
-                {
-                    case ReadState.AccumulatingLength:
-                    {
-                        var bytesToCopy = Math.Min(sizeof(int) - _readBytes, bytesTransferred - offset);
-                        Unsafe.CopyBlockUnaligned(ref _buffer[_readBytes], ref bufferSegmentStart[offset], (uint)bytesToCopy);
-                        _readBytes += bytesToCopy;
-
-                        if (_readBytes != sizeof(int))
-                            return;
-
-                        _messageLength = Unsafe.ReadUnaligned<int>(ref _buffer[0]);
-
-                        offset += bytesToCopy;
-
-                        _readState = ReadState.AccumulatingMessage;
-                        _readBytes = 0;
-                        continue;
-                    }
-
-                    case ReadState.AccumulatingMessage:
-                    {
-                        var bytesToCopy = Math.Min(_messageLength - _readBytes, bytesTransferred - offset);
-                        Unsafe.CopyBlockUnaligned(ref _buffer[_readBytes], ref bufferSegmentStart[offset], (uint)bytesToCopy);
-                        _readBytes += bytesToCopy;
-
-                        if (_readBytes != _messageLength)
-                            return;
-
-                        MessageReceived(sessionId, new ArraySegment<byte>(_buffer, 0, _messageLength));
-
-                        offset += bytesToCopy;
-
-                        _messageLength = 0;
-                        _readState = ReadState.AccumulatingLength;
-                        _readBytes = 0;
-                        continue;
-                    }
-                }
-            }
-        }
-
-        private enum ReadState
-        {
-            AccumulatingLength,
-            AccumulatingMessage,
         }
 
         public void Stop()

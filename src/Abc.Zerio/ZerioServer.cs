@@ -42,7 +42,9 @@ namespace Abc.Zerio
 
         private ISessionManager CreateSessionManager()
         {
-            return new SessionManager(_configuration, _completionQueues);
+            var sessionManager = new SessionManager(_configuration, _completionQueues);
+            sessionManager.MessageReceived += (peerId, message) => MessageReceived?.Invoke(peerId, message);
+            return sessionManager;
         }
 
         private CompletionQueues CreateCompletionQueues()
@@ -53,7 +55,6 @@ namespace Abc.Zerio
         private ReceiveCompletionProcessor CreateReceiveCompletionProcessor()
         {
             var receiver = new ReceiveCompletionProcessor(_configuration, _completionQueues.ReceivingQueue, _sessionManager, _requestProcessingEngine);
-            receiver.MessageReceived += OnMessageReceived;
             return receiver;
         }
 
@@ -229,14 +230,6 @@ namespace Abc.Zerio
         public bool IsRunning { get; }
         public event Action<string> ClientConnected;
         public event Action<string> ClientDisconnected;
-
-        private void OnMessageReceived(int sessionId, ArraySegment<byte> message)
-        {
-            if (!_sessionManager.TryGetSession(sessionId, out var session))
-                return;
-
-            MessageReceived?.Invoke(session.PeerId, message);
-        }
 
         private void ReleaseUnmanagedResources()
         {
