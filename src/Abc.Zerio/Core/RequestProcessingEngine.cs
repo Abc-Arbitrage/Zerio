@@ -14,26 +14,28 @@ namespace Abc.Zerio.Core
         private readonly IZerioConfiguration _configuration;
         private readonly UnmanagedRioBuffer<RequestEntry> _unmanagedRioBuffer;
 
-        private readonly ValueRingBuffer<RequestEntry> _ringBuffer;
-        private readonly ValueDisruptor<RequestEntry> _disruptor;
+        private readonly UnmanagedRingBuffer<RequestEntry> _ringBuffer;
+        private readonly UnmanagedDisruptor<RequestEntry> _disruptor;
 
         public RequestProcessingEngine(IZerioConfiguration configuration, RioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
         {
             _configuration = configuration;
-            _unmanagedRioBuffer = new UnmanagedRioBuffer<RequestEntry>(_configuration.SendingBufferCount, _configuration.SendingBufferLength);
+
+            var entryCount = _configuration.SendingBufferCount;
+            _unmanagedRioBuffer = new UnmanagedRioBuffer<RequestEntry>(entryCount, _configuration.SendingBufferLength);
 
             _disruptor = CreateDisruptor(sendingCompletionQueue, sessionManager);
             _ringBuffer = _disruptor.RingBuffer;
         }
 
-        private ValueDisruptor<RequestEntry> CreateDisruptor(RioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
+        private unsafe UnmanagedDisruptor<RequestEntry> CreateDisruptor(RioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
         {
-            // todo: use _requestingEntryBuffer with the next release of ValueDisruptor
-            var disruptor = new ValueDisruptor<RequestEntry>(() => new RequestEntry() ,
-                                                       _configuration.SendingBufferCount,
-                                                       new ThreadPerTaskScheduler(),
-                                                       ProducerType.Multi,
-                                                       new BusySpinWaitStrategy());
+            var disruptor = new UnmanagedDisruptor<RequestEntry>((IntPtr)_unmanagedRioBuffer.FirstEntry,
+                                                                 _unmanagedRioBuffer.EntryReservedSpaceSize,
+                                                                 _unmanagedRioBuffer.Length,
+                                                                 new ThreadPerTaskScheduler(),
+                                                                 ProducerType.Multi,
+                                                                 new BusySpinWaitStrategy());
 
             var handlers = new IValueEventHandler<RequestEntry>[]
             {
@@ -51,7 +53,7 @@ namespace Abc.Zerio.Core
             var sequence = _ringBuffer.Next();
             try
             {
-                var sendingEntry = _ringBuffer[sequence];
+                ref var sendingEntry = ref _ringBuffer[sequence];
                 sendingEntry.SetWriteRequest(sessionId, message);
             }
             finally
@@ -65,7 +67,7 @@ namespace Abc.Zerio.Core
             var sequence = _ringBuffer.Next();
             try
             {
-                var requestEntry = _ringBuffer[sequence];
+                ref var requestEntry = ref _ringBuffer[sequence];
                 requestEntry.SetReadRequest(sessionId, bufferSegmentId);
             }
             finally

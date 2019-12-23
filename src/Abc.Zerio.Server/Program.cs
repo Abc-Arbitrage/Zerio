@@ -14,7 +14,8 @@ namespace Abc.Zerio.Server
 
             Console.WriteLine("SERVER...");
 
-            RunServer(new TcpFeedServer(48654));
+            RunServer(new ZerioServer(48654));
+            // RunServer(new TcpFeedServer(48654));
 
             Console.WriteLine("Press enter to quit.");
             Console.ReadLine();

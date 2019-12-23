@@ -17,7 +17,8 @@ namespace Abc.Zerio.Client
 
             Console.WriteLine("CLIENT...");
 
-            RunClient(new TcpFeedClient(new IPEndPoint(IPAddress.Loopback, 48654)));
+            RunClient(new ZerioClient(new IPEndPoint(IPAddress.Loopback, 48654)));
+            // RunClient(new TcpFeedClient(new IPEndPoint(IPAddress.Loopback, 48654)));
 
             Console.WriteLine("Press enter to quit.");
             Console.ReadLine();

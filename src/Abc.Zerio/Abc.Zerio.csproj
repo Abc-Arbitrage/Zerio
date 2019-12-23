@@ -5,4 +5,7 @@
   <ItemGroup>
     <PackageReference Include="Disruptor" Version="3.5.0" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Disruptor-net\src\Disruptor\Disruptor.csproj" />
+  </ItemGroup>
 </Project>
