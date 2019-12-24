@@ -37,10 +37,13 @@ namespace Abc.Zerio.Core
             var completionQueue = (RioCompletionQueue)state;
             var maxCompletionResults = _configuration.MaxReceiveCompletionResults;
             var results = stackalloc RIO_RESULT[maxCompletionResults];
-
-            int resultCount;
-            while ((resultCount = completionQueue.TryGetCompletionResults(_cancellationTokenSource.Token, results, maxCompletionResults)) > 0)
+            
+            while (!_cancellationTokenSource.IsCancellationRequested)
             {
+                var resultCount = completionQueue.TryGetCompletionResults(results, maxCompletionResults);
+                if (resultCount == 0)
+                    continue;
+
                 for (var i = 0; i < resultCount; i++)
                 {
                     var result = results[i];

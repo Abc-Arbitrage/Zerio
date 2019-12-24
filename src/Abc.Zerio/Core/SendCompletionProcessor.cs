@@ -10,7 +10,6 @@ namespace Abc.Zerio.Core
 {
     internal unsafe class SendCompletionProcessor : IValueEventHandler<RequestEntry>, ILifecycleAware
     {
-        private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
         private readonly RioCompletionQueue _sendCompletionQueue;
 
         private readonly RIO_RESULT[] _completionResults;
@@ -29,11 +28,16 @@ namespace Abc.Zerio.Core
 
         public void OnEvent(ref RequestEntry data, long sequence, bool endOfBatch)
         {
+            var spinWait = new SpinWait();
+
             while (!_releasableSequences.Remove(sequence))
             {
-                var resultCount = _sendCompletionQueue.TryGetCompletionResults(_cancellationTokenSource.Token, _completionResultsPointer, _completionResults.Length);
+                var resultCount = _sendCompletionQueue.TryGetCompletionResults(_completionResultsPointer, _completionResults.Length);
                 if (resultCount == 0)
+                {
+                    spinWait.SpinOnce();
                     continue;
+                }
 
                 for (var i = 0; i < resultCount; i++)
                 {
@@ -52,8 +56,6 @@ namespace Abc.Zerio.Core
 
         public void OnShutdown()
         {
-            _cancellationTokenSource.Cancel();
-
             Dispose(true);
             GC.SuppressFinalize(this);
         }
@@ -63,10 +65,7 @@ namespace Abc.Zerio.Core
             _completionResultsHandle.Free();
 
             if (disposing)
-            {
                 _sendCompletionQueue?.Dispose();
-                _cancellationTokenSource?.Dispose();
-            }
         }
 
         ~SendCompletionProcessor()
