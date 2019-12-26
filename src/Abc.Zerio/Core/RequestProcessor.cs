@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Net.NetworkInformation;
 using System.Threading;
@@ -11,8 +12,8 @@ namespace Abc.Zerio.Core
         private readonly ISessionManager _sessionManager;
         private readonly int _maxSendBatchSize;
         private int _currentBatchSize;
-        
-        private readonly Dictionary<(int, RequestType), RioRequestQueue> _flushableRequestQueues = new Dictionary<(int, RequestType), RioRequestQueue>();
+
+        private readonly Dictionary<(int sessionId, RequestType), Action> _pendingFlushOperations = new Dictionary<(int sessionId, RequestType), Action>();
 
         public RequestProcessor(IZerioConfiguration configuration, ISessionManager sessionManager)
         {
@@ -28,8 +29,9 @@ namespace Abc.Zerio.Core
         public unsafe void OnEvent(ref RequestEntry data, long sequence, bool endOfBatch)
         {
             var shouldFlush = endOfBatch || _maxSendBatchSize == _currentBatchSize;
-
             var requestType = data.Type;
+
+            Action pendingFlushOperation = default;
             
             var sessionIsActive = _sessionManager.TryGetSession(data.SessionId, out var session);
             if (sessionIsActive)
@@ -38,47 +40,44 @@ namespace Abc.Zerio.Core
                 {
                     case RequestType.Receive:
                         session.RequestQueue.Receive(session.ReadBuffer(data.BufferSegmentId), data.BufferSegmentId, shouldFlush);
+                        pendingFlushOperation = session.RequestQueue.FlushReceivesOperation;
                         break;
                     case RequestType.Send:
                         session.RequestQueue.Send(sequence, data.GetRioBufferDescriptor(), shouldFlush);
+                        pendingFlushOperation = session.RequestQueue.FlushSendsOperation;
                         break;
                     default:
                         throw new NetworkInformationException();
                 }
             }
 
-            var alreadyFlushedSessionId = (data.SessionId, requestType);
+            var flushOperationKey = (data.SessionId, requestType);
 
             if (shouldFlush)
             {
-                FlushRequestQueues(alreadyFlushedSessionId);
+                FlushRequestQueues(flushOperationKey);
             }
             else
             {
                 if (sessionIsActive)
-                    _flushableRequestQueues[alreadyFlushedSessionId] = session.RequestQueue;
+                    _pendingFlushOperations[flushOperationKey] = pendingFlushOperation;
 
                 _currentBatchSize++;
             }
         }
 
-        private void FlushRequestQueues((int SessionId, RequestType requestType) alreadyFlushedSessionId)
+        private void FlushRequestQueues((int sessionId, RequestType requestType) noLongerPendingFlushOperationKey)
         {
-            foreach (var (sessionId, requestQueue) in _flushableRequestQueues)
+            foreach (var (pendingFlushOperationKey, pendingFlushOperation) in _pendingFlushOperations)
             {
-                if (sessionId == alreadyFlushedSessionId)
+                if (pendingFlushOperationKey == noLongerPendingFlushOperationKey)
                     continue;
 
-                if (sessionId.Item2 == RequestType.Receive)
-                    requestQueue.FlushReceives();
-                else
-                {
-                    requestQueue.FlushSends();
-                }
+                pendingFlushOperation.Invoke();
             }
 
             _currentBatchSize = 0;
-            _flushableRequestQueues.Clear();
+            _pendingFlushOperations.Clear();
         }
 
         public void OnShutdown()

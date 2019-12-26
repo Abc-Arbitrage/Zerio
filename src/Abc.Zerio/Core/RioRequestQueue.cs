@@ -7,9 +7,14 @@ namespace Abc.Zerio.Core
     {
         private readonly IntPtr _handle;
 
+        public Action FlushSendsOperation { get; }
+        public Action FlushReceivesOperation { get; }
+
         private RioRequestQueue(IntPtr handle)
         {
             _handle = handle;
+            FlushSendsOperation = FlushSends;
+            FlushReceivesOperation = FlushReceives;
         }
 
         public static RioRequestQueue Create(int correlationId, IntPtr socket, RioCompletionQueue sendingCompletionQueue, uint maxOutstandingSends, RioCompletionQueue receivingCompletionQueue, uint maxOutstandingReceives)
@@ -37,13 +42,13 @@ namespace Abc.Zerio.Core
                 WinSock.ThrowLastWsaError();
         }
 
-        public unsafe void FlushSends()
+        private unsafe void FlushSends()
         {
             if (!WinSock.Extensions.Send(_handle, null, 0, RIO_SEND_FLAGS.COMMIT_ONLY, 0))
                 WinSock.ThrowLastWsaError();
         }
         
-        public unsafe void FlushReceives()
+        private unsafe void FlushReceives()
         {
             if (!WinSock.Extensions.Receive(_handle, null, 0, RIO_RECEIVE_FLAGS.COMMIT_ONLY, 0))
                 WinSock.ThrowLastWsaError();
