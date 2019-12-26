@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.Threading;
 using Abc.Zerio.Core;
-using Abc.Zerio.Tcp;
 
 namespace Abc.Zerio.Server
 {
@@ -15,7 +14,6 @@ namespace Abc.Zerio.Server
             Console.WriteLine("SERVER...");
 
             RunServer(new ZerioServer(48654));
-            // RunServer(new TcpFeedServer(48654));
 
             Console.WriteLine("Press enter to quit.");
             Console.ReadLine();

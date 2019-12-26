@@ -35,7 +35,7 @@ namespace Abc.Zerio.Client
 
                 var latencyInMicroseconds = unchecked(rrt * 1_000_000 / (double)Stopwatch.Frequency);
 
-                Interlocked.Increment(ref receivedMessageCount);
+                receivedMessageCount++;
 
                 histogram.RecordValue((long)latencyInMicroseconds);
             }

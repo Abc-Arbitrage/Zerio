@@ -21,9 +21,11 @@ namespace Abc.Zerio.Core
             return new RioRequestQueue(requestQueue);
         }
 
-        public unsafe void Receive(RioBufferSegment* bufferSegment, int bufferSegmentId)
+        public unsafe void Receive(RioBufferSegment* bufferSegment, int bufferSegmentId, bool flush)
         {
-            if (!WinSock.Extensions.Receive(_handle, bufferSegment->GetRioBufferDescriptor(), 1, RIO_RECEIVE_FLAGS.NONE, bufferSegmentId))
+            var rioSendFlags = flush ? RIO_RECEIVE_FLAGS.NONE : RIO_RECEIVE_FLAGS.DEFER;
+            
+            if (!WinSock.Extensions.Receive(_handle, bufferSegment->GetRioBufferDescriptor(), 1, rioSendFlags, bufferSegmentId))
                 WinSock.ThrowLastWsaError();
         }
 
@@ -35,9 +37,15 @@ namespace Abc.Zerio.Core
                 WinSock.ThrowLastWsaError();
         }
 
-        public unsafe void Flush()
+        public unsafe void FlushSends()
         {
-            if (!WinSock.Extensions.Send(_handle, null, 1, RIO_SEND_FLAGS.COMMIT_ONLY, 0))
+            if (!WinSock.Extensions.Send(_handle, null, 0, RIO_SEND_FLAGS.COMMIT_ONLY, 0))
+                WinSock.ThrowLastWsaError();
+        }
+        
+        public unsafe void FlushReceives()
+        {
+            if (!WinSock.Extensions.Receive(_handle, null, 0, RIO_RECEIVE_FLAGS.COMMIT_ONLY, 0))
                 WinSock.ThrowLastWsaError();
         }
     }

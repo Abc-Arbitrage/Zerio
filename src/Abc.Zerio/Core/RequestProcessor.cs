@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using System.Data;
+using System.Net.NetworkInformation;
 using System.Threading;
 using Abc.Zerio.Configuration;
 using Disruptor;
@@ -10,9 +10,9 @@ namespace Abc.Zerio.Core
     {
         private readonly ISessionManager _sessionManager;
         private readonly int _maxSendBatchSize;
-
         private int _currentBatchSize;
-        private readonly Dictionary<int, RioRequestQueue> _flushableRequestQueues = new Dictionary<int, RioRequestQueue>();
+        
+        private readonly Dictionary<(int, RequestType), RioRequestQueue> _flushableRequestQueues = new Dictionary<(int, RequestType), RioRequestQueue>();
 
         public RequestProcessor(IZerioConfiguration configuration, ISessionManager sessionManager)
         {
@@ -25,56 +25,60 @@ namespace Abc.Zerio.Core
             Thread.CurrentThread.Name = nameof(RequestProcessor);
         }
 
-        public void OnEvent(ref RequestEntry data, long sequence, bool endOfBatch)
-        {
-            switch (data.Type)
-            {
-                case RequestType.Receive:
-                    OnReceivingRequest(data);
-                    break;
-                case RequestType.Send:
-                    OnSendingRequest(ref data, sequence, endOfBatch);
-                    break;
-            }
-        }
-
-        private unsafe void OnSendingRequest(ref RequestEntry data, long sequence, bool endOfBatch)
+        public unsafe void OnEvent(ref RequestEntry data, long sequence, bool endOfBatch)
         {
             var shouldFlush = endOfBatch || _maxSendBatchSize == _currentBatchSize;
 
+            var requestType = data.Type;
+            
             var sessionIsActive = _sessionManager.TryGetSession(data.SessionId, out var session);
             if (sessionIsActive)
-                session.RequestQueue.Send(sequence, data.GetRioBufferDescriptor(), shouldFlush);
-
-            if (!shouldFlush)
             {
-                _currentBatchSize++;
-
-                if(sessionIsActive)
-                    _flushableRequestQueues[data.SessionId] = session.RequestQueue;
-
-                return;
+                switch (requestType)
+                {
+                    case RequestType.Receive:
+                        session.RequestQueue.Receive(session.ReadBuffer(data.BufferSegmentId), data.BufferSegmentId, shouldFlush);
+                        break;
+                    case RequestType.Send:
+                        session.RequestQueue.Send(sequence, data.GetRioBufferDescriptor(), shouldFlush);
+                        break;
+                    default:
+                        throw new NetworkInformationException();
+                }
             }
 
-            foreach (var (sessionId, flushableRequestQueue) in _flushableRequestQueues)
+            var alreadyFlushedSessionId = (data.SessionId, requestType);
+
+            if (shouldFlush)
             {
-                if (sessionId == data.SessionId)
+                FlushRequestQueues(alreadyFlushedSessionId);
+            }
+            else
+            {
+                if (sessionIsActive)
+                    _flushableRequestQueues[alreadyFlushedSessionId] = session.RequestQueue;
+
+                _currentBatchSize++;
+            }
+        }
+
+        private void FlushRequestQueues((int SessionId, RequestType requestType) alreadyFlushedSessionId)
+        {
+            foreach (var (sessionId, requestQueue) in _flushableRequestQueues)
+            {
+                if (sessionId == alreadyFlushedSessionId)
                     continue;
 
-                flushableRequestQueue.Flush();
+                if (sessionId.Item2 == RequestType.Receive)
+                    requestQueue.FlushReceives();
+                else
+                {
+                    requestQueue.FlushSends();
+                }
             }
 
             _currentBatchSize = 0;
             _flushableRequestQueues.Clear();
-        }
-
-        private unsafe void OnReceivingRequest(RequestEntry data)
-        {
-            if (!_sessionManager.TryGetSession(data.SessionId, out var session))
-                return;
-
-            var buffer = session.ReadBuffer(data.BufferSegmentId);
-            session.RequestQueue.Receive(buffer, data.BufferSegmentId);
         }
 
         public void OnShutdown()
