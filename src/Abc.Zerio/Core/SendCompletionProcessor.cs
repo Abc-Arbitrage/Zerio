@@ -28,6 +28,9 @@ namespace Abc.Zerio.Core
 
         public void OnEvent(ref RequestEntry data, long sequence, bool endOfBatch)
         {
+            if (data.Type == RequestType.Receive)
+                return;
+            
             var spinWait = new SpinWait();
 
             while (!_releasableSequences.Remove(sequence))
