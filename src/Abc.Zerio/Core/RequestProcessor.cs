@@ -1,11 +1,12 @@
 using System.Collections.Generic;
 using System.Data;
+using System.Threading;
 using Abc.Zerio.Configuration;
 using Disruptor;
 
 namespace Abc.Zerio.Core
 {
-    internal class RequestProcessor : IValueEventHandler<RequestEntry>
+    internal class RequestProcessor : IValueEventHandler<RequestEntry>, ILifecycleAware
     {
         private readonly ISessionManager _sessionManager;
         private readonly int _maxSendBatchSize;
@@ -17,6 +18,11 @@ namespace Abc.Zerio.Core
         {
             _sessionManager = sessionManager;
             _maxSendBatchSize = _maxSendBatchSize = configuration.MaxSendBatchSize;
+        }
+
+        public void OnStart()
+        {
+            Thread.CurrentThread.Name = nameof(RequestProcessor);
         }
 
         public void OnEvent(ref RequestEntry data, long sequence, bool endOfBatch)
@@ -69,6 +75,10 @@ namespace Abc.Zerio.Core
 
             var buffer = session.ReadBuffer(data.BufferSegmentId);
             session.RequestQueue.Receive(buffer, data.BufferSegmentId);
+        }
+
+        public void OnShutdown()
+        {
         }
     }
 }

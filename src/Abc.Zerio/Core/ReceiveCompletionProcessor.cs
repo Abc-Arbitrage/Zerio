@@ -5,15 +5,15 @@ using Abc.Zerio.Interop;
 
 namespace Abc.Zerio.Core
 {
-    internal class ReceiveCompletionProcessor : IDisposable
+    internal class ReceiveCompletionProcessor
     {
         private readonly IZerioConfiguration _configuration;
         private readonly RioCompletionQueue _receivingCompletionQueue;
         private readonly ISessionManager _sessionManager;
         private readonly RequestProcessingEngine _requestProcessingEngine;
 
+        private bool _isRunning;
         private Thread _completionWorkerThread;
-        private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
 
         public ReceiveCompletionProcessor(IZerioConfiguration configuration, RioCompletionQueue receivingCompletionQueue, ISessionManager sessionManager, RequestProcessingEngine requestProcessingEngine)
         {
@@ -24,21 +24,21 @@ namespace Abc.Zerio.Core
         }
 
         public void Start()
-        {
-            _cancellationTokenSource = new CancellationTokenSource();
+        {   
+            _isRunning = true;
             _completionWorkerThread = new Thread(ProcessCompletions) { IsBackground = true };
             _completionWorkerThread.Start(_receivingCompletionQueue);
         }
 
         private unsafe void ProcessCompletions(object state)
         {
-            Thread.CurrentThread.Name = "Receive completion processing thread";
+            Thread.CurrentThread.Name = nameof(ReceiveCompletionProcessor);
 
             var completionQueue = (RioCompletionQueue)state;
             var maxCompletionResults = _configuration.MaxReceiveCompletionResults;
             var results = stackalloc RIO_RESULT[maxCompletionResults];
-            
-            while (!_cancellationTokenSource.IsCancellationRequested)
+
+            while (_isRunning)
             {
                 var resultCount = completionQueue.TryGetCompletionResults(results, maxCompletionResults);
                 if (resultCount == 0)
@@ -78,15 +78,8 @@ namespace Abc.Zerio.Core
 
         public void Stop()
         {
-            _cancellationTokenSource.Cancel();
+            _isRunning = false;
             _completionWorkerThread.Join(TimeSpan.FromSeconds(10));
-        }
-
-        public void Dispose()
-        {
-            Stop();
-
-            _cancellationTokenSource?.Dispose();
         }
     }
 }

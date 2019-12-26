@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Abc.Zerio.Core;
-using Abc.Zerio.Tcp;
+using HdrHistogram;
 
 namespace Abc.Zerio.Client
 {
@@ -14,11 +14,9 @@ namespace Abc.Zerio.Client
         private static void Main()
         {
             Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
-
             Console.WriteLine("CLIENT...");
 
             RunClient(new ZerioClient(new IPEndPoint(IPAddress.Loopback, 48654)));
-            // RunClient(new TcpFeedClient(new IPEndPoint(IPAddress.Loopback, 48654)));
 
             Console.WriteLine("Press enter to quit.");
             Console.ReadLine();
@@ -26,35 +24,113 @@ namespace Abc.Zerio.Client
 
         private static void RunClient(IFeedClient client)
         {
+            var histogram = new LongHistogram(TimeSpan.FromSeconds(10).Ticks, 2);
+            var receivedMessageCount = 0;
+            
+            void OnMessageReceived(ReadOnlySpan<byte> message)
+            {
+                var now = Stopwatch.GetTimestamp();
+                var start = Unsafe.ReadUnaligned<long>(ref MemoryMarshal.GetReference(message));
+                var rrt = now - start;
+
+                var latencyInMicroseconds = unchecked(rrt * 1_000_000 / (double)Stopwatch.Frequency);
+
+                Interlocked.Increment(ref receivedMessageCount);
+
+                histogram.RecordValue((long)latencyInMicroseconds);
+            }
+
             using (client)
             {
                 var connectedSignal = new AutoResetEvent(false);
                 client.Connected += () => Console.WriteLine($"Connected {connectedSignal.Set()}");
                 client.MessageReceived += OnMessageReceived;
                 client.StartAsync("client");
-
                 connectedSignal.WaitOne();
-                Span<byte> message = stackalloc byte[64];
 
-                for (var i = 0; i < 10000; i++)
+                do
                 {
-                    Unsafe.WriteUnaligned(ref message[0], Stopwatch.GetTimestamp());
-                    client.Send(message);
-                    Thread.Sleep(100);
-                }
+                    Console.WriteLine("Bench? (<message count> <message size> <delay in micro> <burst>, eg.: 100000 128 10 1)");
+
+                    var benchArgs = Console.ReadLine();
+
+                    if (!TryParseBenchArgs(benchArgs, out var args))
+                        break;
+                    
+                    histogram.Reset();
+                    
+                    RunBench(client, args, ref receivedMessageCount);
+
+                    histogram.OutputPercentileDistribution(Console.Out, 1);
+                    
+                } while (true);
 
                 client.Stop();
             }
         }
 
-        private static void OnMessageReceived(ReadOnlySpan<byte> message)
+        private static void RunBench(IFeedClient client, (int messageCount, int messageSize, int delayInMicros, int burstSize) args, ref int receivedMessageCount)
         {
-            var now = Stopwatch.GetTimestamp();
-            var start = Unsafe.ReadUnaligned<long>(ref MemoryMarshal.GetReference(message));
-            var rrt = now - start;
+            receivedMessageCount = 0;
+            
+            Span<byte> message = stackalloc byte[args.messageSize];
 
-            var latencyInMicroseconds = unchecked(rrt * 1_000_000 / (double)Stopwatch.Frequency);
-            Console.WriteLine($"Message echoed in {latencyInMicroseconds:N0} µs");
+            for (var i = 0; i < args.messageCount / args.burstSize; i++)
+            {
+                for (var j = 0; j < args.burstSize; j++)
+                {
+                    Unsafe.WriteUnaligned(ref message[0], Stopwatch.GetTimestamp());
+                    client.Send(message);
+                }
+
+                BusyWait(args.delayInMicros);
+            }
+            
+            while (receivedMessageCount < args.messageCount)
+            {
+                Thread.Sleep(100);
+            }
+        }
+
+        private static void BusyWait(double delayInMicros)
+        {
+            var delayInSeconds = delayInMicros / 1_000_000.0;
+            
+            if (Math.Abs(delayInSeconds) < 0.000_000_01)
+                return;
+
+            var delayInTicks = Math.Round(delayInSeconds * Stopwatch.Frequency);
+
+            var ticks = Stopwatch.GetTimestamp();
+
+            while (Stopwatch.GetTimestamp() - ticks < delayInTicks)
+            {
+                Thread.SpinWait(1);
+            }
+        }
+
+        private static bool TryParseBenchArgs(string benchArgs, out (int messageCount, int messageSize, int delayInMicros, int burstSize) args)
+        {
+            args = default;
+            
+            var parts = benchArgs.Split(" ");
+            if (parts.Length != 4)
+                return false;
+
+            if (!int.TryParse(parts[0], out var messageCount))
+                return false;
+            
+            if (!int.TryParse(parts[1], out var messageSize))
+                return false;
+            
+            if (!int.TryParse(parts[2], out var delayInMicros))
+                return false;
+
+            if (!int.TryParse(parts[3], out var burstSize))
+                return false;
+
+            args = (messageCount, messageSize, delayInMicros, burstSize);
+            return true;
         }
     }
 }

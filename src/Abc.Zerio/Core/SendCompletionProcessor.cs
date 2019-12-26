@@ -55,6 +55,7 @@ namespace Abc.Zerio.Core
 
         public void OnStart()
         {
+            Thread.CurrentThread.Name = nameof(SendCompletionProcessor);
         }
 
         public void OnShutdown()

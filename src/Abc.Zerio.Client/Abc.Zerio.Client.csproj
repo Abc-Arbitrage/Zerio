@@ -7,4 +7,7 @@
     <ProjectReference Include="..\Abc.Zerio.Server\Abc.Zerio.Server.csproj" />
     <ProjectReference Include="..\Abc.Zerio\Abc.Zerio.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="HdrHistogram" Version="2.5.0" />
+  </ItemGroup>
 </Project>
