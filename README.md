@@ -31,7 +31,6 @@ using (var server = new ZerioServer(48654))
 This is how you create a client and connect to a server.
 
 ```csharp
-var serializationEngine = CreateSerializationEngine();
 using (var client = new ZerioClient(new IPEndPoint(IPAddress.Loopback, 48654))
 {
     client.StartAsync("client");
