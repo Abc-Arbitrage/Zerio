@@ -16,31 +16,19 @@ namespace Abc.Zerio.Core
                 WinSock.ThrowLastWsaError();
         }
 
-        internal int TryGetCompletionResults(CancellationToken cancellationToken, RIO_RESULT* results, int maxCompletionResults)
+        internal int TryGetCompletionResults(RIO_RESULT* results, int maxCompletionResults)
         {
             var completionQueue = QueueHandle;
 
-            var spinwait = new SpinWait();
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                var resultCount = WinSock.Extensions.DequeueCompletion(completionQueue, results, (uint)maxCompletionResults);
+            var resultCount = WinSock.Extensions.DequeueCompletion(completionQueue, results, (uint)maxCompletionResults);
 
-                if (resultCount == 0)
-                {
-                    spinwait.SpinOnce();
-                    continue;
-                }
+            if (resultCount == 0)
+                return 0;
 
-                if (resultCount == WinSock.Consts.RIO_CORRUPT_CQ)
-                {
-                    WinSock.ThrowLastWsaError();
-                    break;
-                }
+            if (resultCount == WinSock.Consts.RIO_CORRUPT_CQ)
+                WinSock.ThrowLastWsaError();
 
-                return (int)resultCount;
-            }
-
-            return 0;
+            return (int)resultCount;
         }
 
         public void Dispose()

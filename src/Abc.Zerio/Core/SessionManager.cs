@@ -1,24 +1,31 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using Abc.Zerio.Serialization;
+using Abc.Zerio.Configuration;
 
 namespace Abc.Zerio.Core
 {
-    public class SessionManager
+    internal class SessionManager : ISessionManager
     {
-        private readonly IServerConfiguration _configuration;
-        private readonly ConcurrentStack<RioSession> _sessions = new ConcurrentStack<RioSession>();
-        private readonly ConcurrentDictionary<int, RioSession> _activeSessions = new ConcurrentDictionary<int, RioSession>();
+        private readonly IZerioConfiguration _configuration;
+        private readonly CompletionQueues _completionQueues;
+        
+        private readonly ConcurrentStack<Session> _sessions = new ConcurrentStack<Session>();
+        private readonly ConcurrentDictionary<int, Session> _activeSessions = new ConcurrentDictionary<int, Session>();
+        private readonly ConcurrentDictionary<string, Session> _activeSessionsByPeerId = new ConcurrentDictionary<string, Session>();
 
         private int _sessionCount;
 
-        public SessionManager(IServerConfiguration configuration)
+        public event ServerMessageReceivedDelegate MessageReceived;
+
+        public SessionManager(IZerioConfiguration configuration, CompletionQueues completionQueues)
         {
             _configuration = configuration;
+            _completionQueues = completionQueues;
+
+            CreateSessions();
         }
 
-        public void CreateSessions(IList<RioCompletionWorker> workers, SerializationEngine serializationEngine)
+        private void CreateSessions()
         {
             if (_configuration.SessionCount <= 0)
                 throw new ArgumentOutOfRangeException(nameof(_configuration.SessionCount));
@@ -28,44 +35,48 @@ namespace Abc.Zerio.Core
 
             for (var i = 0; i < _sessionCount; i++)
             {
-                var worker = workers[i % workers.Count];
-                AddNewSession(i, worker, serializationEngine);
+                var session = new Session(i, _configuration, _completionQueues);
+                session.MessageReceived += (peerId, message) => MessageReceived?.Invoke(peerId, message); 
+                _sessions.Push(session);
             }
         }
 
-        private void AddNewSession(int sessionId, RioCompletionWorker completionWorker, SerializationEngine serializationEngine)
+        public Session Acquire(string peerId)
         {
-            var clientSession = new RioSession(sessionId, _configuration, completionWorker.SendingCompletionQueue, completionWorker.ReceivingCompletionQueue, serializationEngine);
-            _sessions.Push(clientSession);
-        }
-
-        public RioSession Acquire()
-        {
-            RioSession rioSession;
-            if (!_sessions.TryPop(out rioSession))
+            if (!_sessions.TryPop(out var rioSession))
                 throw new InvalidOperationException("No session available");
 
+            rioSession.PeerId = peerId;
+            _activeSessionsByPeerId.TryAdd(rioSession.PeerId, rioSession);
             _activeSessions.TryAdd(rioSession.Id, rioSession);
             return rioSession;
         }
 
-        public void Release(RioSession rioSession)
+        public void Release(Session session)
         {
-            RioSession unused;
-            _activeSessions.TryRemove(rioSession.Id, out unused);
-            _sessions.Push(rioSession);
+            _activeSessions.TryRemove(session.Id, out _);
+            _activeSessionsByPeerId.TryRemove(session.PeerId, out _);
+
+            session.Reset();
+            
+            _sessions.Push(session);
         }
 
-        public bool TryGetSession(int sessionId, out RioSession rioSession)
+        public bool TryGetSession(int sessionId, out Session rioSession)
         {
             return _activeSessions.TryGetValue(sessionId, out rioSession);
         }
 
+        public bool TryGetSession(string peerId, out Session rioSession)
+        {
+            return _activeSessionsByPeerId.TryGetValue(peerId, out rioSession);
+        }
+
         public void Dispose()
         {
-            foreach (var clientSession in _sessions)
+            foreach (var session in _sessions)
             {
-                clientSession.Dispose();
+                session.Dispose();
             }
         }
     }

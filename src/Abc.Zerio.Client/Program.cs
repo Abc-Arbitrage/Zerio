@@ -1,105 +1,136 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Linq;
 using System.Net;
-using System.Net.Sockets;
-using System.Text;
-using Abc.Zerio.Dispatch;
-using Abc.Zerio.Serialization;
-using Abc.Zerio.Server.Messages;
-using Abc.Zerio.Server.Serializers;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Threading;
+using Abc.Zerio.Core;
+using HdrHistogram;
 
 namespace Abc.Zerio.Client
 {
-    internal static class Program
+    internal static unsafe class Program
     {
-        private const int _port = 15698;
-        private const int _messageCount = 10 * 1000 * 1000;
-
-        private static int _receivedMessageCount;
-        private static readonly Stopwatch _sw = new Stopwatch();
-        private static readonly SimpleMessagePool<OrderAckMessage> _orderAckMessagePool = new SimpleMessagePool<OrderAckMessage>(65536);
-
         private static void Main()
         {
             Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
-
             Console.WriteLine("CLIENT...");
 
-            RunRioClient();
+            RunClient(new ZerioClient(new IPEndPoint(IPAddress.Loopback, 48654)));
 
             Console.WriteLine("Press enter to quit.");
             Console.ReadLine();
         }
 
-        private static void RunRioClient()
+        private static void RunClient(IFeedClient client)
         {
-            var configuration = new ClientConfiguration();
-            using (var client = CreateClient(configuration))
+            var histogram = new LongHistogram(TimeSpan.FromSeconds(10).Ticks, 2);
+            var receivedMessageCount = 0;
+            
+            void OnMessageReceived(ReadOnlySpan<byte> message)
             {
-                client.Connected += OnClientConnected;
-                client.Disconnected += OnClientDisconnected;
+                var now = Stopwatch.GetTimestamp();
+                var start = Unsafe.ReadUnaligned<long>(ref MemoryMarshal.GetReference(message));
+                var rrt = now - start;
 
-                using (client.Subscribe<OrderAckMessage>(OnMessageReceived))
+                var latencyInMicroseconds = unchecked(rrt * 1_000_000 / (double)Stopwatch.Frequency);
+
+                receivedMessageCount++;
+
+                histogram.RecordValue((long)latencyInMicroseconds);
+            }
+
+            using (client)
+            {
+                var connectedSignal = new AutoResetEvent(false);
+                client.Connected += () => Console.WriteLine($"Connected {connectedSignal.Set()}");
+                client.MessageReceived += OnMessageReceived;
+                client.StartAsync("client");
+                connectedSignal.WaitOne();
+
+                do
                 {
-                    var address = Dns.GetHostAddresses(Environment.MachineName).FirstOrDefault(x => x.AddressFamily == AddressFamily.InterNetwork);
-                    var endPoint = new IPEndPoint(address, _port);
-                    client.Connect(endPoint);
+                    Console.WriteLine("Bench? (<message count> <message size> <delay in micro> <burst>, eg.: 100000 128 10 1)");
 
-                    var instance = new PlaceOrderMessage();
+                    var benchArgs = Console.ReadLine();
 
-                    var sw = Stopwatch.StartNew();
-                    for (var i = 0; i < _messageCount; i++)
-                    {
-                        instance.Id = i;
-                        instance.InstrumentId = i;
-                        instance.Price = i;
-                        instance.Quantity = i;
-                        instance.Side = (OrderSide)(i % 2);
-                        client.Send(instance);
-                    }
+                    if (!TryParseBenchArgs(benchArgs, out var args))
+                        break;
+                    
+                    histogram.Reset();
+                    
+                    RunBench(client, args, ref receivedMessageCount);
 
-                    Console.WriteLine($"{_messageCount:N0} in {sw.Elapsed} ({_messageCount / sw.Elapsed.TotalSeconds:N0}m/s)");
-                }
+                    histogram.OutputPercentileDistribution(Console.Out, 1);
+                    
+                } while (true);
+
+                client.Stop();
             }
         }
 
-        private static void OnClientDisconnected()
+        private static void RunBench(IFeedClient client, (int messageCount, int messageSize, int delayInMicros, int burstSize) args, ref int receivedMessageCount)
         {
-            Console.WriteLine("Disconnected");
-        }
+            receivedMessageCount = 0;
+            
+            Span<byte> message = stackalloc byte[args.messageSize];
 
-        private static void OnClientConnected()
-        {
-            Console.WriteLine("Connected");
-        }
-
-        private static void OnMessageReceived(OrderAckMessage message)
-        {
-            if (_receivedMessageCount == 0)
-                _sw.Start();
-
-            var stepcount = 100 * 1000;
-            if (++_receivedMessageCount % stepcount == 0)
+            for (var i = 0; i < args.messageCount / args.burstSize; i++)
             {
-                Console.WriteLine($"{_receivedMessageCount:N0} in {_sw.Elapsed} ({stepcount / _sw.Elapsed.TotalSeconds:N0}m/s)");
-                _sw.Restart();
+                for (var j = 0; j < args.burstSize; j++)
+                {
+                    Unsafe.WriteUnaligned(ref message[0], Stopwatch.GetTimestamp());
+                    client.Send(message);
+                }
+
+                BusyWait(args.delayInMicros);
+            }
+            
+            while (receivedMessageCount < args.messageCount)
+            {
+                Thread.Sleep(100);
             }
         }
 
-        private static RioClient CreateClient(ClientConfiguration configuration)
+        private static void BusyWait(double delayInMicros)
         {
-            var serializationEngine = CreateSerializationEngine();
-            return new RioClient(configuration, serializationEngine);
+            var delayInSeconds = delayInMicros / 1_000_000.0;
+            
+            if (Math.Abs(delayInSeconds) < 0.000_000_01)
+                return;
+
+            var delayInTicks = Math.Round(delayInSeconds * Stopwatch.Frequency);
+
+            var ticks = Stopwatch.GetTimestamp();
+
+            while (Stopwatch.GetTimestamp() - ticks < delayInTicks)
+            {
+                Thread.SpinWait(1);
+            }
         }
 
-        private static SerializationEngine CreateSerializationEngine()
+        private static bool TryParseBenchArgs(string benchArgs, out (int messageCount, int messageSize, int delayInMicros, int burstSize) args)
         {
-            var serializationRegistry = new SerializationRegistry(Encoding.ASCII);
-            serializationRegistry.Register<PlaceOrderMessage, PlaceOrderMessageSerializer>();
-            serializationRegistry.Register<OrderAckMessage, OrderAckMessageSerializer>(_orderAckMessagePool, _orderAckMessagePool);
-            var serializationEngine = new SerializationEngine(serializationRegistry);
-            return serializationEngine;
+            args = default;
+            
+            var parts = benchArgs.Split(" ");
+            if (parts.Length != 4)
+                return false;
+
+            if (!int.TryParse(parts[0], out var messageCount))
+                return false;
+            
+            if (!int.TryParse(parts[1], out var messageSize))
+                return false;
+            
+            if (!int.TryParse(parts[2], out var delayInMicros))
+                return false;
+
+            if (!int.TryParse(parts[3], out var burstSize))
+                return false;
+
+            args = (messageCount, messageSize, delayInMicros, burstSize);
+            return true;
         }
     }
 }

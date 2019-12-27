@@ -30,6 +30,8 @@ namespace Abc.Zerio.Interop
         public IntPtr BufferId;
         public int Offset;
         public int Length;
+
+        public const int Size =  8 + sizeof(int) + sizeof(int);
     }
 
     [StructLayout(LayoutKind.Explicit)]
@@ -219,7 +221,7 @@ namespace Abc.Zerio.Interop
         AF_CLUSTER = 24, // Microsoft Wolfpack
         AF_12844 = 25, // IEEE 1284.4 WG AF
         AF_IRDA = 26, // IrDA
-        AF_NETDES = 28, // Network Designers OSI & gateway              
+        AF_NETDES = 28, // Network Designers OSI & gateway
         AF_TCNPROCESS = 29,
         AF_TCNMESSAGE = 30,
         AF_ICLFXBM = 31,
