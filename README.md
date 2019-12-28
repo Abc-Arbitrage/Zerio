@@ -73,3 +73,15 @@ server.Send(peerId, message);
 ## ~~Zerio~~ Zero allocation
 
 Both `ZerioClient` and `ZerioServer` can be used to communicate with each other without allocating any .NET object instances on the heap, thus avoiding any garbage collection to be triggered. However, the connection phase between a client and a server is not garbage free.
+
+## Design overview
+
+![Design overview](https://github.com/Abc-Arbitrage/Zerio/blob/master/doc/zerio_overview.png)
+
+## Sending path
+
+![Sending path](https://github.com/Abc-Arbitrage/Zerio/blob/master/doc/zerio_send.png)
+
+## Receiving path
+
+![Receiving path](https://github.com/Abc-Arbitrage/Zerio/blob/master/doc/zerio_receive.png)
