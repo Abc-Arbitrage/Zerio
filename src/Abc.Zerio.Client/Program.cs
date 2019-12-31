@@ -45,7 +45,7 @@ namespace Abc.Zerio.Client
                 var connectedSignal = new AutoResetEvent(false);
                 client.Connected += () => Console.WriteLine($"Connected {connectedSignal.Set()}");
                 client.MessageReceived += OnMessageReceived;
-                client.StartAsync("client");
+                client.Start("client");
                 connectedSignal.WaitOne();
 
                 do

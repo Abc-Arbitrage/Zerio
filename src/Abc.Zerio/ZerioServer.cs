@@ -101,14 +101,12 @@ namespace Abc.Zerio
             _requestProcessingEngine.RequestSend(session.Id, message);
         }
 
-        public Task StartAsync(string peerId)
+        public void Start(string peerId)
         {
             _receiveCompletionProcessor.Start();
             _requestProcessingEngine.Start();
 
             StartListening();
-
-            return Task.CompletedTask;
         }
 
         public void Stop()

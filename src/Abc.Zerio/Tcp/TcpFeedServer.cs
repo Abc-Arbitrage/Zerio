@@ -29,7 +29,7 @@ namespace Abc.Zerio.Tcp
         public event Action<string> ClientDisconnected = delegate { };
         public event ServerMessageReceivedDelegate MessageReceived;
 
-        public Task StartAsync(string peerId)
+        public void Start(string peerId)
         {
             if (_isRunning)
                 throw new InvalidOperationException("Already started");
@@ -49,8 +49,6 @@ namespace Abc.Zerio.Tcp
             _acceptAsyncEventArgs.Completed += OnAcceptCompleted;
 
             Accept();
-
-            return Task.CompletedTask;
         }
 
         private void Accept()

@@ -17,7 +17,7 @@ To create a server you just have to do the following:
 ```csharp
 using (var server = new ZerioServer(48654))
 {
-    server.StartAsync("server");
+    server.Start("server");
     
     // server is ready to be used
     // ...
@@ -33,7 +33,7 @@ This is how you create a client and connect to a server.
 ```csharp
 using (var client = new ZerioClient(new IPEndPoint(IPAddress.Loopback, 48654))
 {
-    client.StartAsync("client");
+    client.Start("client");
 
     // client is ready to be used
     // ...

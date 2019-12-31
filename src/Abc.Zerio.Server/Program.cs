@@ -29,7 +29,7 @@ namespace Abc.Zerio.Server
                 server.ClientDisconnected += peerId => Console.WriteLine($"Client '{peerId}' disconnected. " + disconnectionSignal.Set());
                 server.MessageReceived += server.Send;
 
-                server.StartAsync("server");
+                server.Start("server");
 
                 disconnectionSignal.WaitOne();
 

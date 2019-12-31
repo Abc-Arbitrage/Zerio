@@ -32,7 +32,7 @@ namespace Abc.Zerio.Tcp
         public event Action Disconnected = delegate {};
         public event ClientMessageReceivedDelegate MessageReceived;
 
-        public async Task StartAsync(string peerId)
+        public void Start(string peerId)
         {
             if (_isRunning)
                 throw new InvalidOperationException("Already started");
@@ -42,7 +42,7 @@ namespace Abc.Zerio.Tcp
                 NoDelay = true
             };
 
-            await _socket.ConnectAsync(_serverEndpoint);
+            _socket.Connect(_serverEndpoint);
 
             _sender = new TcpFrameSender(_socket, _arrayPool);
             _receiver = new TcpFrameReceiver(_socket, _arrayPool);

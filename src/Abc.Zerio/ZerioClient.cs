@@ -85,7 +85,7 @@ namespace Abc.Zerio
             _requestProcessingEngine.RequestSend(_session.Id, message);
         }
 
-        public Task StartAsync(string peerId)
+        public void Start(string peerId)
         {
             if (IsConnected)
                 throw new InvalidOperationException("Already started");
@@ -106,7 +106,6 @@ namespace Abc.Zerio
             IsConnected = true;
             
             Connected?.Invoke();
-            return Task.CompletedTask;
         }
 
         private void Handshake(string peerId)

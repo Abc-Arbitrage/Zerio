@@ -13,7 +13,7 @@ namespace Abc.Zerio.Core
         
        void Send(string peerId, ReadOnlySpan<byte> message);
 
-       Task StartAsync(string peerId);
+       void Start(string peerId);
        void Stop();
     }
     
