@@ -1,5 +1,8 @@
 using System;
 using System.Net;
+using System.Reflection.Metadata;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Abc.Zerio.Configuration;
@@ -18,11 +21,11 @@ namespace Abc.Zerio
 
         private readonly RequestProcessingEngine _requestProcessingEngine;
         private readonly ReceiveCompletionProcessor _receiveCompletionProcessor;
+        private readonly AutoResetEvent _handshakeSignal = new AutoResetEvent(false);
 
-        private bool _isRunning;
-        public  bool IsConnected { get; }
+        public  bool IsConnected { get; private set; }
         
-        public event Action Connected;
+        public event Action  Connected;
         public event Action Disconnected;
         public event ClientMessageReceivedDelegate MessageReceived;
 
@@ -39,9 +42,14 @@ namespace Abc.Zerio
             _requestProcessingEngine = CreateRequestProcessingEngine();
             _receiveCompletionProcessor = CreateReceiveCompletionProcessor();
 
-            _session = _sessionManager.Acquire("serverPeerId");
-
+            _session = _sessionManager.Acquire();
+            _session.HandshakeReceived += OnHandshakeReceived;
             _session.Closed += OnSessionClosed;
+        }
+
+        private void OnHandshakeReceived(string peerId)
+        {
+            _handshakeSignal.Set();
         }
 
         private ISessionManager CreateSessionManager()
@@ -79,7 +87,7 @@ namespace Abc.Zerio
 
         public Task StartAsync(string peerId)
         {
-            if (_isRunning)
+            if (IsConnected)
                 throw new InvalidOperationException("Already started");
 
             _receiveCompletionProcessor.Start();
@@ -91,14 +99,21 @@ namespace Abc.Zerio
 
             Connect(socket, _serverEndpoint);
 
-            // todo: send peer Id
-            
             _session.InitiateReceiving(_requestProcessingEngine);
+            
+            Handshake(peerId);
 
-            _isRunning = true;
-
+            IsConnected = true;
+            
             Connected?.Invoke();
             return Task.CompletedTask;
+        }
+
+        private void Handshake(string peerId)
+        { 
+            var peerIdBytes = Encoding.ASCII.GetBytes(peerId);
+            Send(peerIdBytes.AsSpan());
+            _handshakeSignal.WaitOne();
         }
 
         private static unsafe void Connect(IntPtr socket, IPEndPoint ipEndPoint)

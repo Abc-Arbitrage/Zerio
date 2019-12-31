@@ -25,10 +25,9 @@ namespace Abc.Zerio.Server
             {
                 var disconnectionSignal = new AutoResetEvent(false);
 
-                server.ClientConnected += peerId => Console.WriteLine("Client connected");
-                server.ClientDisconnected += peerId => Console.WriteLine($"Client disconnected {disconnectionSignal.Set()}");
-
-                server.MessageReceived += (peerId, message) => server.Send(peerId, message);
+                server.ClientConnected += peerId => Console.WriteLine($"Client '{peerId}' connected.");
+                server.ClientDisconnected += peerId => Console.WriteLine($"Client '{peerId}' disconnected. " + disconnectionSignal.Set());
+                server.MessageReceived += server.Send;
 
                 server.StartAsync("server");
 

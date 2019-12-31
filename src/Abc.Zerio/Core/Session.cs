@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using System.Threading;
 using Abc.Zerio.Configuration;
 using Abc.Zerio.Interop;
@@ -14,12 +15,14 @@ namespace Abc.Zerio.Core
 
         private RioRequestQueue _requestQueue;
         private IntPtr _socket;
-        
+        private bool _isWaitingForHandshake = true; 
+
         public int Id { get; private set; }
-        public string PeerId { get; set; }
+        public string PeerId { get; private set; }
         public RioRequestQueue RequestQueue => _requestQueue;
         
         public event ServerMessageReceivedDelegate MessageReceived;
+        public event Action<string> HandshakeReceived;
         public event Action<Session> Closed;
         
         public Session(int sessionId, IZerioConfiguration configuration, CompletionQueues completionQueues)
@@ -28,7 +31,20 @@ namespace Abc.Zerio.Core
             _configuration = configuration;
             _completionQueues = completionQueues;
             _receivingBuffer = new UnmanagedRioBuffer<RioBufferSegment>(configuration.ReceivingBufferCount, _configuration.ReceivingBufferLength);
-            _messageFramer.MessageFramed += message => MessageReceived?.Invoke(PeerId, message);
+            _messageFramer.MessageFramed += OnMessageFramed;
+        }
+
+        private void OnMessageFramed(ReadOnlySpan<byte> message)
+        {
+            if (_isWaitingForHandshake)
+            {
+                PeerId = Encoding.ASCII.GetString(message);
+                HandshakeReceived?.Invoke(Encoding.ASCII.GetString(message));
+                _isWaitingForHandshake = false;
+                return;
+            }
+            
+            MessageReceived?.Invoke(PeerId, message);
         }
 
         public void Open(IntPtr socket)
@@ -76,6 +92,7 @@ namespace Abc.Zerio.Core
         {
             Id = default;
             _messageFramer.Reset();
+            _isWaitingForHandshake = true;
         }
 
         public unsafe void OnBytesReceived(in int bufferSegmentId, in int bytesTransferred)

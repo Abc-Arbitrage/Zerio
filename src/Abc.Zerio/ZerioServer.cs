@@ -1,5 +1,6 @@
 using System;
 using System.Net;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Abc.Zerio.Configuration;
@@ -21,6 +22,7 @@ namespace Abc.Zerio
 
         private bool _isListening;
         private Thread _listeningThread;
+        private readonly AutoResetEvent _handshakeSignal = new AutoResetEvent(false);
 
         public int ListeningPort { get; set; }
 
@@ -146,18 +148,27 @@ namespace Abc.Zerio
                 InitClientSession(acceptSocket);
             }
         }
-
+        
         private void InitClientSession(IntPtr acceptSocket)
-        {
-            // todo : read peer id from socket
-            var clientSession = _sessionManager.Acquire(Guid.NewGuid().ToString());
+        {     
+            var clientSession = _sessionManager.Acquire();
 
             clientSession.Closed += OnClientSessionClosed;
 
             clientSession.Open(acceptSocket);
+            clientSession.HandshakeReceived += OnHandshakeReceived;
             clientSession.InitiateReceiving(_requestProcessingEngine);
 
+            _handshakeSignal.WaitOne();
+            
             ClientConnected?.Invoke(clientSession.PeerId);
+        }
+
+        private void OnHandshakeReceived(string peerId)
+        {
+            var peerIdBytes = Encoding.ASCII.GetBytes(peerId);
+            Send(peerId, peerIdBytes.AsSpan());
+            _handshakeSignal.Set();
         }
 
         private static unsafe bool Bind(IntPtr listeningSocket, int listeningPort)

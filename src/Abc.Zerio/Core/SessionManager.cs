@@ -36,18 +36,22 @@ namespace Abc.Zerio.Core
             for (var i = 0; i < _sessionCount; i++)
             {
                 var session = new Session(i, _configuration, _completionQueues);
-                session.MessageReceived += (peerId, message) => MessageReceived?.Invoke(peerId, message); 
+                session.MessageReceived += (peerId, message) => MessageReceived?.Invoke(peerId, message);
+                session.HandshakeReceived += peerId => OnHandshakeReceived(peerId, session);
                 _sessions.Push(session);
             }
         }
 
-        public Session Acquire(string peerId)
+        private void OnHandshakeReceived(string peerId, Session session)
+        {
+            _activeSessionsByPeerId.TryAdd(peerId, session);
+        }
+
+        public Session Acquire()
         {
             if (!_sessions.TryPop(out var rioSession))
                 throw new InvalidOperationException("No session available");
 
-            rioSession.PeerId = peerId;
-            _activeSessionsByPeerId.TryAdd(rioSession.PeerId, rioSession);
             _activeSessions.TryAdd(rioSession.Id, rioSession);
             return rioSession;
         }
