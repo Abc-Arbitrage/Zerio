@@ -30,21 +30,22 @@ namespace Abc.Zerio.Core
 
         private unsafe UnmanagedDisruptor<RequestEntry> CreateDisruptor(RioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
         {
+            var waitStrategy = new HybridWaitStrategy();
+            
             var disruptor = new UnmanagedDisruptor<RequestEntry>((IntPtr)_unmanagedRioBuffer.FirstEntry,
                                                                  _unmanagedRioBuffer.EntryReservedSpaceSize,
                                                                  _unmanagedRioBuffer.Length,
                                                                  new ThreadPerTaskScheduler(),
                                                                  ProducerType.Multi,
-                                                                 new BusySpinWaitStrategy());
+                                                                 waitStrategy);
 
-            var handlers = new IValueEventHandler<RequestEntry>[]
-            {
-                new RequestProcessor(_configuration, sessionManager),
-                new SendCompletionProcessor(_configuration, sendingCompletionQueue)
-            };
+            var requestProcessor = new RequestProcessor(_configuration, sessionManager);
+            var sendCompletionProcessor = new SendCompletionProcessor(_configuration, sendingCompletionQueue);
 
-            disruptor.HandleEventsWith(handlers);
+            disruptor.HandleEventsWith(requestProcessor).Then(sendCompletionProcessor);
 
+            waitStrategy.SequenceBarrierForSendCompletionProcessor = disruptor.GetBarrierFor(sendCompletionProcessor);
+            
             return disruptor;
         }
 
