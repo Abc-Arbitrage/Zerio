@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Abc.Zerio.Core;
+using Abc.Zerio.Tcp;
 using HdrHistogram;
 
 namespace Abc.Zerio.Client
@@ -75,7 +76,8 @@ namespace Abc.Zerio.Client
             
             Span<byte> message = stackalloc byte[args.messageSize];
 
-            for (var i = 0; i < args.messageCount / args.burstSize; i++)
+            var burstCount = args.messageCount / args.burstSize;
+            for (var i = 0; i < burstCount; i++)
             {
                 for (var j = 0; j < args.burstSize; j++)
                 {
@@ -86,7 +88,7 @@ namespace Abc.Zerio.Client
                 BusyWait(args.delayInMicros);
             }
             
-            while (receivedMessageCount < args.messageCount)
+            while (receivedMessageCount < burstCount * args.burstSize)
             {
                 Thread.Sleep(100);
             }
