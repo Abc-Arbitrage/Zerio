@@ -5,7 +5,6 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Abc.Zerio.Configuration;
 using Abc.Zerio.Core;
 using Abc.Zerio.Interop;
 
@@ -16,7 +15,7 @@ namespace Abc.Zerio
         private readonly IPEndPoint _serverEndpoint;
         private readonly CompletionQueues _completionQueues;
         private readonly ISessionManager _sessionManager;
-        private readonly IZerioConfiguration _configuration;
+        private readonly ZerioConfiguration _configuration;
         private readonly Session _session;
 
         private readonly RequestProcessingEngine _requestProcessingEngine;
@@ -70,7 +69,7 @@ namespace Abc.Zerio
             return receiver;
         }
 
-        private static IZerioConfiguration CreateConfiguration()
+        private static ZerioConfiguration CreateConfiguration()
         {
             return ZerioConfiguration.CreateDefault();
         }

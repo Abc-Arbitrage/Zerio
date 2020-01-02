@@ -1,6 +1,6 @@
-namespace Abc.Zerio.Configuration
+namespace Abc.Zerio
 {
-    public class ZerioConfiguration : IZerioConfiguration
+    public class ZerioConfiguration
     {
         public int SendingBufferCount { get; set; }
         public int SendingBufferLength { get; set; }

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Abc.Zerio.Configuration;
 using Disruptor;
 using Disruptor.Dsl;
 
@@ -11,13 +10,13 @@ namespace Abc.Zerio.Core
 {
     internal class RequestProcessingEngine : IDisposable
     {
-        private readonly IZerioConfiguration _configuration;
+        private readonly ZerioConfiguration _configuration;
         private readonly UnmanagedRioBuffer<RequestEntry> _unmanagedRioBuffer;
 
         private readonly UnmanagedRingBuffer<RequestEntry> _ringBuffer;
         private readonly UnmanagedDisruptor<RequestEntry> _disruptor;
 
-        public RequestProcessingEngine(IZerioConfiguration configuration, RioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
+        public RequestProcessingEngine(ZerioConfiguration configuration, RioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
         {
             _configuration = configuration;
 

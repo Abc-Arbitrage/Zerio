@@ -1,14 +1,13 @@
 using System;
 using System.Text;
 using System.Threading;
-using Abc.Zerio.Configuration;
 using Abc.Zerio.Interop;
 
 namespace Abc.Zerio.Core
 {
     internal class Session : IDisposable
     {
-        private readonly IZerioConfiguration _configuration;
+        private readonly ZerioConfiguration _configuration;
         private readonly CompletionQueues _completionQueues;
         private readonly UnmanagedRioBuffer<RioBufferSegment> _receivingBuffer;
         private readonly MessageFramer _messageFramer = new MessageFramer();
@@ -25,7 +24,7 @@ namespace Abc.Zerio.Core
         public event Action<string> HandshakeReceived;
         public event Action<Session> Closed;
         
-        public Session(int sessionId, IZerioConfiguration configuration, CompletionQueues completionQueues)
+        public Session(int sessionId, ZerioConfiguration configuration, CompletionQueues completionQueues)
         {
             Id = sessionId;
             _configuration = configuration;

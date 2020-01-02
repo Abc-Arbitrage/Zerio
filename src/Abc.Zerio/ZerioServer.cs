@@ -3,7 +3,6 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Abc.Zerio.Configuration;
 using Abc.Zerio.Core;
 using Abc.Zerio.Interop;
 
@@ -12,7 +11,7 @@ namespace Abc.Zerio
     public class ZerioServer : IFeedServer
     {
         private readonly CompletionQueues _completionQueues;
-        private readonly IZerioConfiguration _configuration;
+        private readonly ZerioConfiguration _configuration;
         private readonly ISessionManager _sessionManager;
         private readonly int _listeningPort;
         private readonly IntPtr _listeningSocket;
@@ -226,7 +225,7 @@ namespace Abc.Zerio
             _listeningThread.Join(TimeSpan.FromSeconds(10));
         }
 
-        private static IZerioConfiguration CreateConfiguration()
+        private static ZerioConfiguration CreateConfiguration()
         {
             return ZerioConfiguration.CreateDefault();
         }

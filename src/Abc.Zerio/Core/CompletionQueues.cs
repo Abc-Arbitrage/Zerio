@@ -1,11 +1,10 @@
 using System;
-using Abc.Zerio.Configuration;
 
 namespace Abc.Zerio.Core
 {
     public class CompletionQueues : IDisposable
     {
-        public CompletionQueues(IZerioConfiguration configuration)
+        public CompletionQueues(ZerioConfiguration configuration)
         {
             SendingQueue = new RioCompletionQueue(configuration.SendingBufferCount);
             ReceivingQueue = new RioCompletionQueue(configuration.ReceivingBufferCount);

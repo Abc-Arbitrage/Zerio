@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Net.NetworkInformation;
 using System.Threading;
-using Abc.Zerio.Configuration;
 using Disruptor;
 
 namespace Abc.Zerio.Core
@@ -15,7 +14,7 @@ namespace Abc.Zerio.Core
 
         private readonly Dictionary<(int sessionId, RequestType), Action> _pendingFlushOperations = new Dictionary<(int sessionId, RequestType), Action>();
 
-        public RequestProcessor(IZerioConfiguration configuration, ISessionManager sessionManager)
+        public RequestProcessor(ZerioConfiguration configuration, ISessionManager sessionManager)
         {
             _sessionManager = sessionManager;
             _maxSendBatchSize = _maxSendBatchSize = configuration.MaxSendBatchSize;

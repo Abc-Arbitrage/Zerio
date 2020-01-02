@@ -1,13 +1,12 @@
 using System;
 using System.Threading;
-using Abc.Zerio.Configuration;
 using Abc.Zerio.Interop;
 
 namespace Abc.Zerio.Core
 {
     internal class ReceiveCompletionProcessor
     {
-        private readonly IZerioConfiguration _configuration;
+        private readonly ZerioConfiguration _configuration;
         private readonly RioCompletionQueue _receivingCompletionQueue;
         private readonly ISessionManager _sessionManager;
         private readonly RequestProcessingEngine _requestProcessingEngine;
@@ -15,7 +14,7 @@ namespace Abc.Zerio.Core
         private bool _isRunning;
         private Thread _completionWorkerThread;
 
-        public ReceiveCompletionProcessor(IZerioConfiguration configuration, RioCompletionQueue receivingCompletionQueue, ISessionManager sessionManager, RequestProcessingEngine requestProcessingEngine)
+        public ReceiveCompletionProcessor(ZerioConfiguration configuration, RioCompletionQueue receivingCompletionQueue, ISessionManager sessionManager, RequestProcessingEngine requestProcessingEngine)
         {
             _configuration = configuration;
             _receivingCompletionQueue = receivingCompletionQueue;

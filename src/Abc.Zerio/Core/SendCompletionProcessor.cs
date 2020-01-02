@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
-using Abc.Zerio.Configuration;
 using Abc.Zerio.Interop;
 using Disruptor;
 
@@ -18,7 +17,7 @@ namespace Abc.Zerio.Core
 
         private readonly HashSet<long> _releasableSequences = new HashSet<long>();
 
-        public SendCompletionProcessor(IZerioConfiguration configuration, RioCompletionQueue sendCompletionQueue)
+        public SendCompletionProcessor(ZerioConfiguration configuration, RioCompletionQueue sendCompletionQueue)
         {
             _sendCompletionQueue = sendCompletionQueue;
             _completionResults = new RIO_RESULT[configuration.MaxSendCompletionResults];

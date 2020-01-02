@@ -1,12 +1,11 @@
 using System;
 using System.Collections.Concurrent;
-using Abc.Zerio.Configuration;
 
 namespace Abc.Zerio.Core
 {
     internal class SessionManager : ISessionManager
     {
-        private readonly IZerioConfiguration _configuration;
+        private readonly ZerioConfiguration _configuration;
         private readonly CompletionQueues _completionQueues;
         
         private readonly ConcurrentStack<Session> _sessions = new ConcurrentStack<Session>();
@@ -17,7 +16,7 @@ namespace Abc.Zerio.Core
 
         public event ServerMessageReceivedDelegate MessageReceived;
 
-        public SessionManager(IZerioConfiguration configuration, CompletionQueues completionQueues)
+        public SessionManager(ZerioConfiguration configuration, CompletionQueues completionQueues)
         {
             _configuration = configuration;
             _completionQueues = completionQueues;
