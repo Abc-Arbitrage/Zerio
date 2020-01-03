@@ -21,11 +21,11 @@ namespace Abc.Zerio.Core
             _messageLength = 0;
         }
 
-        public unsafe void SubmitBytes(RioBufferSegment* bufferSegment, in int bytesTransferred)
+        public void SubmitBytes(Span<byte> bytes)
         {
             var offset = 0;
-
-            var bufferSegmentStart = bufferSegment->GetBufferSegmentStart();
+            var bytesTransferred = bytes.Length;
+            
             while (bytesTransferred - offset > 0)
             {
                 switch (_readState)
@@ -33,7 +33,7 @@ namespace Abc.Zerio.Core
                     case ReadState.AccumulatingLength:
                     {
                         var bytesToCopy = Math.Min(sizeof(int) - _readBytes, bytesTransferred - offset);
-                        Unsafe.CopyBlockUnaligned(ref _buffer[_readBytes], ref bufferSegmentStart[offset], (uint)bytesToCopy);
+                        Unsafe.CopyBlockUnaligned(ref _buffer[_readBytes], ref bytes[offset], (uint)bytesToCopy);
                         _readBytes += bytesToCopy;
 
                         if (_readBytes != sizeof(int))
@@ -51,7 +51,7 @@ namespace Abc.Zerio.Core
                     case ReadState.AccumulatingMessage:
                     {
                         var bytesToCopy = Math.Min(_messageLength - _readBytes, bytesTransferred - offset);
-                        Unsafe.CopyBlockUnaligned(ref _buffer[_readBytes], ref bufferSegmentStart[offset], (uint)bytesToCopy);
+                        Unsafe.CopyBlockUnaligned(ref _buffer[_readBytes], ref bytes[offset], (uint)bytesToCopy);
                         _readBytes += bytesToCopy;
 
                         if (_readBytes != _messageLength)

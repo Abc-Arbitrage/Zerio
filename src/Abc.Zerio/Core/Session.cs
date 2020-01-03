@@ -101,7 +101,8 @@ namespace Abc.Zerio.Core
             if (bufferSegment->RioBufferSegmentDescriptor.Length < bytesTransferred)
                 throw new InvalidOperationException("Received more bytes than expected");
 
-            _messageFramer.SubmitBytes(bufferSegment, bytesTransferred);
+            var receivedBytes = new Span<byte>(bufferSegment->GetBufferSegmentStart(), bytesTransferred);
+            _messageFramer.SubmitBytes(receivedBytes);
         }
     }
 }
