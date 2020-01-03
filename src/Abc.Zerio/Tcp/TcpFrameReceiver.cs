@@ -8,8 +8,8 @@ namespace Abc.Zerio.Tcp
     internal class TcpFrameReceiver
     {
         private readonly Socket _socket;
-        private readonly MessageFramer _framer = new MessageFramer();
         private readonly byte[] _buffer = new byte[64 * 1024];
+        private readonly MessageFramer _framer = new MessageFramer(64 * 1024);
 
         public event ClientMessageReceivedDelegate MessageReceived;
 

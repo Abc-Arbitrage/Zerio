@@ -10,7 +10,7 @@ namespace Abc.Zerio.Core
         private readonly ZerioConfiguration _configuration;
         private readonly CompletionQueues _completionQueues;
         private readonly UnmanagedRioBuffer<RioBufferSegment> _receivingBuffer;
-        private readonly MessageFramer _messageFramer = new MessageFramer();
+        private readonly MessageFramer _messageFramer;
 
         private RioRequestQueue _requestQueue;
         private IntPtr _socket;
@@ -30,6 +30,8 @@ namespace Abc.Zerio.Core
             _configuration = configuration;
             _completionQueues = completionQueues;
             _receivingBuffer = new UnmanagedRioBuffer<RioBufferSegment>(configuration.ReceivingBufferCount, _configuration.ReceivingBufferLength);
+
+            _messageFramer = new MessageFramer(configuration.FramingBufferLength);
             _messageFramer.MessageFramed += OnMessageFramed;
         }
 

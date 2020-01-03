@@ -1,5 +1,3 @@
-using Abc.Zerio.Core;
-
 namespace Abc.Zerio
 {
     public class ZerioConfiguration
@@ -14,27 +12,27 @@ namespace Abc.Zerio
 
         public int MaxSendBatchSize { get; set; }
         public int SessionCount { get; set; }
+        public int FramingBufferLength { get; set; }
 
         public static ZerioConfiguration CreateDefault()
         {
             // const int allocationGranularity = 65536;
-         
             var configuration = new ZerioConfiguration
             {
                 MaxSendBatchSize = 16,
-
-                SendingBufferLength = 1024,
-                ReceivingBufferLength = 64 * 1024,
-
                 SessionCount = 2,
+                
+                SendingBufferLength = 1024,
+                SendingBufferCount = 64 * 1024,
+                
+                ReceivingBufferLength = 64 * 1024,
+                ReceivingBufferCount = 4,
             };
 
-            configuration.SendingBufferCount = 64 * 1024;
-            configuration.ReceivingBufferCount = 4;
-
+            configuration.FramingBufferLength = configuration.ReceivingBufferLength;
             configuration.MaxSendCompletionResults = configuration.SendingBufferCount;
             configuration.MaxReceiveCompletionResults = configuration.ReceivingBufferCount;
-                
+
             return configuration;
         }
 
