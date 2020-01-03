@@ -12,7 +12,6 @@ namespace Abc.Zerio.Tcp
     public class TcpFeedClient : IFeedClient
     {
         private readonly IPEndPoint _serverEndpoint;
-        private readonly ArrayPool<byte> _arrayPool;
 
         private Socket _socket;
         private volatile bool _isRunning;
@@ -22,7 +21,6 @@ namespace Abc.Zerio.Tcp
 
         public TcpFeedClient(IPEndPoint serverEndpoint)
         {
-            _arrayPool = ArrayPool<byte>.Shared;
             _serverEndpoint = serverEndpoint;
         }
 
@@ -44,13 +42,13 @@ namespace Abc.Zerio.Tcp
 
             _socket.Connect(_serverEndpoint);
 
-            _sender = new TcpFrameSender(_socket, _arrayPool);
-            _receiver = new TcpFrameReceiver(_socket, _arrayPool);
+            _sender = new TcpFrameSender(_socket);
+            _receiver = new TcpFrameReceiver(_socket);
             _receiver.MessageReceived += OnMessageReceived;
 
             _isRunning = true;
 
-            _receiver.Receive();
+            _receiver.StartReceive();
 
             Connected?.Invoke();
         }
@@ -69,10 +67,7 @@ namespace Abc.Zerio.Tcp
 
             _isRunning = false;
 
-            _receiver.Dispose();
             _receiver = null;
-
-            _sender.Dispose();
             _sender = null;
 
             _socket.Dispose();

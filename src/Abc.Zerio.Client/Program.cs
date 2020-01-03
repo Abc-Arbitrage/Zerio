@@ -5,7 +5,6 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Abc.Zerio.Core;
-using Abc.Zerio.Tcp;
 using HdrHistogram;
 
 namespace Abc.Zerio.Client

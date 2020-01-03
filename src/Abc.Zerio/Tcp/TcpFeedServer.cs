@@ -1,9 +1,7 @@
 using System;
-using System.Buffers;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading.Tasks;
 using Abc.Zerio.Core;
 
 namespace Abc.Zerio.Tcp
@@ -11,7 +9,6 @@ namespace Abc.Zerio.Tcp
     public class TcpFeedServer : IFeedServer
     {
         private readonly Dictionary<string, ClientSession> _clients = new Dictionary<string, ClientSession>();
-        private readonly ArrayPool<byte> _arrayPool;
         private readonly int _port;
         private volatile bool _isRunning;
         private Socket _serverSocket;
@@ -21,7 +18,6 @@ namespace Abc.Zerio.Tcp
         public TcpFeedServer(int port)
         {
             _port = port;
-            _arrayPool = ArrayPool<byte>.Shared;
         }
 
         public bool IsRunning => _isRunning;
@@ -74,7 +70,7 @@ namespace Abc.Zerio.Tcp
 
             socket.NoDelay = true;
 
-            var client = new ClientSession(socket, _arrayPool);
+            var client = new ClientSession(socket);
 
             lock (_clients)
             {
@@ -133,28 +129,26 @@ namespace Abc.Zerio.Tcp
         private class ClientSession : IDisposable
         {
             private readonly Socket _socket;
-            private readonly TcpFrameSender _sender;
             private readonly TcpFrameReceiver _receiver;
+            private readonly TcpFrameSender _sender;
 
             public event ClientMessageReceivedDelegate MessageReceived;
 
-            public ClientSession(Socket socket, ArrayPool<byte> arrayPool)
+            public ClientSession(Socket socket)
             {
                 _socket = socket;
 
-                _sender = new TcpFrameSender(socket, arrayPool);
-                _receiver = new TcpFrameReceiver(socket, arrayPool);
+                _sender = new TcpFrameSender(socket);
+                _receiver = new TcpFrameReceiver(socket);
                 _receiver.MessageReceived += message => MessageReceived?.Invoke(message);
             }
 
             public void Dispose()
             {
-                _sender.Dispose();
-                _receiver.Dispose();
                 _socket.Dispose();
             }
 
-            public void Receive() => _receiver.Receive();
+            public void Receive() => _receiver.StartReceive();
 
             public void Send(ReadOnlySpan<byte> message) => _sender.Send(message);
         }

@@ -1,12 +1,11 @@
 using System;
 using System.Net;
-using System.Reflection.Metadata;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Abc.Zerio.Core;
 using Abc.Zerio.Interop;
+using SocketFlags = Abc.Zerio.Interop.SocketFlags;
+using SocketType = Abc.Zerio.Interop.SocketType;
 
 namespace Abc.Zerio
 {
