@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 using Abc.Zerio.Core;
 
 namespace Abc.Zerio.Tcp
@@ -10,10 +11,9 @@ namespace Abc.Zerio.Tcp
     {
         private readonly Dictionary<string, ClientSession> _clients = new Dictionary<string, ClientSession>();
         private readonly int _port;
+        private Socket _listeningSocket;
+        
         private volatile bool _isRunning;
-        private Socket _serverSocket;
-
-        private SocketAsyncEventArgs _acceptAsyncEventArgs;
 
         public TcpFeedServer(int port)
         {
@@ -32,38 +32,39 @@ namespace Abc.Zerio.Tcp
 
             _isRunning = true;
 
-            _serverSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
+            _listeningSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
             {
                 ExclusiveAddressUse = true,
                 NoDelay = true
             };
 
-            _serverSocket.Bind(new IPEndPoint(IPAddress.Any, _port));
-            _serverSocket.Listen(16);
+            _listeningSocket.Bind(new IPEndPoint(IPAddress.Any, _port));
+            _listeningSocket.Listen(16);
 
-            _acceptAsyncEventArgs = new SocketAsyncEventArgs();
-            _acceptAsyncEventArgs.Completed += OnAcceptCompleted;
-
-            Accept();
+            StartAccepting();
         }
 
-        private void Accept()
+        public void StartAccepting()
         {
-            _acceptAsyncEventArgs.AcceptSocket = null;
-
-            if (!_serverSocket.AcceptAsync(_acceptAsyncEventArgs))
-                OnAcceptCompleted(_serverSocket, _acceptAsyncEventArgs);
+            Task.Factory.StartNew(AcceptingLoop, TaskCreationOptions.LongRunning);
         }
 
-        private void OnAcceptCompleted(object sender, SocketAsyncEventArgs e)
+        private void AcceptingLoop()
         {
-            if (e.SocketError != SocketError.Success)
-                return;
-
-            InitClient(e.AcceptSocket);
-            Accept();
+            try
+            {
+                while (_isRunning)
+                {
+                    var clientSocket = _listeningSocket.Accept();
+                    InitClient(clientSocket);
+                }
+            }
+            catch (ObjectDisposedException)
+            {
+                // listening socket was disposed
+            }
         }
-
+        
         private void InitClient(Socket socket)
         {
             var peerId = Guid.NewGuid().ToString();
@@ -111,11 +112,8 @@ namespace Abc.Zerio.Tcp
 
             _isRunning = false;
 
-            _acceptAsyncEventArgs?.Dispose();
-            _acceptAsyncEventArgs = null;
-
-            _serverSocket?.Dispose();
-            _serverSocket = null;
+            _listeningSocket?.Dispose();
+            _listeningSocket = null;
 
             lock (_clients)
             {
@@ -155,8 +153,7 @@ namespace Abc.Zerio.Tcp
 
         public void Dispose()
         {
-            _serverSocket?.Dispose();
-            _acceptAsyncEventArgs?.Dispose();
+            _listeningSocket?.Dispose();
         }
     }
 }
