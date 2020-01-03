@@ -20,8 +20,8 @@ namespace Abc.Zerio.Core
         {
             _configuration = configuration;
 
-            var entryCount = _configuration.SendingBufferCount;
-            _unmanagedRioBuffer = new UnmanagedRioBuffer<RequestEntry>(entryCount, _configuration.SendingBufferLength);
+            var ringBufferSize =  ZerioConfiguration.GetNextPowerOfTwo(_configuration.SendingBufferCount * 8 + _configuration.ReceivingBufferCount * 8);
+            _unmanagedRioBuffer = new UnmanagedRioBuffer<RequestEntry>(ringBufferSize, _configuration.SendingBufferLength);
 
             _disruptor = CreateDisruptor(sendingCompletionQueue, sessionManager);
             _ringBuffer = _disruptor.RingBuffer;
@@ -30,6 +30,7 @@ namespace Abc.Zerio.Core
         private unsafe UnmanagedDisruptor<RequestEntry> CreateDisruptor(RioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
         {
             var waitStrategy = new HybridWaitStrategy();
+
             
             var disruptor = new UnmanagedDisruptor<RequestEntry>((IntPtr)_unmanagedRioBuffer.FirstEntry,
                                                                  _unmanagedRioBuffer.EntryReservedSpaceSize,

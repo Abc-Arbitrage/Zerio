@@ -20,22 +20,22 @@ namespace Abc.Zerio
             {
                 MaxSendBatchSize = 16,
 
-                SendingBufferLength = 4096,
-                ReceivingBufferLength = 4096 * 4,
+                SendingBufferLength = 1024,
+                ReceivingBufferLength = 64 * 1024,
 
-                MaxSendCompletionResults = 2048,
-                MaxReceiveCompletionResults = 2048,
+                MaxSendCompletionResults = 64,
+                MaxReceiveCompletionResults = 64,
 
                 SessionCount = 1,
             };
 
-            configuration.SendingBufferCount = GetNextPowerOfTwo(100 * oneMegabyte / configuration.SendingBufferLength);
-            configuration.ReceivingBufferCount = GetNextPowerOfTwo(100 * oneMegabyte / configuration.ReceivingBufferLength);
+            configuration.SendingBufferCount = 10 * oneMegabyte / configuration.SendingBufferLength;
+            configuration.ReceivingBufferCount = 10 * oneMegabyte / configuration.ReceivingBufferLength;
 
             return configuration;
         }
 
-        private static int GetNextPowerOfTwo(int value)
+        public static int GetNextPowerOfTwo(int value)
         {
             var powerOfTwo = 2;
             while (powerOfTwo < value)
