@@ -1,3 +1,5 @@
+using Abc.Zerio.Core;
+
 namespace Abc.Zerio
 {
     public class ZerioConfiguration
@@ -24,15 +26,15 @@ namespace Abc.Zerio
                 SendingBufferLength = 1024,
                 ReceivingBufferLength = 64 * 1024,
 
-                MaxSendCompletionResults = 64,
-                MaxReceiveCompletionResults = 64,
-
                 SessionCount = 2,
             };
 
             configuration.SendingBufferCount = 64 * 1024;
-            configuration.ReceivingBufferCount = 16;
-            
+            configuration.ReceivingBufferCount = 4;
+
+            configuration.MaxSendCompletionResults = configuration.SendingBufferCount;
+            configuration.MaxReceiveCompletionResults = configuration.ReceivingBufferCount;
+                
             return configuration;
         }
 

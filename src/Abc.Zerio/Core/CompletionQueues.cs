@@ -6,8 +6,8 @@ namespace Abc.Zerio.Core
     {
         public CompletionQueues(ZerioConfiguration configuration)
         {
-            SendingQueue = new RioCompletionQueue(configuration.SendingBufferCount + configuration.ReceivingBufferCount * configuration.SessionCount);
-            ReceivingQueue = new RioCompletionQueue(configuration.SendingBufferCount + configuration.ReceivingBufferCount * configuration.SessionCount);
+            SendingQueue = new RioCompletionQueue((configuration.MaxSendCompletionResults + configuration.MaxReceiveCompletionResults) * configuration.SessionCount);
+            ReceivingQueue = new RioCompletionQueue((configuration.MaxSendCompletionResults + configuration.MaxReceiveCompletionResults) * configuration.SessionCount);
         }
 
         public RioCompletionQueue SendingQueue { get; }

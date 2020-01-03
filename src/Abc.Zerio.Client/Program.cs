@@ -26,7 +26,7 @@ namespace Abc.Zerio.Client
         {
             var histogram = new LongHistogram(TimeSpan.FromSeconds(10).Ticks, 2);
             var receivedMessageCount = 0;
-            
+
             void OnMessageReceived(ReadOnlySpan<byte> message)
             {
                 var now = Stopwatch.GetTimestamp();
@@ -45,7 +45,7 @@ namespace Abc.Zerio.Client
                 var connectedSignal = new AutoResetEvent(false);
                 client.Connected += () => Console.WriteLine($"Connected {connectedSignal.Set()}");
                 client.MessageReceived += OnMessageReceived;
-                client.Start("client");
+                client.Start("client " + Guid.NewGuid());
                 connectedSignal.WaitOne();
 
                 do
@@ -56,18 +56,17 @@ namespace Abc.Zerio.Client
 
                     if (!TryParseBenchArgs(benchArgs, out var args))
                         break;
-                    
+
                     histogram.Reset();
-                    
+
                     RunBench(client, args, ref receivedMessageCount);
 
                     histogram.OutputPercentileDistribution(Console.Out, 1);
 
                     Console.WriteLine("FailSends : " + Counters.FailedReceivingNextCount);
                     Console.WriteLine("FailReceives : " + Counters.FailedReceivingNextCount);
-                    
-                    Counters.Reset();
 
+                    Counters.Reset();
                 } while (true);
 
                 client.Stop();
@@ -77,7 +76,7 @@ namespace Abc.Zerio.Client
         private static void RunBench(IFeedClient client, (int messageCount, int messageSize, int delayInMicros, int burstSize) args, ref int receivedMessageCount)
         {
             receivedMessageCount = 0;
-            
+
             Span<byte> message = stackalloc byte[args.messageSize];
 
             var burstCount = args.messageCount / args.burstSize;
@@ -91,7 +90,7 @@ namespace Abc.Zerio.Client
 
                 BusyWait(args.delayInMicros);
             }
-            
+
             while (receivedMessageCount < burstCount * args.burstSize)
             {
                 Thread.Sleep(100);
@@ -101,7 +100,7 @@ namespace Abc.Zerio.Client
         private static void BusyWait(double delayInMicros)
         {
             var delayInSeconds = delayInMicros / 1_000_000.0;
-            
+
             if (Math.Abs(delayInSeconds) < 0.000_000_01)
                 return;
 
@@ -118,17 +117,17 @@ namespace Abc.Zerio.Client
         private static bool TryParseBenchArgs(string benchArgs, out (int messageCount, int messageSize, int delayInMicros, int burstSize) args)
         {
             args = default;
-            
+
             var parts = benchArgs.Split(" ");
             if (parts.Length != 4)
                 return false;
 
             if (!int.TryParse(parts[0], out var messageCount))
                 return false;
-            
+
             if (!int.TryParse(parts[1], out var messageSize))
                 return false;
-            
+
             if (!int.TryParse(parts[2], out var delayInMicros))
                 return false;
 
