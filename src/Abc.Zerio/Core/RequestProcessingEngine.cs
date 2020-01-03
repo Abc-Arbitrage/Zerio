@@ -15,12 +15,12 @@ namespace Abc.Zerio.Core
 
         private readonly UnmanagedRingBuffer<RequestEntry> _ringBuffer;
         private readonly UnmanagedDisruptor<RequestEntry> _disruptor;
-
+        
         public RequestProcessingEngine(ZerioConfiguration configuration, RioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
         {
             _configuration = configuration;
 
-            var ringBufferSize =  ZerioConfiguration.GetNextPowerOfTwo(_configuration.SendingBufferCount * 8 + _configuration.ReceivingBufferCount * 8);
+            var ringBufferSize =  ZerioConfiguration.GetNextPowerOfTwo(_configuration.SendingBufferCount + _configuration.ReceivingBufferCount * _configuration.SessionCount);
             _unmanagedRioBuffer = new UnmanagedRioBuffer<RequestEntry>(ringBufferSize, _configuration.SendingBufferLength);
 
             _disruptor = CreateDisruptor(sendingCompletionQueue, sessionManager);
@@ -31,7 +31,6 @@ namespace Abc.Zerio.Core
         {
             var waitStrategy = new HybridWaitStrategy();
 
-            
             var disruptor = new UnmanagedDisruptor<RequestEntry>((IntPtr)_unmanagedRioBuffer.FirstEntry,
                                                                  _unmanagedRioBuffer.EntryReservedSpaceSize,
                                                                  _unmanagedRioBuffer.Length,
@@ -51,7 +50,7 @@ namespace Abc.Zerio.Core
 
         public void RequestSend(int sessionId, ReadOnlySpan<byte> message)
         {
-            var sequence = _ringBuffer.Next();
+            var sequence = GetSendingNextSequence();
             try
             {
                 ref var sendingEntry = ref _ringBuffer[sequence];
@@ -63,9 +62,27 @@ namespace Abc.Zerio.Core
             }
         }
 
+        private long GetSendingNextSequence()
+        {
+            long sequence;
+            while (!_ringBuffer.TryNext(out sequence))
+                Counters.FailedSendingNextCount++;
+
+            return sequence;
+        }
+        
+        private long GetReceivingNextSequence()
+        {
+            long sequence;
+            while (!_ringBuffer.TryNext(out sequence))
+                Counters.FailedReceivingNextCount++;
+
+            return sequence;
+        }
+
         public void RequestReceive(int sessionId, int bufferSegmentId)
         {
-            var sequence = _ringBuffer.Next();
+            var sequence = GetReceivingNextSequence();
             try
             {
                 ref var requestEntry = ref _ringBuffer[sequence];

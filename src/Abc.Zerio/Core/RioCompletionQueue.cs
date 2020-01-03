@@ -22,9 +22,6 @@ namespace Abc.Zerio.Core
 
             var resultCount = WinSock.Extensions.DequeueCompletion(completionQueue, results, (uint)maxCompletionResults);
 
-            if (resultCount == 0)
-                return 0;
-
             if (resultCount == WinSock.Consts.RIO_CORRUPT_CQ)
                 WinSock.ThrowLastWsaError();
 

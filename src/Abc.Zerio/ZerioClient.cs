@@ -70,7 +70,9 @@ namespace Abc.Zerio
 
         private static ZerioConfiguration CreateConfiguration()
         {
-            return ZerioConfiguration.CreateDefault();
+            var zerioConfiguration = ZerioConfiguration.CreateDefault();
+            zerioConfiguration.SessionCount = 1;
+            return zerioConfiguration;
         }
 
         private RequestProcessingEngine CreateRequestProcessingEngine()

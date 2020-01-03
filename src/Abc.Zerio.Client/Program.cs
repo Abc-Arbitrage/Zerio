@@ -62,7 +62,12 @@ namespace Abc.Zerio.Client
                     RunBench(client, args, ref receivedMessageCount);
 
                     histogram.OutputPercentileDistribution(Console.Out, 1);
+
+                    Console.WriteLine("FailSends : " + Counters.FailedReceivingNextCount);
+                    Console.WriteLine("FailReceives : " + Counters.FailedReceivingNextCount);
                     
+                    Counters.Reset();
+
                 } while (true);
 
                 client.Stop();

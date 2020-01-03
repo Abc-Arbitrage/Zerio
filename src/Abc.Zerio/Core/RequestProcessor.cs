@@ -8,11 +8,11 @@ namespace Abc.Zerio.Core
 {
     internal class RequestProcessor : IValueEventHandler<RequestEntry>, ILifecycleAware
     {
+        private readonly Dictionary<(int sessionId, RequestType), Action> _pendingFlushOperations = new Dictionary<(int sessionId, RequestType), Action>();
         private readonly ISessionManager _sessionManager;
         private readonly int _maxSendBatchSize;
-        private int _currentBatchSize;
 
-        private readonly Dictionary<(int sessionId, RequestType), Action> _pendingFlushOperations = new Dictionary<(int sessionId, RequestType), Action>();
+        private int _currentBatchSize;
 
         public RequestProcessor(ZerioConfiguration configuration, ISessionManager sessionManager)
         {
