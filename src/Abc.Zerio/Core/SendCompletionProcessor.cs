@@ -17,6 +17,8 @@ namespace Abc.Zerio.Core
         private readonly GCHandle _completionResultsHandle;
 
         private readonly HashSet<long> _releasableSequences = new HashSet<long>();
+        
+        private readonly ICompletionPollingWaitStrategy _waitStrategy;
 
         public SendCompletionProcessor(ZerioConfiguration configuration, RioCompletionQueue sendCompletionQueue)
         {
@@ -25,25 +27,27 @@ namespace Abc.Zerio.Core
             _completionResults = new RIO_RESULT[configuration.MaxSendCompletionResults];
             _completionResultsHandle = GCHandle.Alloc(_completionResults, GCHandleType.Pinned);
             _completionResultsPointer = (RIO_RESULT*)_completionResultsHandle.AddrOfPinnedObject().ToPointer();
+            
+            _waitStrategy = CompletionPollingWaitStrategyFactory.Create(_configuration.SendCompletionPollingWaitStrategyType);
         }
 
         public void OnEvent(ref RequestEntry data, long sequence, bool endOfBatch)
         {
             if (data.Type == RequestType.Receive)
                 return;
-
-            var waitStrategy = CompletionPollingWaitStrategyFactory.Create(_configuration.SendCompletionPollingWaitStrategyType);
+            
+            _waitStrategy.Reset();
             
             while (!_releasableSequences.Remove(sequence))
             {
                 var resultCount = _sendCompletionQueue.TryGetCompletionResults(_completionResultsPointer, _completionResults.Length);
                 if (resultCount == 0)
                 {
-                    waitStrategy.Wait();
+                    _waitStrategy.Wait();
                     continue;
                 }
 
-                waitStrategy.Reset();
+                _waitStrategy.Reset();
                 
                 for (var i = 0; i < resultCount; i++)
                 {
