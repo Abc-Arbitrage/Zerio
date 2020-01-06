@@ -114,11 +114,11 @@ namespace Abc.Zerio.Client
             {
                 case "t":
                 case "tcp":
-                    return new TcpFeedClient(new IPEndPoint(Dns.GetHostAddresses(hostname).First(i => i.AddressFamily == AddressFamily.InterNetwork), Server.Program.TCP_PORT));
+                    return new TcpFeedClient(new IPEndPoint(Dns.GetHostAddresses(hostname).First(i => i.AddressFamily == AddressFamily.InterNetwork), Benchmark.TCP_PORT));
 
                 case "r":
                 case "rio":
-                    return new ZerioClient(new IPEndPoint(Dns.GetHostAddresses(hostname).First(i => i.AddressFamily == AddressFamily.InterNetwork), Server.Program.TCP_PORT));
+                    return new ZerioClient(new IPEndPoint(Dns.GetHostAddresses(hostname).First(i => i.AddressFamily == AddressFamily.InterNetwork), Benchmark.TCP_PORT));
 
                 default:
                     throw new InvalidOperationException($"Unknown transport type: {transportType}");

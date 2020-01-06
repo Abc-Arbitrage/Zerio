@@ -4,7 +4,6 @@
     <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Abc.Zerio.Server\Abc.Zerio.Server.csproj" />
     <ProjectReference Include="..\Abc.Zerio\Abc.Zerio.csproj" />
   </ItemGroup>
   <ItemGroup>

@@ -18,6 +18,9 @@ namespace Abc.Zerio.Client
 {
     public class Benchmark
     {
+        public const int RIO_PORT = 48654;
+        public const int TCP_PORT = 48655;
+
         private readonly int _hostCount;
         private readonly int _serversPerHost;
         private readonly int _clientsPerServer;
@@ -388,7 +391,7 @@ namespace Abc.Zerio.Client
                         for (int i = 0; i < serverCount * clientsPerServer; i++)
                         {
                             var portDelta = i % serverCount;
-                            var tcpClient = new TcpFeedClient(new IPEndPoint(IPAddress.Parse(host), Server.Program.TCP_PORT + portDelta));
+                            var tcpClient = new TcpFeedClient(new IPEndPoint(IPAddress.Parse(host), TCP_PORT + portDelta));
 
                             var connectedMre = new ManualResetEvent(false);
                             tcpClient.Connected += () => { connectedMre.Set(); };
@@ -422,7 +425,7 @@ namespace Abc.Zerio.Client
                         for (int i = 0; i < serverCount * clientsPerServer; i++)
                         {
                             var portDelta = i % serverCount;
-                            var tcpClient = new ZerioClient(new IPEndPoint(IPAddress.Parse(host), Server.Program.RIO_PORT + portDelta));
+                            var tcpClient = new ZerioClient(new IPEndPoint(IPAddress.Parse(host), RIO_PORT + portDelta));
 
                             var connectedMre = new ManualResetEvent(false);
                             tcpClient.Connected += () => { connectedMre.Set(); };
