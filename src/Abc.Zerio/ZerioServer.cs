@@ -2,7 +2,6 @@ using System;
 using System.Net;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Abc.Zerio.Core;
 using Abc.Zerio.Interop;
 
@@ -22,6 +21,7 @@ namespace Abc.Zerio
         private bool _isListening;
         private Thread _listeningThread;
         private readonly AutoResetEvent _handshakeSignal = new AutoResetEvent(false);
+        private int _started;
 
         public int ListeningPort { get; set; }
 
@@ -102,20 +102,38 @@ namespace Abc.Zerio
 
         public void Start(string peerId)
         {
+            if(IsRunning)
+                throw new InvalidOperationException("Already started");
+
+            CheckOnlyStartedOnce();
+            
             _receiveCompletionProcessor.Start();
             _requestProcessingEngine.Start();
 
             StartListening();
+
+            IsRunning = true;
         }
 
         public void Stop()
         {
+            if(!IsRunning)
+                throw new InvalidOperationException("Already stopped");
+            
             StopAcceptLoop();
 
             _requestProcessingEngine.Stop();
             _receiveCompletionProcessor.Stop();
+
+            IsRunning = false;
         }
 
+        private void CheckOnlyStartedOnce()
+        {
+            if (Interlocked.Exchange(ref _started, 1) != 0)
+                throw new InvalidOperationException($"{nameof(ZerioClient)} must only be started once.");
+        }
+        
         private void ListenAndRunAcceptLoop(ManualResetEventSlim listeningSignal)
         {
             Thread.CurrentThread.Name = "Server Listening Worker";
@@ -235,7 +253,7 @@ namespace Abc.Zerio
             return new RequestProcessingEngine(_configuration, _completionQueues.SendingQueue, _sessionManager);
         }
 
-        public bool IsRunning { get; }
+        public bool IsRunning { get; private set; }
         public event Action<string> ClientConnected;
         public event Action<string> ClientDisconnected;
 

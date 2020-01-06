@@ -85,7 +85,7 @@ namespace Abc.Zerio.Core
         public void Stop()
         {
             _isRunning = false;
-            _completionWorkerThread.Join(TimeSpan.FromSeconds(10));
+            _completionWorkerThread.Join(TimeSpan.FromSeconds(2));
         }
     }
 }

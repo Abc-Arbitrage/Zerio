@@ -67,7 +67,7 @@ namespace Abc.Zerio.Client
                 ShowHelp(p);
                 return;
             }
-
+  
             if (string.IsNullOrEmpty(transport))
             {
                 Console.WriteLine("Enter transport: t for TCP, r for RIO");

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Net.NetworkInformation;
 using System.Threading;
 using Disruptor;
 
@@ -46,7 +45,7 @@ namespace Abc.Zerio.Core
                         pendingFlushOperation = session.RequestQueue.FlushSendsOperation;
                         break;
                     default:
-                        throw new NetworkInformationException();
+                        throw new ArgumentOutOfRangeException();
                 }
             }
 

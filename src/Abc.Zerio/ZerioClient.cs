@@ -19,10 +19,13 @@ namespace Abc.Zerio
 
         private readonly RequestProcessingEngine _requestProcessingEngine;
         private readonly ReceiveCompletionProcessor _receiveCompletionProcessor;
-        private readonly AutoResetEvent _handshakeSignal = new AutoResetEvent(false);
 
-        public  bool IsConnected { get; private set; }
-        
+        private readonly AutoResetEvent _handshakeSignal = new AutoResetEvent(false);
+        private IntPtr _socket;
+        private int _started;
+
+        public bool IsConnected { get; private set; }
+
         public event Action Connected;
         public event Action Disconnected;
         public event ClientMessageReceivedDelegate MessageReceived;
@@ -85,31 +88,38 @@ namespace Abc.Zerio
             _requestProcessingEngine.RequestSend(_session.Id, message);
         }
 
+        private void CheckOnlyStartedOnce()
+        {
+            if (Interlocked.Exchange(ref _started, 1) != 0)
+                throw new InvalidOperationException($"{nameof(ZerioClient)} must only be started once.");
+        }
+
         public void Start(string peerId)
         {
             if (IsConnected)
                 throw new InvalidOperationException("Already started");
 
+            CheckOnlyStartedOnce();
+
             _receiveCompletionProcessor.Start();
             _requestProcessingEngine.Start();
 
-            var socket = CreateSocket();
+            _socket = CreateSocket();
 
-            _session.Open(socket);
+            _session.Open(_socket);
 
-            Connect(socket, _serverEndpoint);
+            Connect(_socket, _serverEndpoint);
 
             _session.InitiateReceiving(_requestProcessingEngine);
-            
+
             Handshake(peerId);
 
             IsConnected = true;
-            
             Connected?.Invoke();
         }
 
         private void Handshake(string peerId)
-        { 
+        {
             var peerIdBytes = Encoding.ASCII.GetBytes(peerId);
             Send(peerIdBytes.AsSpan());
             _handshakeSignal.WaitOne();
@@ -159,17 +169,42 @@ namespace Abc.Zerio
 
         public void Stop()
         {
-            _requestProcessingEngine.Stop();
-            _receiveCompletionProcessor.Stop();
+            if (!IsConnected)
+                throw new InvalidOperationException("Already stopped");
+
+            Dispose(true);
+        }
+
+        private void Dispose(bool disposing)
+        {   
+            if (disposing)
+            {
+                _session.Close();
+                
+                _receiveCompletionProcessor.Stop();
+                _requestProcessingEngine.Stop();
+                
+                _completionQueues?.Dispose();
+                _sessionManager?.Dispose();
+                _requestProcessingEngine?.Dispose();
+                _handshakeSignal?.Dispose();
+            }
+            else
+            {
+                if (_socket != IntPtr.Zero)
+                    WinSock.closesocket(_socket); 
+            }
         }
 
         public void Dispose()
         {
-            Stop();
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
 
-            _completionQueues?.Dispose();
-            _requestProcessingEngine?.Dispose();
-            _sessionManager?.Dispose();
+        ~ZerioClient()
+        {
+            Dispose(false);
         }
     }
 }

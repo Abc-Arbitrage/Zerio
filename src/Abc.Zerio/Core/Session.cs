@@ -60,7 +60,7 @@ namespace Abc.Zerio.Core
             _requestQueue = RioRequestQueue.Create(Id, socket, _completionQueues.SendingQueue, maxOutstandingSends, _completionQueues.ReceivingQueue, maxOutstandingReceives);
         }
 
-        private void Close()
+        public void Close()
         {
             if (Interlocked.Exchange(ref _requestQueue, null) == null)
                 return;
@@ -86,6 +86,8 @@ namespace Abc.Zerio.Core
 
         public void Dispose()
         {
+            Close();
+            
             _receivingBuffer?.Dispose();
         }
 
