@@ -23,7 +23,7 @@ namespace Abc.Zerio.Core
         }
 
         public void Start()
-        {   
+        {
             _isRunning = true;
             _completionWorkerThread = new Thread(ProcessCompletions) { IsBackground = true };
             _completionWorkerThread.Start(_receivingCompletionQueue);
@@ -37,12 +37,19 @@ namespace Abc.Zerio.Core
             var maxCompletionResults = _configuration.MaxReceiveCompletionResults;
             var results = stackalloc RIO_RESULT[maxCompletionResults];
 
+            var waitStrategy = CompletionPollingWaitStrategyFactory.Create(_configuration.ReceiveCompletionPollingWaitStrategyType);
+
             while (_isRunning)
             {
                 var resultCount = completionQueue.TryGetCompletionResults(results, maxCompletionResults);
                 if (resultCount == 0)
+                {
+                    waitStrategy.Wait();
                     continue;
+                }
 
+                waitStrategy.Reset();
+                
                 for (var i = 0; i < resultCount; i++)
                 {
                     var result = results[i];

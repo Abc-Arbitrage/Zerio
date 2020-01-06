@@ -17,7 +17,9 @@ namespace Abc.Zerio
         public int FramingBufferLength { get; set; }
 
         public RequestEngineWaitStrategyType RequestEngineWaitStrategyType { get; set; }
-        
+        public CompletionPollingWaitStrategyType ReceiveCompletionPollingWaitStrategyType { get; set; }
+        public CompletionPollingWaitStrategyType SendCompletionPollingWaitStrategyType { get; set; }
+
         public static ZerioConfiguration CreateDefault()
         {
             // const int allocationGranularity = 65536;
@@ -33,6 +35,8 @@ namespace Abc.Zerio
                 ReceivingBufferCount = 4,
                 
                 RequestEngineWaitStrategyType = RequestEngineWaitStrategyType.HybridWaitStrategy,
+                ReceiveCompletionPollingWaitStrategyType = CompletionPollingWaitStrategyType.BusySpinWaitStrategy,
+                SendCompletionPollingWaitStrategyType = CompletionPollingWaitStrategyType.SpinWaitWaitStrategy,
             };
 
             configuration.FramingBufferLength = configuration.ReceivingBufferLength;

@@ -9,6 +9,7 @@ namespace Abc.Zerio.Core
 {
     internal unsafe class SendCompletionProcessor : IValueEventHandler<RequestEntry>, ILifecycleAware
     {
+        private readonly ZerioConfiguration _configuration;
         private readonly RioCompletionQueue _sendCompletionQueue;
 
         private readonly RIO_RESULT[] _completionResults;
@@ -19,6 +20,7 @@ namespace Abc.Zerio.Core
 
         public SendCompletionProcessor(ZerioConfiguration configuration, RioCompletionQueue sendCompletionQueue)
         {
+            _configuration = configuration;
             _sendCompletionQueue = sendCompletionQueue;
             _completionResults = new RIO_RESULT[configuration.MaxSendCompletionResults];
             _completionResultsHandle = GCHandle.Alloc(_completionResults, GCHandleType.Pinned);
@@ -29,18 +31,20 @@ namespace Abc.Zerio.Core
         {
             if (data.Type == RequestType.Receive)
                 return;
-            
-            var spinWait = new SpinWait();
 
+            var waitStrategy = CompletionPollingWaitStrategyFactory.Create(_configuration.SendCompletionPollingWaitStrategyType);
+            
             while (!_releasableSequences.Remove(sequence))
             {
                 var resultCount = _sendCompletionQueue.TryGetCompletionResults(_completionResultsPointer, _completionResults.Length);
                 if (resultCount == 0)
                 {
-                    spinWait.SpinOnce();
+                    waitStrategy.Wait();
                     continue;
                 }
 
+                waitStrategy.Reset();
+                
                 for (var i = 0; i < resultCount; i++)
                 {
                     var result = _completionResultsPointer[i];
