@@ -2,39 +2,83 @@
 using System.Diagnostics;
 using System.Threading;
 using Abc.Zerio.Core;
+using Abc.Zerio.Tcp;
 
 namespace Abc.Zerio.Server
 {
-    internal static class Program
+    public static class Program
     {
+        public const int RIO_PORT = 48654;
+        public const int TCP_PORT = 48655;
+
+        private static long _messageCounter;
+
         private static void Main()
         {
             Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
 
             Console.WriteLine("SERVER...");
 
-            RunServer(new ZerioServer(48654));
+            using var rioServer = new ZerioServer(RIO_PORT);
+            using var tcpServer = new TcpFeedServer(TCP_PORT);
+
+            StartServer(rioServer);
+            StartServer(tcpServer);
+
+            const bool alwaysPrintStats = false;
+            var cts = new CancellationTokenSource();
+
+            var monitortinThread = new Thread(() =>
+            {
+                var previousCount = 0L;
+                var previousGC0Count = 0L;
+                var previousGC1Count = 0L;
+
+                while (!cts.IsCancellationRequested)
+                {
+                    var count = Volatile.Read(ref _messageCounter);
+                    var countPerSec = count - previousCount;
+                    previousCount = count;
+
+                    var gc0Count = GC.CollectionCount(0);
+                    var gc0countPerSec = gc0Count - previousGC0Count;
+                    previousGC0Count = gc0Count;
+
+                    var gc1Count = GC.CollectionCount(1);
+                    var gc1countPerSec = gc1Count - previousGC1Count;
+                    previousGC1Count = gc1Count;
+
+                    if (alwaysPrintStats || gc0countPerSec != 0 || gc1countPerSec != 0)
+                    {
+                        // alloc
+                        Console.WriteLine($"Processed messages: {countPerSec:N0}, total: {count:N0} [GC 0:{gc0countPerSec} 1:{gc1countPerSec}]");
+                    }
+
+                    Thread.Sleep(1_000);
+                }
+            });
+
+            monitortinThread.Start();
 
             Console.WriteLine("Press enter to quit.");
             Console.ReadLine();
+
+            cts.Cancel();
+            monitortinThread.Join();
+            rioServer.Stop();
+            tcpServer.Stop();
         }
 
-        private static void RunServer(IFeedServer server)
+        private static void StartServer(IFeedServer server)
         {
-            using (server)
+            server.ClientConnected += peerId => Console.WriteLine($"Client '{peerId}' connected.");
+            server.ClientDisconnected += peerId => Console.WriteLine($"Client '{peerId}' disconnected. ");
+            server.MessageReceived += (s, span) =>
             {
-                var disconnectionSignal = new AutoResetEvent(false);
-
-                server.ClientConnected += peerId => Console.WriteLine($"Client '{peerId}' connected.");
-                server.ClientDisconnected += peerId => Console.WriteLine($"Client '{peerId}' disconnected. " + disconnectionSignal.Set());
-                server.MessageReceived += server.Send;
-
-                server.Start("server");
-
-                disconnectionSignal.WaitOne();
-
-                server.Stop();
-            }
+                server.Send(s, span);
+                Interlocked.Increment(ref _messageCounter);
+            };
+            server.Start(server.GetType().Name);
         }
     }
 }

@@ -1,141 +1,185 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
+using System.Net.Sockets;
+using System.Runtime;
 using System.Threading;
 using Abc.Zerio.Core;
-using HdrHistogram;
+using Abc.Zerio.Tcp;
+using NDesk.Options;
 
 namespace Abc.Zerio.Client
 {
-    internal static unsafe class Program
+    internal static class Program
     {
-        private static void Main()
+        static void Main(string[] args)
         {
-            Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
-            Console.WriteLine("CLIENT...");
+            Console.BackgroundColor = ConsoleColor.DarkBlue;
 
-            RunClient(new ZerioClient(new IPEndPoint(IPAddress.Loopback, 48654)));
+            var proc = Process.GetCurrentProcess();
 
-            Console.WriteLine("Press enter to quit.");
-            Console.ReadLine();
-        }
+            // Just in case if something allocates
+            GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
+            Console.WriteLine("IsServerGC: " + GCSettings.IsServerGC);
+            Console.WriteLine("Latency mode: " + GCSettings.LatencyMode);
 
-        private static void RunClient(IFeedClient client)
-        {
-            var histogram = new LongHistogram(TimeSpan.FromSeconds(10).Ticks, 2);
-            var receivedMessageCount = 0;
+            var showHelp = false;
 
-            void OnMessageReceived(ReadOnlySpan<byte> message)
+            var hosts = new List<string>();
+
+            decimal spt = 2;
+            decimal bw = 100;
+            var runAll = false;
+            var transport = string.Empty;
+            var highPriority = false;
+            var clientsPerServer = 1;
+            var suffix = string.Empty;
+            const int serverCount = 1;
+
+            var p = new OptionSet
             {
-                var now = Stopwatch.GetTimestamp();
-                var start = Unsafe.ReadUnaligned<long>(ref MemoryMarshal.GetReference(message));
-                var rrt = now - start;
+                { "h|host=", "hostname", v => hosts.Add(v) },
+                { "a|all", "run all test", v => runAll = true },
+                { "t|transport=", "transport to use for manual test", v => transport = v },
+                { "p|priority", "run with high priority", v => highPriority = true },
+                { "spt|secondsPerTest=", "how many seconds a single test should take", v => spt = int.Parse(v) },
+                { "bw|bandwidth=", "bandwidths limit in Mbps", v => bw = decimal.Parse(v) },
+                { "c|clients=", "number of local clients per server", v => clientsPerServer = (int)decimal.Parse(v) },
+                { "x|suffix=", "transport suffix", v => suffix = v },
+                { "help", "show this message and exit", v => showHelp = v != null },
+            };
 
-                var latencyInMicroseconds = unchecked(rrt * 1_000_000 / (double)Stopwatch.Frequency);
-
-                receivedMessageCount++;
-
-                histogram.RecordValue((long)latencyInMicroseconds);
+            try
+            {
+                p.Parse(args);
+            }
+            catch (OptionException e)
+            {
+                Console.WriteLine(e.Message);
+                Console.WriteLine("Try --help for more information.");
+                return;
             }
 
-            using (client)
+            if (showHelp)
             {
-                var connectedSignal = new AutoResetEvent(false);
-                client.Connected += () => Console.WriteLine($"Connected {connectedSignal.Set()}");
-                client.MessageReceived += OnMessageReceived;
-                client.Start("client " + Guid.NewGuid());
-                connectedSignal.WaitOne();
+                ShowHelp(p);
+                return;
+            }
 
-                do
+            if (string.IsNullOrEmpty(transport))
+            {
+                Console.WriteLine("Enter transport: t for TCP, r for RIO");
+                transport = Console.ReadLine();
+            }
+
+            if (hosts.Count == 0)
+            {
+                hosts.Add(GetLocalIPAddress());
+            }
+
+            if (highPriority)
+            {
+                proc.PriorityClass = ProcessPriorityClass.High;
+            }
+
+            if (runAll)
+            {
+                Benchmark.RunAll(transport, hosts, (int)spt, (int)bw, null, serverCount, clientsPerServer, suffix);
+            }
+            else
+            {
+                using var client = CreateClient(hosts[0], transport);
+                ManualBenchmark(client);
+            }
+        }
+
+        public static string GetLocalIPAddress()
+        {
+            var host = Dns.GetHostEntry(Dns.GetHostName());
+            var ipAddress = host.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork).Select(x => x.ToString()).FirstOrDefault();
+            return ipAddress ?? string.Empty;
+        }
+
+        private static void ShowHelp(OptionSet p)
+        {
+            Console.WriteLine("Options:");
+            p.WriteOptionDescriptions(Console.Out);
+        }
+
+        private static IFeedClient CreateClient(string hostname, string transportType)
+        {
+            switch (transportType.ToLowerInvariant())
+            {
+                case "t":
+                case "tcp":
+                    return new TcpFeedClient(new IPEndPoint(Dns.GetHostAddresses(hostname).First(i => i.AddressFamily == AddressFamily.InterNetwork), Server.Program.TCP_PORT));
+
+                case "r":
+                case "rio":
+                    return new ZerioClient(new IPEndPoint(Dns.GetHostAddresses(hostname).First(i => i.AddressFamily == AddressFamily.InterNetwork), Server.Program.TCP_PORT));
+
+                default:
+                    throw new InvalidOperationException($"Unknown transport type: {transportType}");
+            }
+        }
+
+        static void ManualBenchmark(IFeedClient client)
+        {
+            var connectedMre = new ManualResetEvent(false);
+
+            client.Connected += () => { connectedMre.Set(); };
+
+            Thread.Sleep(3000);
+
+            client.Start($"{client.GetType().Name}");
+
+            if (!connectedMre.WaitOne(1000))
+            {
+                Console.WriteLine("Cannot connect");
+                return;
+            }
+
+            var benchmark = new Benchmark(client);
+
+            int size;
+            int delay;
+            int burst = 1;
+            while (true)
+            {
+                while (true)
                 {
-                    Console.WriteLine("Bench? (<message count> <message size> <delay in micro> <burst>, eg.: 100000 128 10 1)");
+                    try
+                    {
+                        Console.WriteLine("Enter size in bytes, delay in micros, and (optionally) burst , e.g. 512 100 2");
 
-                    var benchArgs = Console.ReadLine();
+                        var sizeDelay = Console.ReadLine();
+                        if (string.IsNullOrEmpty(sizeDelay) || sizeDelay == "q")
+                        {
+                            client.Dispose();
+                            return;
+                        }
 
-                    if (!TryParseBenchArgs(benchArgs, out var args))
+                        var parts = sizeDelay.Split(' ');
+                        size = int.Parse(parts[0]);
+                        delay = int.Parse(parts[1]);
+                        if (parts.Length > 2)
+                        {
+                            burst = int.Parse(parts[2]);
+                        }
+
                         break;
-
-                    histogram.Reset();
-
-                    RunBench(client, args, ref receivedMessageCount);
-
-                    histogram.OutputPercentileDistribution(Console.Out, 1);
-
-                    Console.WriteLine("FailSends : " + Counters.FailedReceivingNextCount);
-                    Console.WriteLine("FailReceives : " + Counters.FailedReceivingNextCount);
-
-                    Counters.Reset();
-                } while (true);
-
-                client.Stop();
-            }
-        }
-
-        private static void RunBench(IFeedClient client, (int messageCount, int messageSize, int delayInMicros, int burstSize) args, ref int receivedMessageCount)
-        {
-            receivedMessageCount = 0;
-
-            Span<byte> message = stackalloc byte[args.messageSize];
-
-            var burstCount = args.messageCount / args.burstSize;
-            for (var i = 0; i < burstCount; i++)
-            {
-                for (var j = 0; j < args.burstSize; j++)
-                {
-                    Unsafe.WriteUnaligned(ref message[0], Stopwatch.GetTimestamp());
-                    client.Send(message);
+                    }
+                    catch
+                    {
+                    }
                 }
 
-                BusyWait(args.delayInMicros);
+                benchmark.Start(size, delay, burst);
+                Console.ReadLine();
+                benchmark.Stop();
             }
-
-            while (receivedMessageCount < burstCount * args.burstSize)
-            {
-                Thread.Sleep(100);
-            }
-        }
-
-        private static void BusyWait(double delayInMicros)
-        {
-            var delayInSeconds = delayInMicros / 1_000_000.0;
-
-            if (Math.Abs(delayInSeconds) < 0.000_000_01)
-                return;
-
-            var delayInTicks = Math.Round(delayInSeconds * Stopwatch.Frequency);
-
-            var ticks = Stopwatch.GetTimestamp();
-
-            while (Stopwatch.GetTimestamp() - ticks < delayInTicks)
-            {
-                Thread.SpinWait(1);
-            }
-        }
-
-        private static bool TryParseBenchArgs(string benchArgs, out (int messageCount, int messageSize, int delayInMicros, int burstSize) args)
-        {
-            args = default;
-
-            var parts = benchArgs.Split(" ");
-            if (parts.Length != 4)
-                return false;
-
-            if (!int.TryParse(parts[0], out var messageCount))
-                return false;
-
-            if (!int.TryParse(parts[1], out var messageSize))
-                return false;
-
-            if (!int.TryParse(parts[2], out var delayInMicros))
-                return false;
-
-            if (!int.TryParse(parts[3], out var burstSize))
-                return false;
-
-            args = (messageCount, messageSize, delayInMicros, burstSize);
-            return true;
         }
     }
 }
