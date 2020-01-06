@@ -6,6 +6,7 @@ using System.Security;
 
 namespace Abc.Zerio.Interop
 {
+    [SuppressUnmanagedCodeSecurity]
     public unsafe class WinSock
     {
         [DllImport("WS2_32.dll", SetLastError = true, CharSet = CharSet.Ansi, BestFitMapping = true, ThrowOnUnmappableChar = true)]
