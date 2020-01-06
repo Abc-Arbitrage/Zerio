@@ -29,7 +29,7 @@ namespace Abc.Zerio.Core
 
         private unsafe UnmanagedDisruptor<RequestEntry> CreateDisruptor(RioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
         {
-            var waitStrategy = CreatWaitStrategy();
+            var waitStrategy = CreateWaitStrategy();
             
             var disruptor = new UnmanagedDisruptor<RequestEntry>((IntPtr)_unmanagedRioBuffer.FirstEntry,
                                                                  _unmanagedRioBuffer.EntryReservedSpaceSize,
@@ -58,7 +58,7 @@ namespace Abc.Zerio.Core
             }
         }
 
-        private IWaitStrategy CreatWaitStrategy()
+        private IWaitStrategy CreateWaitStrategy()
         {
             return _configuration.RequestEngineWaitStrategyType switch
             {
@@ -66,6 +66,7 @@ namespace Abc.Zerio.Core
                 RequestEngineWaitStrategyType.BlockingWaitStrategy => new BlockingWaitStrategy(),
                 RequestEngineWaitStrategyType.SleepingWaitStrategy => new SleepingWaitStrategy(),
                 RequestEngineWaitStrategyType.YieldingWaitStrategy => new YieldingWaitStrategy(),
+                RequestEngineWaitStrategyType.BusySpinWaitStrategy => new BusySpinWaitStrategy(),
                 RequestEngineWaitStrategyType.SpinWaitWaitStrategy => new SpinWaitWaitStrategy(),
                 _                                                  => throw new ArgumentOutOfRangeException()
             };

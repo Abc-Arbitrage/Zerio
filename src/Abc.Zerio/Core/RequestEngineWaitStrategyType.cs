@@ -7,5 +7,6 @@ namespace Abc.Zerio.Core
         SleepingWaitStrategy,
         YieldingWaitStrategy,
         SpinWaitWaitStrategy,
+        BusySpinWaitStrategy,
     }
 }

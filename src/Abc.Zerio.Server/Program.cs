@@ -15,6 +15,8 @@ namespace Abc.Zerio.Server
 
         private static void Main()
         {
+            Console.BackgroundColor = ConsoleColor.DarkRed;
+
             Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.High;
 
             Console.WriteLine("SERVER...");
@@ -28,7 +30,7 @@ namespace Abc.Zerio.Server
             const bool alwaysPrintStats = false;
             var cts = new CancellationTokenSource();
 
-            var monitortinThread = new Thread(() =>
+            var monitoringThread = new Thread(() =>
             {
                 var previousCount = 0L;
                 var previousGC0Count = 0L;
@@ -58,13 +60,13 @@ namespace Abc.Zerio.Server
                 }
             });
 
-            monitortinThread.Start();
+            monitoringThread.Start();
 
             Console.WriteLine("Press enter to quit.");
             Console.ReadLine();
 
             cts.Cancel();
-            monitortinThread.Join();
+            monitoringThread.Join();
             rioServer.Stop();
             tcpServer.Stop();
         }

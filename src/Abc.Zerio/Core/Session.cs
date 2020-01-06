@@ -54,8 +54,8 @@ namespace Abc.Zerio.Core
 
             _socket = socket;
 
-            var maxOutstandingReceives = (uint)_configuration.ReceivingBufferCount;
-            var maxOutstandingSends = (uint)_configuration.SendingBufferCount;
+            var maxOutstandingReceives = (uint)_configuration.ReceivingBufferCount * 2;
+            var maxOutstandingSends = (uint)_configuration.SendingBufferCount * 2;
 
             _requestQueue = RioRequestQueue.Create(Id, socket, _completionQueues.SendingQueue, maxOutstandingSends, _completionQueues.ReceivingQueue, maxOutstandingReceives);
         }
