@@ -15,7 +15,7 @@ namespace Abc.Zerio.Core
         public int EntryReservedSpaceSize { get; }
         public int Length { get; }
 
-        public T* this[in int index] => (T*)((byte*)FirstEntry + index * EntryReservedSpaceSize);
+        public T* this[int index] => (T*)((byte*)FirstEntry + index * EntryReservedSpaceSize);
 
         public UnmanagedRioBuffer(int bufferCount, int bufferLength)
         {

@@ -23,7 +23,7 @@ namespace Abc.Zerio
 
         public  bool IsConnected { get; private set; }
         
-        public event Action  Connected;
+        public event Action Connected;
         public event Action Disconnected;
         public event ClientMessageReceivedDelegate MessageReceived;
 
@@ -153,6 +153,7 @@ namespace Abc.Zerio
 
         private void OnSessionClosed(Session session)
         {
+            IsConnected = false;
             Disconnected?.Invoke();
         }
 

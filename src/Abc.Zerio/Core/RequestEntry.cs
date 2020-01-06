@@ -47,6 +47,7 @@ namespace Abc.Zerio.Core
 
         public void Reset()
         {
+            Type = RequestType.Undefined;
             RioBufferSegmentDescriptor.Length = default;
             SessionId = default;
         }

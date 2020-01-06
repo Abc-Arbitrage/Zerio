@@ -17,7 +17,7 @@ namespace Abc.Zerio.Core
         public RequestProcessor(ZerioConfiguration configuration, ISessionManager sessionManager)
         {
             _sessionManager = sessionManager;
-            _maxSendBatchSize = _maxSendBatchSize = configuration.MaxSendBatchSize;
+            _maxSendBatchSize = configuration.MaxSendBatchSize;
         }
 
         public void OnStart()

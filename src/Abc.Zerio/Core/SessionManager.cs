@@ -12,8 +12,6 @@ namespace Abc.Zerio.Core
         private readonly ConcurrentDictionary<int, Session> _activeSessions = new ConcurrentDictionary<int, Session>();
         private readonly ConcurrentDictionary<string, Session> _activeSessionsByPeerId = new ConcurrentDictionary<string, Session>();
 
-        private int _sessionCount;
-
         public event ServerMessageReceivedDelegate MessageReceived;
 
         public SessionManager(ZerioConfiguration configuration, CompletionQueues completionQueues)
@@ -30,9 +28,8 @@ namespace Abc.Zerio.Core
                 throw new ArgumentOutOfRangeException(nameof(_configuration.SessionCount));
 
             _sessions.Clear();
-            _sessionCount = _configuration.SessionCount;
 
-            for (var i = 0; i < _sessionCount; i++)
+            for (var i = 0; i < _configuration.SessionCount; i++)
             {
                 var session = new Session(i, _configuration, _completionQueues);
                 session.MessageReceived += (peerId, message) => MessageReceived?.Invoke(peerId, message);

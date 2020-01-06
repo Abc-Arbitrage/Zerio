@@ -96,7 +96,7 @@ namespace Abc.Zerio.Core
             _isWaitingForHandshake = true;
         }
 
-        public unsafe void OnBytesReceived(in int bufferSegmentId, in int bytesTransferred)
+        public unsafe void OnBytesReceived(int bufferSegmentId, int bytesTransferred)
         {
             var bufferSegment = _receivingBuffer[bufferSegmentId];
             
