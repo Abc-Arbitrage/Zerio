@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,8 +30,8 @@ namespace Abc.Zerio.Core
 
         private unsafe UnmanagedDisruptor<RequestEntry> CreateDisruptor(RioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
         {
-            var waitStrategy = new HybridWaitStrategy();
-
+            var waitStrategy = CreatWaitStrategy();
+            
             var disruptor = new UnmanagedDisruptor<RequestEntry>((IntPtr)_unmanagedRioBuffer.FirstEntry,
                                                                  _unmanagedRioBuffer.EntryReservedSpaceSize,
                                                                  _unmanagedRioBuffer.Length,
@@ -43,9 +44,32 @@ namespace Abc.Zerio.Core
 
             disruptor.HandleEventsWith(requestProcessor).Then(sendCompletionProcessor);
 
-            waitStrategy.SequenceBarrierForSendCompletionProcessor = disruptor.GetBarrierFor(sendCompletionProcessor);
+            ConfigureWaitStrategy(waitStrategy, disruptor, sendCompletionProcessor);
             
             return disruptor;
+        }
+
+        private static void ConfigureWaitStrategy(IWaitStrategy waitStrategy, UnmanagedDisruptor<RequestEntry> disruptor, SendCompletionProcessor sendCompletionProcessor)
+        {
+            switch (waitStrategy)
+            {
+                case HybridWaitStrategy hybridWaitStrategy:
+                    hybridWaitStrategy.SequenceBarrierForSendCompletionProcessor = disruptor.GetBarrierFor(sendCompletionProcessor);
+                    return;
+            }
+        }
+
+        private IWaitStrategy CreatWaitStrategy()
+        {
+            return _configuration.RequestEngineWaitStrategyType switch
+            {
+                RequestEngineWaitStrategyType.HybridWaitStrategy   => (IWaitStrategy)new HybridWaitStrategy(),
+                RequestEngineWaitStrategyType.BlockingWaitStrategy => new BlockingWaitStrategy(),
+                RequestEngineWaitStrategyType.SleepingWaitStrategy => new SleepingWaitStrategy(),
+                RequestEngineWaitStrategyType.YieldingWaitStrategy => new YieldingWaitStrategy(),
+                RequestEngineWaitStrategyType.SpinWaitWaitStrategy => new SpinWaitWaitStrategy(),
+                _                                                  => throw new ArgumentOutOfRangeException()
+            };
         }
 
         public void RequestSend(int sessionId, ReadOnlySpan<byte> message)

@@ -1,3 +1,5 @@
+using Abc.Zerio.Core;
+
 namespace Abc.Zerio
 {
     public class ZerioConfiguration
@@ -14,6 +16,8 @@ namespace Abc.Zerio
         public int SessionCount { get; set; }
         public int FramingBufferLength { get; set; }
 
+        public RequestEngineWaitStrategyType RequestEngineWaitStrategyType { get; set; }
+        
         public static ZerioConfiguration CreateDefault()
         {
             // const int allocationGranularity = 65536;
@@ -27,6 +31,8 @@ namespace Abc.Zerio
                 
                 ReceivingBufferLength = 64 * 1024,
                 ReceivingBufferCount = 4,
+                
+                RequestEngineWaitStrategyType = RequestEngineWaitStrategyType.HybridWaitStrategy,
             };
 
             configuration.FramingBufferLength = configuration.ReceivingBufferLength;
