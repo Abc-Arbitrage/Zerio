@@ -17,11 +17,11 @@ namespace Abc.Zerio.Core
 
         public T* this[int index] => (T*)((byte*)FirstEntry + index * EntryReservedSpaceSize);
 
-        public UnmanagedRioBuffer(int bufferCount, int bufferLength)
+        public UnmanagedRioBuffer(int bufferSegmentCount, int bufferSegmentLength)
         {
             // Example with:
             //  - Length = 2 entries
-            //  - BufferLength = 1024 bytes
+            //  - BufferSegmentLength = 1024 bytes
             //  - Entry of type T having
             //     - A 1 byte field
             //     - A 4 bytes field
@@ -42,13 +42,13 @@ namespace Abc.Zerio.Core
             // |             |                                  | 153       | 1024      |                                                       | 1202      | 1024      |               
             // |                                                  +---------------------^                                                         +---------------------^
             
-            Length = bufferCount;
+            Length = bufferSegmentCount;
             var entryLength = sizeof(T);
-            EntryReservedSpaceSize = entryLength + bufferLength;
+            EntryReservedSpaceSize = entryLength + bufferSegmentLength;
 
             // Padding is added at the start and the end of the buffer to prevent false sharing when using this UnmanagedRioBuffer
             // as the underlying ring buffer memory of an unmanaged disruptor
-            var totalBufferLength = (uint)(_padding + bufferCount * EntryReservedSpaceSize + _padding);
+            var totalBufferLength = (uint)(_padding + bufferSegmentCount * EntryReservedSpaceSize + _padding);
 
             const int allocationType = Kernel32.Consts.MEM_COMMIT | Kernel32.Consts.MEM_RESERVE;
             _buffer = Kernel32.VirtualAlloc(IntPtr.Zero, totalBufferLength, allocationType, Kernel32.Consts.PAGE_READWRITE);
@@ -59,15 +59,15 @@ namespace Abc.Zerio.Core
 
             var currentEntry = FirstEntry = (T*)((byte*)_buffer.ToPointer() + _padding);
 
-            for (var i = 0; i < bufferCount; i++)
+            for (var i = 0; i < bufferSegmentCount; i++)
             {
                 var bufferDescriptor = currentEntry->GetRioBufferDescriptor();
                 
                 bufferDescriptor->BufferId = _bufferId;
                 bufferDescriptor->Offset = _padding + i * EntryReservedSpaceSize + sizeof(T);
-                bufferDescriptor->Length = bufferLength;
+                bufferDescriptor->Length = bufferSegmentLength;
                 
-                currentEntry = (T*)((byte*)(currentEntry + 1) + bufferLength);
+                currentEntry = (T*)((byte*)(currentEntry + 1) + bufferSegmentLength);
             }
         }
 

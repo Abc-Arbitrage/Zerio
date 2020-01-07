@@ -90,7 +90,7 @@ namespace Abc.Zerio.Interop
     [StructLayout(LayoutKind.Sequential)]
     internal struct RioNotificationCompletionEvent
     {
-        public IntPtr IocpHandle;
+        public IntPtr EventHandle;
         public int NotifyReset;
     }
 

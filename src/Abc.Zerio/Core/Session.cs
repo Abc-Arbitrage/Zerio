@@ -29,7 +29,7 @@ namespace Abc.Zerio.Core
             Id = sessionId;
             _configuration = configuration;
             _completionQueues = completionQueues;
-            _receivingBuffer = new UnmanagedRioBuffer<RioBufferSegment>(configuration.ReceivingBufferCount, _configuration.ReceivingBufferLength);
+            _receivingBuffer = new UnmanagedRioBuffer<RioBufferSegment>(configuration.ReceivingBufferCount, _configuration.ReceivingBufferSegmentLength);
 
             _messageFramer = new MessageFramer(configuration.FramingBufferLength);
             _messageFramer.MessageFramed += OnMessageFramed;
@@ -55,7 +55,7 @@ namespace Abc.Zerio.Core
             _socket = socket;
 
             var maxOutstandingReceives = (uint)_configuration.ReceivingBufferCount * 2;
-            var maxOutstandingSends = (uint)_configuration.SendingBufferCount * 2;
+            var maxOutstandingSends = (uint)_configuration.SendingBufferSegmentCount * 2;
 
             _requestQueue = RioRequestQueue.Create(Id, socket, _completionQueues.SendingQueue, maxOutstandingSends, _completionQueues.ReceivingQueue, maxOutstandingReceives);
         }

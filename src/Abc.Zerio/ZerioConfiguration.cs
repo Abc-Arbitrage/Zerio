@@ -4,12 +4,12 @@ namespace Abc.Zerio
 {
     public class ZerioConfiguration
     {
-        public int SendingBufferCount { get; set; }
-        public int SendingBufferLength { get; set; }
+        public int SendingBufferSegmentCount { get; set; }
+        public int SendingBufferSegmentLength { get; set; }
         public int MaxSendCompletionResults { get; set; }
 
         public int ReceivingBufferCount { get; set; }
-        public int ReceivingBufferLength { get; set; }
+        public int ReceivingBufferSegmentLength { get; set; }
         public int MaxReceiveCompletionResults { get; set; }
 
         public int MaxSendBatchSize { get; set; }
@@ -26,21 +26,21 @@ namespace Abc.Zerio
             var configuration = new ZerioConfiguration
             {
                 MaxSendBatchSize = 16,
-                SessionCount = 2,
+                SessionCount = 1,
                 
-                SendingBufferLength = 1024,
-                SendingBufferCount = 64 * 1024,
+                SendingBufferSegmentLength = 1024,
+                SendingBufferSegmentCount = 64 * 1024,
                 
-                ReceivingBufferLength = 64 * 1024,
-                ReceivingBufferCount = 4,
+                ReceivingBufferSegmentLength = 1024,
+                ReceivingBufferCount = 1024,
                 
                 RequestEngineWaitStrategyType = RequestEngineWaitStrategyType.HybridWaitStrategy,
                 ReceiveCompletionPollingWaitStrategyType = CompletionPollingWaitStrategyType.BusySpinWaitStrategy,
-                SendCompletionPollingWaitStrategyType = CompletionPollingWaitStrategyType.SpinWaitWaitStrategy,
+                SendCompletionPollingWaitStrategyType = CompletionPollingWaitStrategyType.BusySpinWaitStrategy,
             };
 
-            configuration.FramingBufferLength = configuration.ReceivingBufferLength;
-            configuration.MaxSendCompletionResults = configuration.SendingBufferCount;
+            configuration.FramingBufferLength = configuration.ReceivingBufferSegmentLength;
+            configuration.MaxSendCompletionResults = configuration.SendingBufferSegmentCount;
             configuration.MaxReceiveCompletionResults = configuration.ReceivingBufferCount;
 
             return configuration;

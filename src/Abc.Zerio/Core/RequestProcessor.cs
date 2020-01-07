@@ -22,7 +22,7 @@ namespace Abc.Zerio.Core
         {
             _sessionManager = sessionManager;
             _maxSendBatchSize = configuration.MaxSendBatchSize;
-            _sendingBufferLength = configuration.SendingBufferLength;
+            _sendingBufferLength = configuration.SendingBufferSegmentLength;
         }
 
         public void OnStart()

@@ -20,8 +20,8 @@ namespace Abc.Zerio.Core
         {
             _configuration = configuration;
 
-            var ringBufferSize =  ZerioConfiguration.GetNextPowerOfTwo(_configuration.SendingBufferCount + _configuration.ReceivingBufferCount * _configuration.SessionCount);
-            _unmanagedRioBuffer = new UnmanagedRioBuffer<RequestEntry>(ringBufferSize, _configuration.SendingBufferLength);
+            var ringBufferSize =  ZerioConfiguration.GetNextPowerOfTwo(_configuration.SendingBufferSegmentCount + _configuration.ReceivingBufferCount * _configuration.SessionCount);
+            _unmanagedRioBuffer = new UnmanagedRioBuffer<RequestEntry>(ringBufferSize, _configuration.SendingBufferSegmentLength);
 
             _disruptor = CreateDisruptor(sendingCompletionQueue, sessionManager);
             _ringBuffer = _disruptor.RingBuffer;
