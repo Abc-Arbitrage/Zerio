@@ -16,6 +16,7 @@ namespace Abc.Zerio.Core
         private int _currentBatchSize;
 
         private RequestEntry* _batchingEntry;
+        private long _batchingEntrySequence;
 
         public RequestProcessor(ZerioConfiguration configuration, ISessionManager sessionManager)
         {
@@ -51,6 +52,8 @@ namespace Abc.Zerio.Core
             if (_batchingEntry == null)
             {
                 _batchingEntry = (RequestEntry*)Unsafe.AsPointer(ref currentEntry);
+                _batchingEntrySequence = sequence;
+                
                 currentEntryWasConsumed = true;
             }
             else
@@ -66,13 +69,16 @@ namespace Abc.Zerio.Core
 
             if (currentEntryWasConsumed)
             {
-                AddToSendRioBatch(ref Unsafe.AsRef<RequestEntry>(_batchingEntry), sequence, endOfBatch);
+                AddToSendRioBatch(ref Unsafe.AsRef<RequestEntry>(_batchingEntry), _batchingEntrySequence, endOfBatch);
             }
             else
             {
-                AddToSendRioBatch(ref Unsafe.AsRef<RequestEntry>(_batchingEntry), sequence, false);
-                AddToSendRioBatch(ref Unsafe.AsRef<RequestEntry>(_batchingEntry), sequence, endOfBatch);
+                AddToSendRioBatch(ref Unsafe.AsRef<RequestEntry>(_batchingEntry), _batchingEntrySequence, false);
+                AddToSendRioBatch(ref currentEntry, sequence, endOfBatch);
             }
+
+            _batchingEntry = null;
+            _batchingEntrySequence = default;
         }
 
         private void AddToSendRioBatch(ref RequestEntry data, long sequence, bool endOfBatch)
