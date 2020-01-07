@@ -53,7 +53,7 @@ namespace Abc.Zerio.Core
             {
                 _batchingEntry = (RequestEntry*)Unsafe.AsPointer(ref currentEntry);
                 _batchingEntrySequence = sequence;
-                
+
                 currentEntryWasConsumed = true;
             }
             else
@@ -63,22 +63,36 @@ namespace Abc.Zerio.Core
                     currentEntry.Type = RequestType.BatchedSend;
             }
 
-            var shouldForwardToRioBatch = endOfBatch || !currentEntryWasConsumed;
-            if (!shouldForwardToRioBatch)
+            var shouldEnqueueToRioBatch = endOfBatch || !currentEntryWasConsumed;
+            if (!shouldEnqueueToRioBatch)
                 return;
 
+            EnqueueToRioBatch(ref currentEntry, sequence, endOfBatch, currentEntryWasConsumed);
+        }
+
+        private void EnqueueToRioBatch(ref RequestEntry currentEntry, long sequence, bool endOfBatch, bool currentEntryWasConsumed)
+        {
             if (currentEntryWasConsumed)
             {
-                AddToSendRioBatch(ref Unsafe.AsRef<RequestEntry>(_batchingEntry), _batchingEntrySequence, endOfBatch);
+                AddToSendRioBatch(ref Unsafe.AsRef<RequestEntry>(_batchingEntry), _batchingEntrySequence, true);
             }
             else
             {
                 AddToSendRioBatch(ref Unsafe.AsRef<RequestEntry>(_batchingEntry), _batchingEntrySequence, false);
-                AddToSendRioBatch(ref currentEntry, sequence, endOfBatch);
-            }
 
-            _batchingEntry = null;
-            _batchingEntrySequence = default;
+                if (endOfBatch)
+                {
+                    AddToSendRioBatch(ref currentEntry, sequence, true);
+
+                    _batchingEntry = null;
+                    _batchingEntrySequence = default;
+                }
+                else
+                {
+                    _batchingEntry = (RequestEntry*)Unsafe.AsPointer(ref currentEntry);
+                    _batchingEntrySequence = sequence;
+                }
+            }
         }
 
         private void AddToSendRioBatch(ref RequestEntry data, long sequence, bool endOfBatch)
