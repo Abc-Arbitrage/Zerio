@@ -5,7 +5,7 @@ namespace Abc.Zerio.Core
         Undefined,
         Send,
         Receive,
-        BatchedSend,
+        AddedToSendBatch,
         ExpiredOperation
     }
 }

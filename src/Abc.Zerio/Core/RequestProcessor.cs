@@ -35,18 +35,23 @@ namespace Abc.Zerio.Core
 
             switch (entry.Type)
             {
-                case RequestType.Send:
-                    OnSendRequest(ref entry, sequence, endOfBatch, session);
-                    break;
                 case RequestType.Receive:
                     OnReceiveRequest(ref entry, endOfBatch, session);
+                    break;
+                case RequestType.Send:
+                    OnSendRequest(ref entry, sequence, endOfBatch, session);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
             }
         }
 
-        public void OnSendRequest(ref RequestEntry currentEntry, long sequence, bool endOfBatch, Session session)
+        private void OnReceiveRequest(ref RequestEntry entry, bool endOfBatch, Session session)
+        {
+            EnqueueToRioReceiveBatch(session, ref entry, endOfBatch);
+        }
+
+        public void OnSendRequest(ref RequestEntry entry, long sequence, bool endOfBatch, Session session)
         {
             bool currentEntryWasConsumed;
 
@@ -54,14 +59,14 @@ namespace Abc.Zerio.Core
 
             if (sendingBatch.IsEmpty)
             {
-                sendingBatch.Initialize(ref currentEntry, sequence);
+                sendingBatch.Initialize(ref entry, sequence);
                 currentEntryWasConsumed = true;
             }
             else
             {
-                currentEntryWasConsumed = sendingBatch.TryAppend(ref currentEntry);
+                currentEntryWasConsumed = sendingBatch.TryAppend(ref entry);
                 if (currentEntryWasConsumed)
-                    currentEntry.Type = RequestType.BatchedSend;
+                    entry.Type = RequestType.AddedToSendBatch;
             }
 
             var shouldEnqueueToRioBatch = endOfBatch || !currentEntryWasConsumed;
@@ -70,54 +75,36 @@ namespace Abc.Zerio.Core
 
             if (currentEntryWasConsumed)
             {
-                AddToSendRioBatch(ref Unsafe.AsRef<RequestEntry>(sendingBatch.BatchingEntry), sendingBatch.BatchingEntrySequence, true);
+                EnqueueToRioSendBatch(session, ref Unsafe.AsRef<RequestEntry>(sendingBatch.BatchingEntry), sendingBatch.BatchingEntrySequence, true);
             }
             else
             {
-                AddToSendRioBatch(ref Unsafe.AsRef<RequestEntry>(sendingBatch.BatchingEntry), sendingBatch.BatchingEntrySequence, false);
+                EnqueueToRioSendBatch(session, ref Unsafe.AsRef<RequestEntry>(sendingBatch.BatchingEntry), sendingBatch.BatchingEntrySequence, false);
 
                 if (endOfBatch)
                 {
-                    AddToSendRioBatch(ref currentEntry, sequence, true);
+                    EnqueueToRioSendBatch(session, ref entry, sequence, true);
                     sendingBatch.Reset();
                 }
                 else
                 {
-                    sendingBatch.Initialize(ref currentEntry, sequence);
+                    sendingBatch.Initialize(ref entry, sequence);
                 }
             }
         }
 
-        private void AddToSendRioBatch(ref RequestEntry data, long sequence, bool endOfBatch)
+        private void EnqueueToRioSendBatch(Session session, ref RequestEntry data, long sequence, bool endOfBatch)
         {
             var shouldFlush = endOfBatch || _maxSendBatchSize == _currentBatchSize;
-
-            Action pendingFlushOperation = null;
-
-            var sessionIsActive = _sessionManager.TryGetSession(data.SessionId, out var session);
-            if (sessionIsActive)
-            {
-                session.RequestQueue.Send(sequence, data.GetRioBufferDescriptor(), shouldFlush);
-                pendingFlushOperation = session.RequestQueue.FlushSendsOperation;
-            }
-
-            TryFlushRioBatches(ref data, RequestType.Send, shouldFlush, pendingFlushOperation);
+            session.RequestQueue.Send(sequence, data.GetRioBufferDescriptor(), shouldFlush);
+            TryFlushRioBatches(ref data, RequestType.Send, shouldFlush, session.RequestQueue.FlushSendsOperation);
         }
 
-        private void AddToReceiveRioBatch(ref RequestEntry data, bool endOfBatch)
+        private void EnqueueToRioReceiveBatch(Session session, ref RequestEntry data, bool endOfBatch)
         {
             var shouldFlush = endOfBatch || _maxSendBatchSize == _currentBatchSize;
-
-            Action pendingFlushOperation = null;
-
-            var sessionIsActive = _sessionManager.TryGetSession(data.SessionId, out var session);
-            if (sessionIsActive)
-            {
-                session.RequestQueue.Receive(session.ReadBuffer(data.BufferSegmentId), data.BufferSegmentId, shouldFlush);
-                pendingFlushOperation = session.RequestQueue.FlushReceivesOperation;
-            }
-
-            TryFlushRioBatches(ref data, RequestType.Receive, shouldFlush, pendingFlushOperation);
+            session.RequestQueue.Receive(session.ReadBuffer(data.BufferSegmentId), data.BufferSegmentId, shouldFlush);
+            TryFlushRioBatches(ref data, RequestType.Receive, shouldFlush, session.RequestQueue.FlushReceivesOperation);
         }
 
         private void TryFlushRioBatches(ref RequestEntry data, RequestType requestType, bool shouldFlush, Action pendingFlushOperation)
@@ -135,11 +122,6 @@ namespace Abc.Zerio.Core
 
                 _currentBatchSize++;
             }
-        }
-
-        private void OnReceiveRequest(ref RequestEntry data, bool endOfBatch, Session session)
-        {
-            AddToReceiveRioBatch(ref data, endOfBatch);
         }
 
         private void FlushRequestQueues((int sessionId, RequestType requestType) noLongerPendingFlushOperationKey)

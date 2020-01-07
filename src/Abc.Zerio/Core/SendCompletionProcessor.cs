@@ -54,8 +54,7 @@ namespace Abc.Zerio.Core
                     for (var i = 0; i < resultCount; i++)
                     {
                         var result = _completionResultsPointer[i];
-                        var releasableSequence = result.RequestCorrelation;
-                        _releasableSequences.Add(releasableSequence);
+                        _releasableSequences.Add(result.RequestCorrelation);
                     }
                 }   
             }
