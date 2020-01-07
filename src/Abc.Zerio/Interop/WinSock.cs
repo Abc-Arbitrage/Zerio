@@ -99,16 +99,16 @@ namespace Abc.Zerio.Interop
             internal delegate bool RIOReceiveFunc([In] IntPtr SocketQueue, RIO_BUF* RioBuffer, [In] uint DataBufferCount, [In] RIO_RECEIVE_FLAGS Flags, [In] long RequestCorrelation);
 
             [UnmanagedFunctionPointer(CallingConvention.StdCall, SetLastError = true), SuppressUnmanagedCodeSecurity]
-            internal delegate CompletionQueueHandle RIOCreateCompletionQueueFunc([In] uint QueueSize, [In, Optional] RIO_NOTIFICATION_COMPLETION* NotificationCompletion);
+            internal delegate IntPtr RIOCreateCompletionQueueFunc([In] uint QueueSize, [In, Optional] RIO_NOTIFICATION_COMPLETION* NotificationCompletion);
 
             [UnmanagedFunctionPointer(CallingConvention.StdCall, SetLastError = true), SuppressUnmanagedCodeSecurity]
             internal delegate void RIOCloseCompletionQueueAction([In] IntPtr CQ);
 
             [UnmanagedFunctionPointer(CallingConvention.StdCall, SetLastError = true), SuppressUnmanagedCodeSecurity]
-            internal delegate IntPtr RIOCreateRequestQueueFunc([In] IntPtr Socket, [In] uint MaxOutstandingReceive, [In] uint MaxReceiveDataBuffers, [In] uint MaxOutstandingSend, [In] uint MaxSendDataBuffers, [In] CompletionQueueHandle ReceiveCQ, [In] CompletionQueueHandle SendCQ, [In] int ConnectionCorrelation);
+            internal delegate IntPtr RIOCreateRequestQueueFunc([In] IntPtr Socket, [In] uint MaxOutstandingReceive, [In] uint MaxReceiveDataBuffers, [In] uint MaxOutstandingSend, [In] uint MaxSendDataBuffers, [In] IntPtr ReceiveCQ, [In] IntPtr SendCQ, [In] long ConnectionCorrelation);
 
             [UnmanagedFunctionPointer(CallingConvention.StdCall, SetLastError = false), SuppressUnmanagedCodeSecurity]
-            internal delegate uint RIODequeueCompletionFunc([In] CompletionQueueHandle CQ, [In] RIO_RESULT* ResultArray, [In] uint ResultArrayLength);
+            internal delegate uint RIODequeueCompletionFunc([In] IntPtr CQ, [In] RIO_RESULT* ResultArray, [In] uint ResultArrayLength);
 
             [UnmanagedFunctionPointer(CallingConvention.StdCall, SetLastError = false), SuppressUnmanagedCodeSecurity]
             internal delegate int RIONotifyFunc([In] IntPtr CQ);
