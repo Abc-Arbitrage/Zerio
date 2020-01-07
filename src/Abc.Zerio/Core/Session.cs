@@ -23,6 +23,8 @@ namespace Abc.Zerio.Core
         public event ServerMessageReceivedDelegate MessageReceived;
         public event Action<string> HandshakeReceived;
         public event Action<Session> Closed;
+
+        public readonly SessionSendingBatch SendingBatch;
         
         public Session(int sessionId, ZerioConfiguration configuration, CompletionQueues completionQueues)
         {
@@ -32,7 +34,9 @@ namespace Abc.Zerio.Core
             _receivingBuffer = new UnmanagedRioBuffer<RioBufferSegment>(configuration.ReceivingBufferCount, _configuration.ReceivingBufferLength);
 
             _messageFramer = new MessageFramer(configuration.FramingBufferLength);
-            _messageFramer.MessageFramed += OnMessageFramed;
+            _messageFramer.MessageFramed += OnMessageFramed; 
+            
+            SendingBatch = new SessionSendingBatch(configuration.SendingBufferLength);
         }
 
         private void OnMessageFramed(ReadOnlySpan<byte> message)

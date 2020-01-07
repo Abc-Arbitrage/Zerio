@@ -8,21 +8,16 @@ namespace Abc.Zerio.Core
 {
     internal unsafe class RequestProcessor : IValueEventHandler<RequestEntry>, ILifecycleAware
     {
-        private readonly Dictionary<(int sessionId, RequestType), Action> _pendingFlushOperations = new Dictionary<(int sessionId, RequestType), Action>();
+        private readonly Dictionary<(int sessionId, RequestType), Action> _pendingFlushOperations;
         private readonly ISessionManager _sessionManager;
-        private readonly int _sendingBufferLength;
         private readonly int _maxSendBatchSize;
-
         private int _currentBatchSize;
-
-        private RequestEntry* _batchingEntry;
-        private long _batchingEntrySequence;
 
         public RequestProcessor(ZerioConfiguration configuration, ISessionManager sessionManager)
         {
             _sessionManager = sessionManager;
             _maxSendBatchSize = configuration.MaxSendBatchSize;
-            _sendingBufferLength = configuration.SendingBufferLength;
+            _pendingFlushOperations = new Dictionary<(int sessionId, RequestType), Action>(configuration.SessionCount * 2);
         }
 
         public void OnStart()
@@ -32,33 +27,39 @@ namespace Abc.Zerio.Core
 
         public void OnEvent(ref RequestEntry data, long sequence, bool endOfBatch)
         {
+            if (!_sessionManager.TryGetSession(data.SessionId, out var session))
+            {
+                data.Type = RequestType.ExpiredOperation;
+                return;
+            }
+
             switch (data.Type)
             {
                 case RequestType.Send:
-                    OnSendRequest(ref data, sequence, endOfBatch);
+                    OnSendRequest(ref data, sequence, endOfBatch, session);
                     break;
                 case RequestType.Receive:
-                    OnReceiveRequest(ref data, endOfBatch);
+                    OnReceiveRequest(ref data, endOfBatch, session);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
             }
         }
 
-        public void OnSendRequest(ref RequestEntry currentEntry, long sequence, bool endOfBatch)
+        public void OnSendRequest(ref RequestEntry currentEntry, long sequence, bool endOfBatch, Session session)
         {
             bool currentEntryWasConsumed;
 
-            if (_batchingEntry == null)
-            {
-                _batchingEntry = (RequestEntry*)Unsafe.AsPointer(ref currentEntry);
-                _batchingEntrySequence = sequence;
+            var sendingBatch = session.SendingBatch;
 
+            if (sendingBatch.IsEmpty)
+            {
+                sendingBatch.Initialize(ref currentEntry, sequence);
                 currentEntryWasConsumed = true;
             }
             else
             {
-                currentEntryWasConsumed = TryCopyCurrentEntryToBatchingEntry(ref currentEntry);
+                currentEntryWasConsumed = sendingBatch.TryAppend(ref currentEntry);
                 if (currentEntryWasConsumed)
                     currentEntry.Type = RequestType.BatchedSend;
             }
@@ -67,30 +68,22 @@ namespace Abc.Zerio.Core
             if (!shouldEnqueueToRioBatch)
                 return;
 
-            EnqueueToRioBatch(ref currentEntry, sequence, endOfBatch, currentEntryWasConsumed);
-        }
-
-        private void EnqueueToRioBatch(ref RequestEntry currentEntry, long sequence, bool endOfBatch, bool currentEntryWasConsumed)
-        {
             if (currentEntryWasConsumed)
             {
-                AddToSendRioBatch(ref Unsafe.AsRef<RequestEntry>(_batchingEntry), _batchingEntrySequence, true);
+                AddToSendRioBatch(ref Unsafe.AsRef<RequestEntry>(sendingBatch.BatchingEntry), sendingBatch.BatchingEntrySequence, true);
             }
             else
             {
-                AddToSendRioBatch(ref Unsafe.AsRef<RequestEntry>(_batchingEntry), _batchingEntrySequence, false);
+                AddToSendRioBatch(ref Unsafe.AsRef<RequestEntry>(sendingBatch.BatchingEntry), sendingBatch.BatchingEntrySequence, false);
 
                 if (endOfBatch)
                 {
                     AddToSendRioBatch(ref currentEntry, sequence, true);
-
-                    _batchingEntry = null;
-                    _batchingEntrySequence = default;
+                    sendingBatch.Reset();
                 }
                 else
                 {
-                    _batchingEntry = (RequestEntry*)Unsafe.AsPointer(ref currentEntry);
-                    _batchingEntrySequence = sequence;
+                    sendingBatch.Initialize(ref currentEntry, sequence);
                 }
             }
         }
@@ -144,24 +137,9 @@ namespace Abc.Zerio.Core
             }
         }
 
-        private void OnReceiveRequest(ref RequestEntry data, bool endOfBatch)
+        private void OnReceiveRequest(ref RequestEntry data, bool endOfBatch, Session session)
         {
             AddToReceiveRioBatch(ref data, endOfBatch);
-        }
-
-        private bool TryCopyCurrentEntryToBatchingEntry(ref RequestEntry currentEntry)
-        {
-            var currentEntryLength = currentEntry.RioBufferSegmentDescriptor.Length;
-            if (currentEntryLength > _sendingBufferLength - _batchingEntry->RioBufferSegmentDescriptor.Length)
-                return false;
-
-            var endOfBatchingEntryData = _batchingEntry->GetBufferSegmentStart() + _batchingEntry->RioBufferSegmentDescriptor.Length;
-            var startOfCurrentEntryData = currentEntry.GetBufferSegmentStart();
-
-            Unsafe.CopyBlockUnaligned(endOfBatchingEntryData, startOfCurrentEntryData, (uint)currentEntryLength);
-            _batchingEntry->RioBufferSegmentDescriptor.Length += currentEntryLength;
-
-            return true;
         }
 
         private void FlushRequestQueues((int sessionId, RequestType requestType) noLongerPendingFlushOperationKey)
