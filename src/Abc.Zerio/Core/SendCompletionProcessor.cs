@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Abc.Zerio.Interop;
@@ -34,6 +35,9 @@ namespace Abc.Zerio.Core
         public void OnEvent(ref RequestEntry data, long sequence, bool endOfBatch)
         {
             if (data.Type == RequestType.Receive)
+                return;
+
+            if (data.Type == RequestType.BatchedSend)
                 return;
             
             _waitStrategy.Reset();
