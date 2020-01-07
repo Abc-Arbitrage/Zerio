@@ -31,36 +31,38 @@ namespace Abc.Zerio.Core
             _waitStrategy = CompletionPollingWaitStrategyFactory.Create(_configuration.SendCompletionPollingWaitStrategyType);
         }
 
-        public void OnEvent(ref RequestEntry data, long sequence, bool endOfBatch)
+        public void OnEvent(ref RequestEntry entry, long sequence, bool endOfBatch)
         {
-            if (data.Type == RequestType.Receive)
-                return;
-
-            if (data.Type == RequestType.BatchedSend)
-                return;
-            
-            _waitStrategy.Reset();
-            
-            while (!_releasableSequences.Remove(sequence))
+            try
             {
-                var resultCount = _sendCompletionQueue.TryGetCompletionResults(_completionResultsPointer, _completionResults.Length);
-                if (resultCount == 0)
-                {
-                    _waitStrategy.Wait();
-                    continue;
-                }
-
+                if (entry.Type != RequestType.Send)
+                    return;
+            
                 _waitStrategy.Reset();
-                
-                for (var i = 0; i < resultCount; i++)
+            
+                while (!_releasableSequences.Remove(sequence))
                 {
-                    var result = _completionResultsPointer[i];
-                    var releasableSequence = result.RequestCorrelation;
-                    _releasableSequences.Add(releasableSequence);
-                }
-            }
+                    var resultCount = _sendCompletionQueue.TryGetCompletionResults(_completionResultsPointer, _completionResults.Length);
+                    if (resultCount == 0)
+                    {
+                        _waitStrategy.Wait();
+                        continue;
+                    }
 
-            data.Reset();
+                    _waitStrategy.Reset();
+                
+                    for (var i = 0; i < resultCount; i++)
+                    {
+                        var result = _completionResultsPointer[i];
+                        var releasableSequence = result.RequestCorrelation;
+                        _releasableSequences.Add(releasableSequence);
+                    }
+                }   
+            }
+            finally
+            {
+                entry.Reset();
+            }
         }
 
         public void OnStart()

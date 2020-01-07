@@ -25,21 +25,21 @@ namespace Abc.Zerio.Core
             Thread.CurrentThread.Name = nameof(RequestProcessor);
         }
 
-        public void OnEvent(ref RequestEntry data, long sequence, bool endOfBatch)
+        public void OnEvent(ref RequestEntry entry, long sequence, bool endOfBatch)
         {
-            if (!_sessionManager.TryGetSession(data.SessionId, out var session))
+            if (!_sessionManager.TryGetSession(entry.SessionId, out var session))
             {
-                data.Type = RequestType.ExpiredOperation;
+                entry.Type = RequestType.ExpiredOperation;
                 return;
             }
 
-            switch (data.Type)
+            switch (entry.Type)
             {
                 case RequestType.Send:
-                    OnSendRequest(ref data, sequence, endOfBatch, session);
+                    OnSendRequest(ref entry, sequence, endOfBatch, session);
                     break;
                 case RequestType.Receive:
-                    OnReceiveRequest(ref data, endOfBatch, session);
+                    OnReceiveRequest(ref entry, endOfBatch, session);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
