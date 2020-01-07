@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Abc.Zerio.Interop;
@@ -16,9 +15,8 @@ namespace Abc.Zerio.Core
         private readonly RIO_RESULT* _completionResultsPointer;
         private readonly GCHandle _completionResultsHandle;
 
-        private readonly HashSet<long> _releasableSequences = new HashSet<long>();
-        
         private readonly ICompletionPollingWaitStrategy _waitStrategy;
+        private long _lastCompletedSequence = long.MinValue;
 
         public SendCompletionProcessor(ZerioConfiguration configuration, RioCompletionQueue sendCompletionQueue)
         {
@@ -27,7 +25,7 @@ namespace Abc.Zerio.Core
             _completionResults = new RIO_RESULT[configuration.MaxSendCompletionResults];
             _completionResultsHandle = GCHandle.Alloc(_completionResults, GCHandleType.Pinned);
             _completionResultsPointer = (RIO_RESULT*)_completionResultsHandle.AddrOfPinnedObject().ToPointer();
-            
+
             _waitStrategy = CompletionPollingWaitStrategyFactory.Create(_configuration.SendCompletionPollingWaitStrategyType);
         }
 
@@ -37,10 +35,10 @@ namespace Abc.Zerio.Core
             {
                 if (entry.Type != RequestType.Send)
                     return;
-            
+
                 _waitStrategy.Reset();
-            
-                while (!_releasableSequences.Remove(sequence))
+
+                while (sequence > _lastCompletedSequence)
                 {
                     var resultCount = _sendCompletionQueue.TryGetCompletionResults(_completionResultsPointer, _completionResults.Length);
                     if (resultCount == 0)
@@ -50,13 +48,13 @@ namespace Abc.Zerio.Core
                     }
 
                     _waitStrategy.Reset();
-                
+
                     for (var i = 0; i < resultCount; i++)
                     {
                         var result = _completionResultsPointer[i];
-                        _releasableSequences.Add(result.RequestCorrelation);
+                        _lastCompletedSequence = result.RequestCorrelation;
                     }
-                }   
+                }
             }
             finally
             {
