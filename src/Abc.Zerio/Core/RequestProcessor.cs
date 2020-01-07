@@ -76,6 +76,7 @@ namespace Abc.Zerio.Core
             if (currentEntryWasConsumed)
             {
                 EnqueueToRioSendBatch(session, ref Unsafe.AsRef<RequestEntry>(sendingBatch.BatchingEntry), sendingBatch.BatchingEntrySequence, true);
+                sendingBatch.Reset();
             }
             else
             {
