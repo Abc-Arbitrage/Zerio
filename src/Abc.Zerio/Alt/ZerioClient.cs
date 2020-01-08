@@ -14,7 +14,6 @@ namespace Abc.Zerio.Alt
     {
         private readonly IPEndPoint _serverEndpoint;
         private Session _session;
-        private readonly AutoResetEvent _handshakeSignal = new AutoResetEvent(false);
         private IntPtr _socket;
         private int _started;
 
@@ -37,11 +36,6 @@ namespace Abc.Zerio.Alt
             _cts = new CancellationTokenSource();
             _pools = new RioBufferPools(ct: _cts.Token);
             _poller = new Poller(_cts.Token);
-        }
-
-        private void OnHandshakeReceived(string peerId)
-        {
-            _handshakeSignal.Set();
         }
 
         public void Send(ReadOnlySpan<byte> message)
@@ -67,19 +61,13 @@ namespace Abc.Zerio.Alt
             _socket = CreateSocket();
             Connect(_socket, _serverEndpoint);
 
-            _session = new Session(0, _socket, _pools, _poller, OnHandshakeReceived, (_, bytes) => {MessageReceived?.Invoke(bytes);}, OnSessionClosed);
-
-            Handshake(peerId);
+            _session = new Session(0, _socket, _pools, _poller, (_, bytes) => {MessageReceived?.Invoke(bytes);}, OnSessionClosed);
+            var peerIdBytes = Encoding.ASCII.GetBytes(peerId);
+            Send(peerIdBytes.AsSpan());
+            _session.HandshakeSignal.WaitOne();
 
             IsConnected = true;
             Connected?.Invoke();
-        }
-
-        private void Handshake(string peerId)
-        {
-            var peerIdBytes = Encoding.ASCII.GetBytes(peerId);
-            Send(peerIdBytes.AsSpan());
-            _handshakeSignal.WaitOne();
         }
 
         private static unsafe void Connect(IntPtr socket, IPEndPoint ipEndPoint)
@@ -140,7 +128,6 @@ namespace Abc.Zerio.Alt
                 _session = null;
                 _pools.Dispose();
                 _poller.Dispose();
-                _handshakeSignal?.Dispose();
             }
             else
             {

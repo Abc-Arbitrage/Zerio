@@ -13,7 +13,7 @@ namespace Abc.Zerio.Alt.Buffers
         RioSegment Rent();
         void Return(RioSegment segment);
         void AddBuffer(RegisteredBuffer segment);
-        RegisteredBuffer GetBuffer(int bufferIdOneBased);
+        RegisteredBuffer GetBuffer(int bufferId);
         int SegmentLength { get; }
     }
 
@@ -86,8 +86,8 @@ namespace Abc.Zerio.Alt.Buffers
 
                 if (idx == -1)
                 {
-                    _buffers.Add(buffer);
                     idx = _buffers.Count;
+                    _buffers.Add(buffer);
                 }
             }
 
@@ -104,6 +104,6 @@ namespace Abc.Zerio.Alt.Buffers
         }
 
         // ReSharper disable once InconsistentlySynchronizedField
-        public RegisteredBuffer GetBuffer(int bufferIdOneBased) => _buffers[bufferIdOneBased - 1];
+        public RegisteredBuffer GetBuffer(int bufferId) => _buffers[bufferId];
     }
 }

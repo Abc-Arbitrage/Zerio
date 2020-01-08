@@ -67,11 +67,11 @@ namespace Abc.Zerio.Client
                 ShowHelp(p);
                 return;
             }
-  
+
             if (string.IsNullOrEmpty(transport))
             {
-                Console.WriteLine("Enter transport: t for TCP, r for RIO");
-                transport = Console.ReadLine();
+                // Console.WriteLine("Enter transport: t for TCP, r for RIO, a for ALT");
+                transport = "a"; // Console.ReadLine();
             }
 
             if (hosts.Count == 0)
@@ -119,6 +119,10 @@ namespace Abc.Zerio.Client
                 case "r":
                 case "rio":
                     return new ZerioClient(new IPEndPoint(Dns.GetHostAddresses(hostname).First(i => i.AddressFamily == AddressFamily.InterNetwork), Benchmark.TCP_PORT));
+
+                case "a":
+                case "alt":
+                    return new Alt.ZerioClient(new IPEndPoint(Dns.GetHostAddresses(hostname).First(i => i.AddressFamily == AddressFamily.InterNetwork), Benchmark.ALT_PORT));
 
                 default:
                     throw new InvalidOperationException($"Unknown transport type: {transportType}");

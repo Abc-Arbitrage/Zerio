@@ -26,7 +26,7 @@ namespace Abc.Zerio.Alt.Buffers
         }
 
         public long Value => _value;
-        public int PoolId => (int)(_value >> 32 + 24);
+        public int PoolId => (int)(_value >> (32 + 24));
         public int BufferId => ((int)(_value >> 32)) & ((1 << 24) - 1);
         public int SegmentId => (int)(_value & ((1L << 32) - 1));
     }

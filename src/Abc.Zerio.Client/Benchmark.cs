@@ -20,6 +20,7 @@ namespace Abc.Zerio.Client
     {
         public const int RIO_PORT = 48654;
         public const int TCP_PORT = 48655;
+        public const int ALT_PORT = 48656;
 
         private readonly int _hostCount;
         private readonly int _serversPerHost;

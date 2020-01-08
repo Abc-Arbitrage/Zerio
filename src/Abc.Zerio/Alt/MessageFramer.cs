@@ -72,7 +72,7 @@ namespace Abc.Zerio.Alt
             if (_readBytes != sizeof(int))
                 return true;
 
-            _messageLength = Unsafe.ReadUnaligned<int>(ref _buffer[0]);
+            _messageLength = Unsafe.ReadUnaligned<ushort>(ref _buffer[2]);
 
             offset += bytesToCopy;
 

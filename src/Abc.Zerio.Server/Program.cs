@@ -10,6 +10,7 @@ namespace Abc.Zerio.Server
     {
         public const int RIO_PORT = 48654;
         public const int TCP_PORT = 48655;
+        public const int ALT_PORT = 48656;
 
         private static long _messageCounter;
 
@@ -21,11 +22,13 @@ namespace Abc.Zerio.Server
 
             Console.WriteLine("SERVER...");
 
-            using var rioServer = new ZerioServer(RIO_PORT);
-            using var tcpServer = new TcpFeedServer(TCP_PORT);
+            //using var rioServer = new ZerioServer(RIO_PORT);
+            //using var tcpServer = new TcpFeedServer(TCP_PORT);
+            using var altServer = new Alt.ZerioServer(ALT_PORT);
 
-            StartServer(rioServer);
-            StartServer(tcpServer);
+            //StartServer(rioServer);
+            //StartServer(tcpServer);
+            StartServer(altServer);
 
             const bool alwaysPrintStats = false;
             var cts = new CancellationTokenSource();
@@ -67,8 +70,9 @@ namespace Abc.Zerio.Server
 
             cts.Cancel();
             monitoringThread.Join();
-            rioServer.Stop();
-            tcpServer.Stop();
+            //rioServer.Stop();
+            //tcpServer.Stop();
+            altServer.Stop();
         }
 
         private static void StartServer(IFeedServer server)

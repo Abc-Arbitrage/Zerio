@@ -27,14 +27,14 @@ namespace Abc.Zerio.Alt
         private readonly SemaphoreSlim _sendSemaphore;
         private MessageFramer _messageFramer;
 
+        public readonly AutoResetEvent HandshakeSignal = new AutoResetEvent(false);
         public string PeerId { get; private set; }
         
         private bool _isWaitingForHandshake = true;
-        private readonly Action<string> _handshakeReceived;
         private readonly SessionMessageReceivedDelegate _messageReceived;
         private readonly Action<Session> _closed;
 
-        public unsafe Session(int sessionId, IntPtr socket, RioBufferPools pools, Poller poller, Action<string> handshakeReceived, SessionMessageReceivedDelegate messageReceived, Action<Session> closed)
+        public unsafe Session(int sessionId, IntPtr socket, RioBufferPools pools, Poller poller, SessionMessageReceivedDelegate messageReceived, Action<Session> closed)
         {
             SessionId = sessionId;
             _socket = socket;
@@ -43,7 +43,6 @@ namespace Abc.Zerio.Alt
             _srb = pools.AllocateSendBuffer();
             _rrb = pools.AllocateReceiveBuffer();
 
-            _handshakeReceived = handshakeReceived;
             _messageReceived = messageReceived;
             _closed = closed;
 
@@ -83,8 +82,9 @@ namespace Abc.Zerio.Alt
             if (_isWaitingForHandshake)
             {
                 PeerId = Encoding.ASCII.GetString(message);
-                _handshakeReceived?.Invoke(Encoding.ASCII.GetString(message));
                 _isWaitingForHandshake = false;
+                HandshakeSignal.Set();
+                Send(message);
                 return;
             }
             _messageReceived?.Invoke(PeerId, message);
@@ -96,6 +96,13 @@ namespace Abc.Zerio.Alt
             // and the buffers will be disposed as soon as no segments are used.
             _srb.IsPooled = false;
             _rrb.IsPooled = false;
+        }
+
+        public void Send(ReadOnlySpan<byte> message)
+        {
+            var claim = Claim();
+            message.CopyTo(claim.Span);
+            claim.Commit(message.Length, false);
         }
 
         public Claim Claim()
@@ -132,7 +139,7 @@ namespace Abc.Zerio.Alt
             for (int i = 0; i < resultCount; i++)
             {
                 var result = results[i];
-                var id = new BufferSegmentId(result.ConnectionCorrelation);
+                var id = new BufferSegmentId(result.RequestCorrelation);
                 if (id.PoolId == RioBufferPools.ReceivePoolId)
                 {
                     var segment = _pools[id];
@@ -148,6 +155,7 @@ namespace Abc.Zerio.Alt
                 else
                 {
                     _pools.ReturnSegment(result.ConnectionCorrelation);
+                    _sendSemaphore.Release();
                 }
             }
 
@@ -194,6 +202,7 @@ namespace Abc.Zerio.Alt
                 {
                     _spinLock.Enter(ref lockTaken);
 
+                    // TODO Test DONT_NOTIFY
                     if (!WinSock.Extensions.Receive(_rq, &segment.RioBuf, 1, RIO_RECEIVE_FLAGS.NONE, segment.Id.Value))
                         WinSock.ThrowLastWsaError();
                 }

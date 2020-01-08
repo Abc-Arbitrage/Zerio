@@ -18,7 +18,6 @@ namespace Abc.Zerio.Alt
 
         private bool _isListening;
         private Thread _listeningThread;
-        private readonly AutoResetEvent _handshakeSignal = new AutoResetEvent(false);
         private int _started;
         private RioBufferPools _pools;
         private CancellationTokenSource _cts;
@@ -75,9 +74,7 @@ namespace Abc.Zerio.Alt
             if (!_sessions.TryGetValue(peerId, out Session session))
                 return;
 
-            var claim = session.Claim();
-            message.CopyTo(claim.Span);
-            claim.Commit(message.Length, false);
+            session.Send(message);
         }
 
         public void Start(string peerId)
@@ -139,21 +136,15 @@ namespace Abc.Zerio.Alt
 
         private void InitClientSession(IntPtr acceptSocket)
         {
-            var clientSession = new Session(0, acceptSocket, _pools, _poller, OnHandshakeReceived, OnMessageReceived, OnClientSessionClosed);
-            _handshakeSignal.WaitOne();
+            var clientSession = new Session(0, acceptSocket, _pools, _poller, OnMessageReceived, OnClientSessionClosed);
+            clientSession.HandshakeSignal.WaitOne(); // TODO timeout
+            _sessions.TryAdd(clientSession.PeerId, clientSession);
             ClientConnected?.Invoke(clientSession.PeerId);
         }
 
         private void OnMessageReceived(string peerId, ReadOnlySpan<byte> message)
         {
             MessageReceived?.Invoke(peerId, message);
-        }
-
-        private void OnHandshakeReceived(string peerId)
-        {
-            var peerIdBytes = Encoding.ASCII.GetBytes(peerId);
-            Send(peerId, peerIdBytes.AsSpan());
-            _handshakeSignal.Set();
         }
 
         private static unsafe bool Bind(IntPtr listeningSocket, int listeningPort)
