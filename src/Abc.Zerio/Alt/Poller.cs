@@ -11,10 +11,12 @@ namespace Abc.Zerio.Alt
         private int _lastIdx;
         private Thread _thread;
 
-        public Poller(CancellationToken ct)
+        public Poller(string name, CancellationToken ct)
         {
             _ct = ct;
             _thread = new Thread(Poll);
+            _thread.Priority = ThreadPriority.Highest;
+            _thread.Name = name;
             _thread.Start();
         }
 
@@ -35,7 +37,8 @@ namespace Abc.Zerio.Alt
         private int Wait()
         {
             // could wait on RQ events here
-            Thread.SpinWait(1);
+            // Thread.SpinWait(1);
+            Thread.Sleep(0);
             return 0;
         }
 

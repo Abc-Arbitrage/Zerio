@@ -25,14 +25,14 @@ namespace Abc.Zerio.Alt.Buffers
 
         private readonly CancellationToken _ct;
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0, int.MaxValue);
-        private ConcurrentBag<RioSegment> _cb;
+        private ConcurrentQueue<RioSegment> _cb;
 
         public DefaultSegmentPool(byte poolId, int segmentLength, CancellationToken ct = default)
         {
             _poolId = poolId;
             SegmentLength = segmentLength;
             _ct = ct;
-            _cb = new ConcurrentBag<RioSegment>();
+            _cb = new ConcurrentQueue<RioSegment>();
         }
 
         public int SegmentLength { get; }
@@ -40,7 +40,7 @@ namespace Abc.Zerio.Alt.Buffers
         public RioSegment Rent()
         {
             _semaphore.Wait(_ct);
-            if (_cb.TryTake(out var segment))
+            if (_cb.TryDequeue(out var segment))
             {
                 return segment;
             }
@@ -53,7 +53,7 @@ namespace Abc.Zerio.Alt.Buffers
             var buffer = segment.RioBuf.GetBuffer();
             if (buffer.IsPooled)
             {
-                _cb.Add(segment);
+                _cb.Enqueue(segment);
                 _semaphore.Release();
             }
             else
@@ -97,7 +97,7 @@ namespace Abc.Zerio.Alt.Buffers
 
             for (int i = 0; i < buffer.Count; i++)
             {
-                _cb.Add(buffer[i]);
+                _cb.Enqueue(buffer[i]);
             }
 
             _semaphore.Release(buffer.Count);

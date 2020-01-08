@@ -99,6 +99,8 @@ namespace Abc.Zerio.Alt.Buffers
         public void ReturnSegment(long correlationId)
         {
             var id = new BufferSegmentId(correlationId);
+            if(id.PoolId != SendPoolId)
+                throw new InvalidOperationException();
             var pool = _pools[id.PoolId];
             var segment = pool.GetBuffer(id.BufferId)[id.SegmentId];
             segment.RioBuf.Length = pool.SegmentLength;

@@ -22,11 +22,11 @@ namespace Abc.Zerio.Server
 
             Console.WriteLine("SERVER...");
 
-            //using var rioServer = new ZerioServer(RIO_PORT);
+            using var rioServer = new ZerioServer(RIO_PORT);
             //using var tcpServer = new TcpFeedServer(TCP_PORT);
             using var altServer = new Alt.ZerioServer(ALT_PORT);
 
-            //StartServer(rioServer);
+            // StartServer(rioServer);
             //StartServer(tcpServer);
             StartServer(altServer);
 

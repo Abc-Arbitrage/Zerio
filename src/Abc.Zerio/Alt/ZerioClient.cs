@@ -35,7 +35,7 @@ namespace Abc.Zerio.Alt
 
             _cts = new CancellationTokenSource();
             _pools = new RioBufferPools(ct: _cts.Token);
-            _poller = new Poller(_cts.Token);
+            _poller = new Poller("client_poller", _cts.Token);
         }
 
         public void Send(ReadOnlySpan<byte> message)

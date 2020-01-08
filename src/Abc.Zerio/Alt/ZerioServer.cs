@@ -33,7 +33,7 @@ namespace Abc.Zerio.Alt
             _listeningSocket = CreateListeningSocket();
             _cts = new CancellationTokenSource();
             _pools = new RioBufferPools(ct: _cts.Token);
-            _poller = new Poller(_cts.Token);
+            _poller = new Poller("server_poller", _cts.Token);
         }
 
         private static unsafe IntPtr CreateListeningSocket()

@@ -33,7 +33,7 @@ namespace Abc.Zerio.Client
             decimal bw = 100;
             var runAll = false;
             var transport = string.Empty;
-            var highPriority = false;
+            var highPriority = true;
             var clientsPerServer = 1;
             var suffix = string.Empty;
             const int serverCount = 1;
@@ -118,7 +118,7 @@ namespace Abc.Zerio.Client
 
                 case "r":
                 case "rio":
-                    return new ZerioClient(new IPEndPoint(Dns.GetHostAddresses(hostname).First(i => i.AddressFamily == AddressFamily.InterNetwork), Benchmark.TCP_PORT));
+                    return new ZerioClient(new IPEndPoint(Dns.GetHostAddresses(hostname).First(i => i.AddressFamily == AddressFamily.InterNetwork), Benchmark.RIO_PORT));
 
                 case "a":
                 case "alt":
