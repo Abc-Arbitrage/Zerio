@@ -7,6 +7,7 @@ namespace Abc.Zerio
         public int SendingBufferCount { get; set; }
         public int SendingBufferLength { get; set; }
         public int MaxSendBatchSize { get; set; }
+        public bool BatchRequests { get; set; }
 
         public int ReceivingBufferCount { get; set; }
         public int ReceivingBufferLength { get; set; }
@@ -18,14 +19,16 @@ namespace Abc.Zerio
 
         protected ZerioConfiguration()
         {
+            BatchRequests = true;
+            
+            MaxSendBatchSize = 16;
             SendingBufferLength = 1024;
             SendingBufferCount = 64 * 1024;
-            MaxSendBatchSize = 16;
 
+            FramingBufferLength = 64 * 1024;
             ReceivingBufferLength = 64 * 1024;
             ReceivingBufferCount = 256;
-            FramingBufferLength = 64 * 1024;
-            
+
             RequestEngineWaitStrategyType = RequestEngineWaitStrategyType.HybridWaitStrategy;
             ReceiveCompletionPollingWaitStrategyType = CompletionPollingWaitStrategyType.BusySpinWaitStrategy;
             SendCompletionPollingWaitStrategyType = CompletionPollingWaitStrategyType.SpinWaitWaitStrategy;
@@ -49,6 +52,8 @@ namespace Abc.Zerio
                 
                 MaxSendCompletionResults = SendingBufferCount,
                 MaxReceiveCompletionResults = ReceivingBufferCount,
+                
+                BatchRequests = BatchRequests,
             };
 
             configuration.RequestQueueMaxOutstandingReceives = configuration.ReceivingBufferCount * 2;
