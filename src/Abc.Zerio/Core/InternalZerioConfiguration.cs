@@ -18,6 +18,13 @@ namespace Abc.Zerio.Core
         public CompletionPollingWaitStrategyType ReceiveCompletionPollingWaitStrategyType { get; set; }
         public CompletionPollingWaitStrategyType SendCompletionPollingWaitStrategyType { get; set; }
 
+        public int RequestQueueMaxOutstandingReceives { get; set; }
+        public int RequestQueueMaxOutstandingSends { get; set; }
+        
+        public int SendingCompletionQueueSize { get; set; }
+        public int ReceivingCompletionQueueSize { get; set; }
+        public int RequestProcessingEngineRingBufferSize { get; set; }
+
         public static int GetNextPowerOfTwo(int value)
         {
             var powerOfTwo = 2;

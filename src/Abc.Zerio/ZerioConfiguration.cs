@@ -35,7 +35,7 @@ namespace Abc.Zerio
         {
             // const int allocationGranularity = 65536;
             
-            var internalConfiguration = new InternalZerioConfiguration
+            var configuration = new InternalZerioConfiguration
             {
                 MaxSendBatchSize = MaxSendBatchSize,
                 SendingBufferLength = SendingBufferLength,
@@ -46,11 +46,20 @@ namespace Abc.Zerio
                 ReceiveCompletionPollingWaitStrategyType = ReceiveCompletionPollingWaitStrategyType,
                 SendCompletionPollingWaitStrategyType = SendCompletionPollingWaitStrategyType,
                 FramingBufferLength = ReceivingBufferLength,
+                
                 MaxSendCompletionResults = SendingBufferCount,
                 MaxReceiveCompletionResults = ReceivingBufferCount,
             };
 
-            return internalConfiguration;
+            configuration.RequestQueueMaxOutstandingReceives = configuration.ReceivingBufferCount * 2;
+            configuration.RequestQueueMaxOutstandingSends = configuration.SendingBufferCount * 2;
+            
+            configuration.SendingCompletionQueueSize = (configuration.MaxSendCompletionResults + configuration.MaxReceiveCompletionResults) * 2;
+            configuration.ReceivingCompletionQueueSize = (configuration.MaxSendCompletionResults + configuration.MaxReceiveCompletionResults) *  2;
+
+            configuration.RequestProcessingEngineRingBufferSize = configuration.SendingBufferCount + configuration.ReceivingBufferCount;
+            
+            return configuration;
         }
     }
 }

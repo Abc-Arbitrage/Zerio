@@ -14,7 +14,12 @@ namespace Abc.Zerio
         internal override InternalZerioConfiguration ToInternalConfiguration()
         {
             var configuration = base.ToInternalConfiguration();
+            
             configuration.SessionCount = SessionCount;
+            configuration.SendingCompletionQueueSize *= SessionCount;
+            configuration.ReceivingCompletionQueueSize *= SessionCount;
+            configuration.RequestProcessingEngineRingBufferSize *= SessionCount;
+
             return configuration;
         }
     }

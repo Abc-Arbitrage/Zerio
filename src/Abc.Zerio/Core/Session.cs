@@ -14,18 +14,18 @@ namespace Abc.Zerio.Core
 
         private RioRequestQueue _requestQueue;
         private IntPtr _socket;
-        private bool _isWaitingForHandshake = true; 
+        private bool _isWaitingForHandshake = true;
 
         public int Id { get; private set; }
         public string PeerId { get; private set; }
         public RioRequestQueue RequestQueue => _requestQueue;
-        
+
         public event ServerMessageReceivedDelegate MessageReceived;
         public event Action<string> HandshakeReceived;
         public event Action<Session> Closed;
 
         public readonly SessionSendingBatch SendingBatch;
-        
+
         public Session(int sessionId, InternalZerioConfiguration configuration, CompletionQueues completionQueues)
         {
             Id = sessionId;
@@ -34,8 +34,8 @@ namespace Abc.Zerio.Core
             _receivingBuffer = new UnmanagedRioBuffer<RioBufferSegment>(configuration.ReceivingBufferCount, _configuration.ReceivingBufferLength);
 
             _messageFramer = new MessageFramer(configuration.FramingBufferLength);
-            _messageFramer.MessageFramed += OnMessageFramed; 
-            
+            _messageFramer.MessageFramed += OnMessageFramed;
+
             SendingBatch = new SessionSendingBatch(configuration.SendingBufferLength);
         }
 
@@ -48,7 +48,7 @@ namespace Abc.Zerio.Core
                 _isWaitingForHandshake = false;
                 return;
             }
-            
+
             MessageReceived?.Invoke(PeerId, message);
         }
 
@@ -57,11 +57,7 @@ namespace Abc.Zerio.Core
             Close();
 
             _socket = socket;
-
-            var maxOutstandingReceives = (uint)_configuration.ReceivingBufferCount * 2;
-            var maxOutstandingSends = (uint)_configuration.SendingBufferCount * 2;
-
-            _requestQueue = RioRequestQueue.Create(Id, socket, _completionQueues.SendingQueue, maxOutstandingSends, _completionQueues.ReceivingQueue, maxOutstandingReceives);
+            _requestQueue = RioRequestQueue.Create(Id, socket, _completionQueues.SendingQueue, (uint)_configuration.RequestQueueMaxOutstandingSends, _completionQueues.ReceivingQueue, (uint)_configuration.RequestQueueMaxOutstandingReceives);
         }
 
         public void Close()
@@ -91,7 +87,7 @@ namespace Abc.Zerio.Core
         public void Dispose()
         {
             Close();
-            
+
             _receivingBuffer?.Dispose();
         }
 
@@ -105,7 +101,7 @@ namespace Abc.Zerio.Core
         public unsafe void OnBytesReceived(int bufferSegmentId, int bytesTransferred)
         {
             var bufferSegment = _receivingBuffer[bufferSegmentId];
-            
+
             if (bufferSegment->RioBufferSegmentDescriptor.Length < bytesTransferred)
                 throw new InvalidOperationException("Received more bytes than expected");
 
