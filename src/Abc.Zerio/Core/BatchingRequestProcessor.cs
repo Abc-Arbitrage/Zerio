@@ -6,14 +6,14 @@ using Disruptor;
 
 namespace Abc.Zerio.Core
 {
-    internal unsafe class RequestProcessor : IValueEventHandler<RequestEntry>, ILifecycleAware
+    internal unsafe class BatchingRequestProcessor : IValueEventHandler<RequestEntry>, ILifecycleAware
     {
         private readonly Dictionary<(int sessionId, RequestType), Action> _pendingFlushOperations;
         private readonly ISessionManager _sessionManager;
         private readonly int _maxSendBatchSize;
         private int _currentBatchSize;
 
-        public RequestProcessor(InternalZerioConfiguration configuration, ISessionManager sessionManager)
+        public BatchingRequestProcessor(InternalZerioConfiguration configuration, ISessionManager sessionManager)
         {
             _sessionManager = sessionManager;
             _maxSendBatchSize = configuration.MaxSendBatchSize;
@@ -22,7 +22,7 @@ namespace Abc.Zerio.Core
 
         public void OnStart()
         {
-            Thread.CurrentThread.Name = nameof(RequestProcessor);
+            Thread.CurrentThread.Name = nameof(BatchingRequestProcessor);
         }
 
         public void OnEvent(ref RequestEntry entry, long sequence, bool endOfBatch)

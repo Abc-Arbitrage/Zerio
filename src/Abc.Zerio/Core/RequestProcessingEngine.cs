@@ -38,7 +38,7 @@ namespace Abc.Zerio.Core
                                                                  ProducerType.Multi,
                                                                  waitStrategy);
 
-            var requestProcessor = new RequestProcessor(_configuration, sessionManager);
+            var requestProcessor = new BatchingRequestProcessor(_configuration, sessionManager);
             var sendCompletionProcessor = new SendCompletionProcessor(_configuration, sendingCompletionQueue);
 
             disruptor.HandleEventsWith(requestProcessor).Then(sendCompletionProcessor);

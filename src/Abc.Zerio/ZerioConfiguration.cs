@@ -23,7 +23,7 @@ namespace Abc.Zerio
             MaxSendBatchSize = 16;
 
             ReceivingBufferLength = 64 * 1024;
-            ReceivingBufferCount = 4;
+            ReceivingBufferCount = 256;
             FramingBufferLength = 64 * 1024;
             
             RequestEngineWaitStrategyType = RequestEngineWaitStrategyType.HybridWaitStrategy;
