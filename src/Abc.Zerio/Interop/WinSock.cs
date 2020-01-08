@@ -108,7 +108,7 @@ namespace Abc.Zerio.Interop
             internal delegate IntPtr RIOCreateRequestQueueFunc([In] IntPtr Socket, [In] uint MaxOutstandingReceive, [In] uint MaxReceiveDataBuffers, [In] uint MaxOutstandingSend, [In] uint MaxSendDataBuffers, [In] CompletionQueueHandle ReceiveCQ, [In] CompletionQueueHandle SendCQ, [In] int ConnectionCorrelation);
 
             [UnmanagedFunctionPointer(CallingConvention.StdCall, SetLastError = false), SuppressUnmanagedCodeSecurity]
-            internal delegate uint RIODequeueCompletionFunc([In] CompletionQueueHandle CQ, [In] RIO_RESULT* ResultArray, [In] uint ResultArrayLength);
+            internal delegate uint RIODequeueCompletionFunc([In] IntPtr CQ, [In] RIO_RESULT* ResultArray, [In] uint ResultArrayLength);
 
             [UnmanagedFunctionPointer(CallingConvention.StdCall, SetLastError = false), SuppressUnmanagedCodeSecurity]
             internal delegate int RIONotifyFunc([In] IntPtr CQ);

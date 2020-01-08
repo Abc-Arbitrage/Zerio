@@ -20,7 +20,7 @@ namespace Abc.Zerio.Core
         {
             var completionQueue = QueueHandle;
 
-            var resultCount = WinSock.Extensions.DequeueCompletion(completionQueue, results, (uint)maxCompletionResults);
+            var resultCount = WinSock.Extensions.DequeueCompletion(completionQueue.DangerousGetHandle(), results, (uint)maxCompletionResults);
 
             if (resultCount == WinSock.Consts.RIO_CORRUPT_CQ)
                 WinSock.ThrowLastWsaError();
