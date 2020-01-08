@@ -10,7 +10,7 @@ namespace Abc.Zerio
     public class ZerioServer : IFeedServer
     {
         private readonly CompletionQueues _completionQueues;
-        private readonly ZerioConfiguration _configuration;
+        private readonly InternalZerioConfiguration _configuration;
         private readonly ISessionManager _sessionManager;
         private readonly int _listeningPort;
         private readonly IntPtr _listeningSocket;
@@ -25,13 +25,13 @@ namespace Abc.Zerio
 
         public int ListeningPort { get; set; }
 
-        public ZerioServer(int listeningPort)
+        public ZerioServer(int listeningPort, ZerioServerConfiguration serverConfiguration = null)
         {
             WinSock.EnsureIsInitialized();
 
             _listeningPort = listeningPort;
 
-            _configuration = CreateConfiguration();
+            _configuration = CreateConfiguration(serverConfiguration);
             _completionQueues = CreateCompletionQueues();
             _sessionManager = CreateSessionManager();
 
@@ -243,9 +243,10 @@ namespace Abc.Zerio
             _listeningThread.Join(TimeSpan.FromSeconds(10));
         }
 
-        private static ZerioConfiguration CreateConfiguration()
+        private static InternalZerioConfiguration CreateConfiguration(ZerioServerConfiguration serverConfiguration)
         {
-            return ZerioConfiguration.CreateDefault();
+            serverConfiguration ??= new ZerioServerConfiguration();
+            return serverConfiguration.ToInternalConfiguration();
         }
 
         private RequestProcessingEngine CreateRequestProcessingEngine()

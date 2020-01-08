@@ -14,7 +14,7 @@ namespace Abc.Zerio
         private readonly IPEndPoint _serverEndpoint;
         private readonly CompletionQueues _completionQueues;
         private readonly ISessionManager _sessionManager;
-        private readonly ZerioConfiguration _configuration;
+        private readonly InternalZerioConfiguration _configuration;
         private readonly Session _session;
 
         private readonly RequestProcessingEngine _requestProcessingEngine;
@@ -30,13 +30,13 @@ namespace Abc.Zerio
         public event Action Disconnected;
         public event ClientMessageReceivedDelegate MessageReceived;
 
-        public ZerioClient(IPEndPoint serverEndpoint)
+        public ZerioClient(IPEndPoint serverEndpoint, ZerioClientConfiguration clientConfiguration = null)
         {
             _serverEndpoint = serverEndpoint;
 
             WinSock.EnsureIsInitialized();
 
-            _configuration = CreateConfiguration();
+            _configuration = CreateConfiguration(clientConfiguration);
             _completionQueues = CreateCompletionQueues();
             _sessionManager = CreateSessionManager();
 
@@ -71,11 +71,10 @@ namespace Abc.Zerio
             return receiver;
         }
 
-        private static ZerioConfiguration CreateConfiguration()
+        private static InternalZerioConfiguration CreateConfiguration(ZerioClientConfiguration clientConfiguration)
         {
-            var zerioConfiguration = ZerioConfiguration.CreateDefault();
-            zerioConfiguration.SessionCount = 1;
-            return zerioConfiguration;
+            clientConfiguration ??= new ZerioClientConfiguration();
+            return clientConfiguration.ToInternalConfiguration();
         }
 
         private RequestProcessingEngine CreateRequestProcessingEngine()

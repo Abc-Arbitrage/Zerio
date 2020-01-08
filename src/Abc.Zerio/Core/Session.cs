@@ -7,7 +7,7 @@ namespace Abc.Zerio.Core
 {
     internal class Session : IDisposable
     {
-        private readonly ZerioConfiguration _configuration;
+        private readonly InternalZerioConfiguration _configuration;
         private readonly CompletionQueues _completionQueues;
         private readonly UnmanagedRioBuffer<RioBufferSegment> _receivingBuffer;
         private readonly MessageFramer _messageFramer;
@@ -26,7 +26,7 @@ namespace Abc.Zerio.Core
 
         public readonly SessionSendingBatch SendingBatch;
         
-        public Session(int sessionId, ZerioConfiguration configuration, CompletionQueues completionQueues)
+        public Session(int sessionId, InternalZerioConfiguration configuration, CompletionQueues completionQueues)
         {
             Id = sessionId;
             _configuration = configuration;

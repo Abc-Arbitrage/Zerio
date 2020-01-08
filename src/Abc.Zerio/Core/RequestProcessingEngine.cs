@@ -10,17 +10,17 @@ namespace Abc.Zerio.Core
 {
     internal class RequestProcessingEngine : IDisposable
     {
-        private readonly ZerioConfiguration _configuration;
+        private readonly InternalZerioConfiguration _configuration;
         private readonly UnmanagedRioBuffer<RequestEntry> _unmanagedRioBuffer;
 
         private readonly UnmanagedRingBuffer<RequestEntry> _ringBuffer;
         private readonly UnmanagedDisruptor<RequestEntry> _disruptor;
         
-        public RequestProcessingEngine(ZerioConfiguration configuration, RioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
+        public RequestProcessingEngine(InternalZerioConfiguration configuration, RioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
         {
             _configuration = configuration;
 
-            var ringBufferSize =  ZerioConfiguration.GetNextPowerOfTwo(_configuration.SendingBufferCount + _configuration.ReceivingBufferCount * _configuration.SessionCount);
+            var ringBufferSize =  InternalZerioConfiguration.GetNextPowerOfTwo(_configuration.SendingBufferCount + _configuration.ReceivingBufferCount * _configuration.SessionCount);
             _unmanagedRioBuffer = new UnmanagedRioBuffer<RequestEntry>(ringBufferSize, _configuration.SendingBufferLength);
 
             _disruptor = CreateDisruptor(sendingCompletionQueue, sessionManager);

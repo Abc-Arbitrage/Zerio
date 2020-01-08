@@ -13,7 +13,7 @@ namespace Abc.Zerio.Core
         private readonly int _maxSendBatchSize;
         private int _currentBatchSize;
 
-        public RequestProcessor(ZerioConfiguration configuration, ISessionManager sessionManager)
+        public RequestProcessor(InternalZerioConfiguration configuration, ISessionManager sessionManager)
         {
             _sessionManager = sessionManager;
             _maxSendBatchSize = configuration.MaxSendBatchSize;
@@ -78,19 +78,16 @@ namespace Abc.Zerio.Core
                 EnqueueToRioSendBatch(session, ref Unsafe.AsRef<RequestEntry>(sendingBatch.BatchingEntry), sendingBatch.BatchingEntrySequence, true);
                 sendingBatch.Reset();
             }
+            else if (endOfBatch)
+            {
+                EnqueueToRioSendBatch(session, ref Unsafe.AsRef<RequestEntry>(sendingBatch.BatchingEntry), sendingBatch.BatchingEntrySequence, false);
+                EnqueueToRioSendBatch(session, ref entry, sequence, true);
+                sendingBatch.Reset();
+            }
             else
             {
                 EnqueueToRioSendBatch(session, ref Unsafe.AsRef<RequestEntry>(sendingBatch.BatchingEntry), sendingBatch.BatchingEntrySequence, false);
-
-                if (endOfBatch)
-                {
-                    EnqueueToRioSendBatch(session, ref entry, sequence, true);
-                    sendingBatch.Reset();
-                }
-                else
-                {
-                    sendingBatch.Initialize(ref entry, sequence);
-                }
+                sendingBatch.Initialize(ref entry, sequence);
             }
         }
 
@@ -98,17 +95,17 @@ namespace Abc.Zerio.Core
         {
             var shouldFlush = endOfBatch || _maxSendBatchSize == _currentBatchSize;
             session.RequestQueue.Send(sequence, data.GetRioBufferDescriptor(), shouldFlush);
-            TryFlushRioBatches(ref data, RequestType.Send, shouldFlush, session.RequestQueue.FlushSendsOperation);
+            TryToFlushRioBatches(ref data, RequestType.Send, shouldFlush, session.RequestQueue.FlushSendsOperation);
         }
 
         private void EnqueueToRioReceiveBatch(Session session, ref RequestEntry data, bool endOfBatch)
         {
             var shouldFlush = endOfBatch || _maxSendBatchSize == _currentBatchSize;
             session.RequestQueue.Receive(session.ReadBuffer(data.BufferSegmentId), data.BufferSegmentId, shouldFlush);
-            TryFlushRioBatches(ref data, RequestType.Receive, shouldFlush, session.RequestQueue.FlushReceivesOperation);
+            TryToFlushRioBatches(ref data, RequestType.Receive, shouldFlush, session.RequestQueue.FlushReceivesOperation);
         }
 
-        private void TryFlushRioBatches(ref RequestEntry data, RequestType requestType, bool shouldFlush, Action pendingFlushOperation)
+        private void TryToFlushRioBatches(ref RequestEntry data, RequestType requestType, bool shouldFlush, Action pendingFlushOperation)
         {
             var flushOperationKey = (data.SessionId, requestType);
 

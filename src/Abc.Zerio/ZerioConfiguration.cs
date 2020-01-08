@@ -2,59 +2,55 @@ using Abc.Zerio.Core;
 
 namespace Abc.Zerio
 {
-    public class ZerioConfiguration
+    public abstract class ZerioConfiguration
     {
         public int SendingBufferCount { get; set; }
         public int SendingBufferLength { get; set; }
-        public int MaxSendCompletionResults { get; set; }
+        public int MaxSendBatchSize { get; set; }
 
         public int ReceivingBufferCount { get; set; }
         public int ReceivingBufferLength { get; set; }
-        public int MaxReceiveCompletionResults { get; set; }
-
-        public int MaxSendBatchSize { get; set; }
-        public int SessionCount { get; set; }
         public int FramingBufferLength { get; set; }
-
+        
         public RequestEngineWaitStrategyType RequestEngineWaitStrategyType { get; set; }
         public CompletionPollingWaitStrategyType ReceiveCompletionPollingWaitStrategyType { get; set; }
         public CompletionPollingWaitStrategyType SendCompletionPollingWaitStrategyType { get; set; }
 
-        public static ZerioConfiguration CreateDefault()
+        protected ZerioConfiguration()
         {
-            // const int allocationGranularity = 65536;
-            var configuration = new ZerioConfiguration
-            {
-                MaxSendBatchSize = 16,
-                SessionCount = 2,
-                
-                SendingBufferLength = 1024,
-                SendingBufferCount = 64 * 1024,
-                
-                ReceivingBufferLength = 64 * 1024,
-                ReceivingBufferCount = 4,
-                
-                RequestEngineWaitStrategyType = RequestEngineWaitStrategyType.HybridWaitStrategy,
-                ReceiveCompletionPollingWaitStrategyType = CompletionPollingWaitStrategyType.BusySpinWaitStrategy,
-                SendCompletionPollingWaitStrategyType = CompletionPollingWaitStrategyType.SpinWaitWaitStrategy,
-            };
+            SendingBufferLength = 1024;
+            SendingBufferCount = 64 * 1024;
+            MaxSendBatchSize = 16;
 
-            configuration.FramingBufferLength = configuration.ReceivingBufferLength;
-            configuration.MaxSendCompletionResults = configuration.SendingBufferCount;
-            configuration.MaxReceiveCompletionResults = configuration.ReceivingBufferCount;
-
-            return configuration;
+            ReceivingBufferLength = 64 * 1024;
+            ReceivingBufferCount = 4;
+            FramingBufferLength = 64 * 1024;
+            
+            RequestEngineWaitStrategyType = RequestEngineWaitStrategyType.HybridWaitStrategy;
+            ReceiveCompletionPollingWaitStrategyType = CompletionPollingWaitStrategyType.BusySpinWaitStrategy;
+            SendCompletionPollingWaitStrategyType = CompletionPollingWaitStrategyType.SpinWaitWaitStrategy;
         }
 
-        public static int GetNextPowerOfTwo(int value)
+        internal virtual InternalZerioConfiguration ToInternalConfiguration()
         {
-            var powerOfTwo = 2;
-            while (powerOfTwo < value)
+            // const int allocationGranularity = 65536;
+            
+            var internalConfiguration = new InternalZerioConfiguration
             {
-                powerOfTwo *= 2;
-            }
+                MaxSendBatchSize = MaxSendBatchSize,
+                SendingBufferLength = SendingBufferLength,
+                SendingBufferCount = SendingBufferCount,
+                ReceivingBufferLength = ReceivingBufferLength,
+                ReceivingBufferCount = ReceivingBufferCount,
+                RequestEngineWaitStrategyType = RequestEngineWaitStrategyType,
+                ReceiveCompletionPollingWaitStrategyType = ReceiveCompletionPollingWaitStrategyType,
+                SendCompletionPollingWaitStrategyType = SendCompletionPollingWaitStrategyType,
+                FramingBufferLength = ReceivingBufferLength,
+                MaxSendCompletionResults = SendingBufferCount,
+                MaxReceiveCompletionResults = ReceivingBufferCount,
+            };
 
-            return powerOfTwo;
+            return internalConfiguration;
         }
     }
 }
