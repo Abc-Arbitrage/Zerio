@@ -6,8 +6,9 @@ using Disruptor;
 
 namespace Abc.Zerio.Core
 {
-    internal unsafe class SendCompletionProcessor : IValueEventHandler<RequestEntry>, ILifecycleAware
+    internal unsafe class SendCompletionProcessor : IValueEventHandler<RequestEntry>, ILifecycleAware, IEventProcessorSequenceAware
     {
+        private readonly CompletionTracker _completionTracker = new CompletionTracker();
         private readonly ZerioConfiguration _configuration;
         private readonly RioCompletionQueue _sendCompletionQueue;
 
@@ -16,7 +17,7 @@ namespace Abc.Zerio.Core
         private readonly GCHandle _completionResultsHandle;
 
         private readonly ICompletionPollingWaitStrategy _waitStrategy;
-        private long _lastCompletedSequence = long.MinValue;
+        private ISequence _entryReleasingSequence;
 
         public SendCompletionProcessor(ZerioConfiguration configuration, RioCompletionQueue sendCompletionQueue)
         {
@@ -34,11 +35,14 @@ namespace Abc.Zerio.Core
             try
             {
                 if (entry.Type != RequestType.Send)
+                {
+                    _completionTracker.MarketAsCompleted(sequence);
                     return;
+                }
 
                 _waitStrategy.Reset();
 
-                while (sequence > _lastCompletedSequence)
+                while (!_completionTracker.IsCompleted(sequence))
                 {
                     var resultCount = _sendCompletionQueue.TryGetCompletionResults(_completionResultsPointer, _completionResults.Length);
                     if (resultCount == 0)
@@ -52,12 +56,14 @@ namespace Abc.Zerio.Core
                     for (var i = 0; i < resultCount; i++)
                     {
                         var result = _completionResultsPointer[i];
-                        _lastCompletedSequence = result.RequestCorrelation;
+                        _completionTracker.MarketAsCompleted(result.RequestCorrelation);
                     }
                 }
             }
             finally
             {
+                _entryReleasingSequence.SetValue(sequence);
+                
                 entry.Reset();
             }
         }
@@ -84,6 +90,11 @@ namespace Abc.Zerio.Core
         ~SendCompletionProcessor()
         {
             Dispose(false);
+        }
+
+        public void SetSequenceCallback(ISequence sequenceCallback)
+        {
+            _entryReleasingSequence = sequenceCallback;
         }
     }
 }
