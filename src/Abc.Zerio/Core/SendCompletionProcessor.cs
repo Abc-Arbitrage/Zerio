@@ -62,9 +62,9 @@ namespace Abc.Zerio.Core
             }
             finally
             {
-                _entryReleasingSequence.SetValue(sequence);
-                
                 entry.Reset();
+                
+                _entryReleasingSequence.SetValue(sequence);
             }
         }
 
