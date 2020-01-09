@@ -11,25 +11,25 @@ namespace Abc.Zerio.Core
         [FieldOffset(0)]
         public RequestType Type;
 
-        [FieldOffset(1)]
+        [FieldOffset(4)]
         public int SessionId;
 
-        [FieldOffset(5)]
+        [FieldOffset(8)]
         internal RIO_BUF RioBufferSegmentDescriptor;
 
         public RIO_BUF* GetRioBufferDescriptor() => (RIO_BUF*)Unsafe.AsPointer(ref RioBufferSegmentDescriptor);
-        
+
         public byte* GetBufferSegmentStart() => (byte*)(GetRioBufferDescriptor() + 1);
 
         public void SetWriteRequest(int sessionId, ReadOnlySpan<byte> message)
         {
             Type = RequestType.Send;
             SessionId = sessionId;
-
+            
             // The actual buffer segment is located right at the end of the current struct
             var bufferSegmentStart = GetBufferSegmentStart();
 
-            Unsafe.WriteUnaligned(ref bufferSegmentStart[0], message.Length);
+            Unsafe.Write(bufferSegmentStart, message.Length);
             message.CopyTo(new Span<byte>(bufferSegmentStart + sizeof(int), message.Length));
 
             RioBufferSegmentDescriptor.Length = sizeof(int) + message.Length;
