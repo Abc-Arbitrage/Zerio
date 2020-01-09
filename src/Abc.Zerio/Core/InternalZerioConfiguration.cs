@@ -25,6 +25,7 @@ namespace Abc.Zerio.Core
         public int ReceivingCompletionQueueSize { get; set; }
         public int SendRequestProcessingEngineRingBufferSize { get; set; }
         public bool BatchSendRequests { get; set; }
+        public bool UseDeferCommit { get; set; }
 
         public static int GetNextPowerOfTwo(int value)
         {

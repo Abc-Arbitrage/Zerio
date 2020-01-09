@@ -11,10 +11,12 @@ namespace Abc.Zerio.Core
         private readonly Dictionary<int, Action> _pendingFlushOperations;
         private readonly ISessionManager _sessionManager;
         private readonly int _maxSendBatchSize;
+        private readonly bool _useDeferCommit;
         private int _currentBatchSize;
 
         public BatchingSendRequestProcessor(InternalZerioConfiguration configuration, ISessionManager sessionManager)
         {
+            _useDeferCommit = configuration.UseDeferCommit;
             _sessionManager = sessionManager;
             _maxSendBatchSize = configuration.MaxSendBatchSize;
             _pendingFlushOperations = new Dictionary<int, Action>(configuration.SessionCount);
@@ -78,6 +80,12 @@ namespace Abc.Zerio.Core
 
         private void EnqueueToRioSendBatch(Session session, ref RequestEntry data, long sequence, bool endOfBatch)
         {
+            if (!_useDeferCommit)
+            {
+                session.RequestQueue.Send(sequence, data.GetRioBufferDescriptor(), true);
+                return;
+            }
+            
             var shouldFlush = endOfBatch || _maxSendBatchSize == _currentBatchSize;
             session.RequestQueue.Send(sequence, data.GetRioBufferDescriptor(), shouldFlush);
 

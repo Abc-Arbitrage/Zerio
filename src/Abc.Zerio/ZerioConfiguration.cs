@@ -7,12 +7,13 @@ namespace Abc.Zerio
         public int SendingBufferCount { get; set; }
         public int SendingBufferLength { get; set; }
         public int MaxSendBatchSize { get; set; }
+        public bool UseDeferCommit { get; set; }
         public bool BatchSendRequests { get; set; }
 
         public int ReceivingBufferCount { get; set; }
         public int ReceivingBufferLength { get; set; }
         public int FramingBufferLength { get; set; }
-        
+
         public RequestEngineWaitStrategyType RequestEngineWaitStrategyType { get; set; }
         public CompletionPollingWaitStrategyType ReceiveCompletionPollingWaitStrategyType { get; set; }
         public CompletionPollingWaitStrategyType SendCompletionPollingWaitStrategyType { get; set; }
@@ -20,6 +21,7 @@ namespace Abc.Zerio
         protected ZerioConfiguration()
         {
             BatchSendRequests = true;
+            UseDeferCommit = false;
             
             MaxSendBatchSize = 16;
             SendingBufferLength = 1024 + 512;
@@ -29,7 +31,7 @@ namespace Abc.Zerio
             ReceivingBufferLength = 64 * 1024;
             ReceivingBufferCount = 256;
 
-            RequestEngineWaitStrategyType = RequestEngineWaitStrategyType.HybridWaitStrategy;
+            RequestEngineWaitStrategyType = RequestEngineWaitStrategyType.BusySpinWaitStrategy;
             ReceiveCompletionPollingWaitStrategyType = CompletionPollingWaitStrategyType.BusySpinWaitStrategy;
             SendCompletionPollingWaitStrategyType = CompletionPollingWaitStrategyType.BusySpinWaitStrategy;
         }
@@ -58,7 +60,8 @@ namespace Abc.Zerio
             configuration.SendingCompletionQueueSize = sendBufferCount;
             configuration.MaxSendCompletionResults = sendBufferCount;
             configuration.SendRequestProcessingEngineRingBufferSize = sendBufferCount;
-
+            configuration.UseDeferCommit = UseDeferCommit; 
+    
             configuration.MaxReceiveCompletionResults = ReceivingBufferCount;
             configuration.RequestQueueMaxOutstandingReceives = ReceivingBufferCount;
             configuration.ReceivingCompletionQueueSize = ReceivingBufferCount;
