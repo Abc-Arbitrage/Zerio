@@ -16,7 +16,7 @@ namespace Abc.Zerio.Alt.Buffers
         public const byte SendPoolId = 0;
         public const byte ReceivePoolId = 1;
 
-        public RioBufferPools(int sendSegmentCount = 2048, int sendSegmentSize = 1024, int receiveSegmentCount = 128, int receiveSegmentSize = 16384, CancellationToken ct = default)
+        public RioBufferPools(int sendSegmentCount = 2048, int sendSegmentSize = 2048, int receiveSegmentCount = 128, int receiveSegmentSize = 16384, CancellationToken ct = default)
         {
             SendSegmentCount = sendSegmentCount;
             SendSegmentSize = sendSegmentSize;

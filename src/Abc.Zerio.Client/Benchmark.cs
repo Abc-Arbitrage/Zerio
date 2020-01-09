@@ -450,6 +450,40 @@ namespace Abc.Zerio.Client
                     }
                 }
                     break;
+
+                case "a":
+                case "alt":
+                {
+                    var rioClients = new List<Alt.ZerioClient>();
+                    foreach (var host in hosts)
+                    {
+                        for (int i = 0; i < serverCount * clientsPerServer; i++)
+                        {
+                            var portDelta = i % serverCount;
+                            var tcpClient = new Alt.ZerioClient(new IPEndPoint(IPAddress.Parse(host), ALT_PORT + portDelta));
+
+                            var connectedMre = new ManualResetEvent(false);
+                            tcpClient.Connected += () => { connectedMre.Set(); };
+                            tcpClient.Start($"alt_client_{i}");
+                            if (!connectedMre.WaitOne(1000))
+                            {
+                                Console.WriteLine("Cannot connect");
+                                return;
+                            }
+
+                            rioClients.Add(tcpClient);
+                        }
+                    }
+
+                    var code = string.IsNullOrWhiteSpace(suffix) ? "alt" : "alt" + "_" + suffix;
+                    results.AddRange(RunWithClients(rioClients, code, secondsPerTest, maxBandwidthMb, outFolder, hosts.Count, serverCount, clientsPerServer));
+
+                    foreach (var rioClient in rioClients)
+                    {
+                        rioClient.Dispose();
+                    }
+                }
+                    break;
                 default:
                     throw new InvalidOperationException($"Unknown transport type: {transportType}");
             }
@@ -552,7 +586,7 @@ namespace Abc.Zerio.Client
                                                                    int serverCount,
                                                                    int clientsPerServer)
         {
-            var msgSizes = new[] { 1020, 32, 512, 128 }; //  2500, , 128, 32 
+            var msgSizes = new[] { 1024, 32, 512, 128 }; //  2500, , 128, 32 
             var delays = new[] { 10, 40, 100, 1000 }; // 20,10,, 2000
             var bursts = new[] { 50, 5, 2, 1 }; // 50,
 

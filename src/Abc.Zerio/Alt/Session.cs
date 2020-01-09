@@ -132,35 +132,38 @@ namespace Abc.Zerio.Alt
 
             bool entered;
             var count = 0;
-            const int spinLimit = 20;
+            // total wait is (1 + spinLimit) * spinLimit / 2
+            // 25 -> 325
+            // 50 -> 1275
+            // 100 -> 5050
+            const int spinLimit = 50;
             while (true)
             {
                 entered = _sendSemaphore.Wait(0);
                 if (entered)
                     break;
 
-                if (1 != Interlocked.Increment(ref _isPollingSend)) // 0 -> 1
+                if (1 == Interlocked.Increment(ref _isPollingSend)) // 0 -> 1
                 {
-                    count++;
-                    if (count > spinLimit)
-                        break;
-                    Thread.SpinWait(1);
-                    continue;
+                    RIO_RESULT result = default;
+                    var resultCount = WinSock.Extensions.DequeueCompletion(_scq, &result, 1);
+                    Volatile.Write(ref _isPollingSend, 0);
+
+                    if (resultCount == WinSock.Consts.RIO_CORRUPT_CQ)
+                        WinSock.ThrowLastWsaError();
+
+                    if (resultCount == 1)
+                    {
+                        var id = new BufferSegmentId(result.RequestCorrelation);
+                        segment = _pools[id];
+                        return new Claim(segment, this);
+                    }
                 }
 
-                RIO_RESULT result = default;
-                var resultCount = WinSock.Extensions.DequeueCompletion(_scq, &result, 1);
-                Volatile.Write(ref _isPollingSend, 0);
-
-                if (resultCount == WinSock.Consts.RIO_CORRUPT_CQ)
-                    WinSock.ThrowLastWsaError();
-
-                if (resultCount == 1)
-                {
-                    var id = new BufferSegmentId(result.RequestCorrelation);
-                    segment = _pools[id];
-                    return new Claim(segment, this);
-                }
+                count++;
+                if (count > spinLimit)
+                    break;
+                Thread.SpinWait(count);
             }
 
             if (!entered)
