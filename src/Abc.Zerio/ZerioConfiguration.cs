@@ -56,8 +56,8 @@ namespace Abc.Zerio
             
             configuration.RequestQueueMaxOutstandingSends = sendBufferCount;
             configuration.SendingCompletionQueueSize = sendBufferCount;
-            configuration.SendRequestProcessingEngineRingBufferSize = sendBufferCount;
             configuration.MaxSendCompletionResults = sendBufferCount;
+            configuration.SendRequestProcessingEngineRingBufferSize = sendBufferCount;
 
             configuration.MaxReceiveCompletionResults = ReceivingBufferCount;
             configuration.RequestQueueMaxOutstandingReceives = ReceivingBufferCount;
