@@ -1,10 +1,6 @@
 using System;
-using System.Buffers;
-using System.IO;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading.Tasks;
 using Abc.Zerio.Core;
 
 namespace Abc.Zerio.Tcp
@@ -27,7 +23,7 @@ namespace Abc.Zerio.Tcp
         public bool IsConnected => _isRunning;
 
         public event Action Connected;
-        public event Action Disconnected = delegate {};
+        public event Action Disconnected = delegate { };
         public event ClientMessageReceivedDelegate MessageReceived;
 
         public void Start(string peerId)

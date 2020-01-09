@@ -23,7 +23,7 @@ namespace Abc.Zerio
             BatchSendRequests = true;
             ConflateSendRequests = true;
             
-            MaxSendBatchSize = 16;
+            MaxSendBatchSize = 8;
             SendingBufferLength = 1024 + 512;
             SendingBufferCount = 64 * 1024;
 

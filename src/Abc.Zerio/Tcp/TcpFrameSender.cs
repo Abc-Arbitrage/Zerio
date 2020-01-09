@@ -14,7 +14,7 @@ namespace Abc.Zerio.Tcp
             _socket.NoDelay = true;
         }
 
-        private readonly byte[] _buffer = new byte[1024];
+        private readonly byte[] _buffer = new byte[1024 + 512];
 
         public void Send(ReadOnlySpan<byte> message)
         {

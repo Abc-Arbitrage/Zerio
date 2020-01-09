@@ -20,9 +20,9 @@ namespace Abc.Zerio.Core
         {
             _batchSendRequests = configuration.BatchSendRequests;
             _conflateSendRequests = configuration.ConflateSendRequests;
+            _maxSendBatchSize = configuration.MaxSendBatchSize;
 
             _sessionManager = sessionManager;
-            _maxSendBatchSize = configuration.MaxSendBatchSize;
             _pendingFlushOperations = new Dictionary<int, Action>(configuration.SessionCount);
         }
 
