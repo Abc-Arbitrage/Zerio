@@ -27,9 +27,9 @@ namespace Abc.Zerio.Alt
 
         private readonly SemaphoreSlim _sendSemaphore;
 
-        private SingleProducerSingleConsumerQueue<RIO_RESULT> _invokationQueue = new SingleProducerSingleConsumerQueue<RIO_RESULT>();
-        private SemaphoreSlim _invocationSemaphore = new SemaphoreSlim(0, Int32.MaxValue);
-        private Thread _invocationThread;
+        private SingleProducerSingleConsumerQueue<RIO_RESULT> _receiveResultQueue = new SingleProducerSingleConsumerQueue<RIO_RESULT>();
+        private SemaphoreSlim _processorSemaphore = new SemaphoreSlim(0, Int32.MaxValue);
+        private Thread _processorThread;
 
         internal long RqSendLength => _pools.SendSegmentCount * 2;
         internal long RqReceiveLength => _pools.ReceiveSegmentCount;
@@ -82,10 +82,13 @@ namespace Abc.Zerio.Alt
             _messageFramer = new MessageFramer(64 * 1024);
             _messageFramer.MessageFramed += OnMessageFramed;
 
-            _invocationThread = new Thread(InvocationLoop);
-            _invocationThread.Name = "invocation_thread";
-            _invocationThread.Priority = ThreadPriority.Highest;
-            _invocationThread.Start();
+            _processorThread = new Thread(InvocationLoop);
+            _processorThread.Name = "invocation_thread";
+            _processorThread.Priority = ThreadPriority.Highest;
+
+            
+
+            _processorThread.Start();
 
             // this line at the very end after session is ready
             _poller.AddSession(this);
@@ -130,7 +133,7 @@ namespace Abc.Zerio.Alt
 
         public void Commit(RioSegment segment)
         {
-            _sendSemaphore.Wait();
+            _sendSemaphore.Wait(_pools.CancellationToken);
             _sr.Send(segment);
         }
 
@@ -141,7 +144,7 @@ namespace Abc.Zerio.Alt
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe int Poll()
         {
-            const int maxCompletionResults = 64;
+            const int maxCompletionResults = 128;
             var results = stackalloc RIO_RESULT[maxCompletionResults];
 
             // dequeue some limited number from CQ
@@ -150,8 +153,22 @@ namespace Abc.Zerio.Alt
             if (resultCount == WinSock.Consts.RIO_CORRUPT_CQ)
                 WinSock.ThrowLastWsaError();
 
-            var sendCount = 0;
+            for (int i = 0; i < resultCount; i++)
+            {
+                var result = results[i];
+                var id = new BufferSegmentId(result.RequestCorrelation);
+                if (id.PoolId == RioBufferPools.ReceivePoolId)
+                {
+                    _receiveResultQueue.Enqueue(result);
+                    _processorSemaphore.Release();
+                }
+                //else
+                //{
+                //    _sendResultQueue.Enqueue(result);
+                //}
+            }
 
+            var sendCount = 0;
             for (int i = 0; i < resultCount; i++)
             {
                 var result = results[i];
@@ -160,44 +177,26 @@ namespace Abc.Zerio.Alt
                 if (id.PoolId != RioBufferPools.ReceivePoolId)
                 {
                     sendCount++;
-                    _invokationQueue.Enqueue(result);
-                    _invocationSemaphore.Release();
-                    //_pools.ReturnSegment(result.ConnectionCorrelation);
+                    // _receiveResultQueue.Enqueue(result);
+                    // _processorSemaphore.Release();
+
+                    _pools.ReturnSegment(result.ConnectionCorrelation);
                     //_sendSemaphore.Release();
                 }
             }
-            //if (sendCount > 0)
-            //    _invocationSemaphore.Release();
 
-            var receiveCount = 0;
-            for (int i = 0; i < resultCount; i++)
+            if (sendCount > 0)
             {
-                var result = results[i];
-                var id = new BufferSegmentId(result.RequestCorrelation);
-                if (id.PoolId == RioBufferPools.ReceivePoolId)
-                {
-                    receiveCount++;
-                    var segment = _pools[id];
-
-                    // this is payload from RIO buffer, not a message yet
-                    var span = segment.Span.Slice(0, (int)result.BytesTransferred);
-                    OnSegmentReceived(span);
-
-                    _invokationQueue.Enqueue(result);
-
-                    //_invokationQueue.Enqueue(result);
-                    //_invocationSemaphore.Release();
-                }
+                _sendSemaphore.Release(sendCount);
             }
-            if (receiveCount > 0)
-                _invocationSemaphore.Release();
 
             return (int)resultCount;
 
             //int count = 0;
 
-            //count += PollReceive();
             //count += PollSend();
+            //count += PollReceive();
+
             //return count;
         }
 
@@ -313,21 +312,52 @@ namespace Abc.Zerio.Alt
 
         public void InvocationLoop()
         {
+            //var nativeThread = CpuInfo.GetCurrentThread();
+            //var affinity = CpuInfo.GetAffinity(0);
+            //nativeThread.ProcessorAffinity = new IntPtr((long)affinity);
+
             // ReSharper disable once AssignmentInConditionalExpression
             while (true)
             {
-                _invocationSemaphore.Wait();
-                while (_invokationQueue.TryDequeue(out var result))
+                _processorSemaphore.Wait();
+
+                while (_receiveResultQueue.TryDequeue(out var result))
                 {
+                    //var count = 0;
+                    //var sw = new SpinWait();
+                    //RIO_RESULT result = default;
+                    //var breakX = false;
+                    //while (!_receiveResultQueue.TryDequeue(out result))
+                    //{
+                    //    sw.SpinOnce();
+                    //    if (sw.NextSpinWillYield)
+                    //    {
+                    //        count++;
+                    //        if (count < 10)
+                    //        {
+                    //            sw.Reset();
+                    //        }
+                    //        else
+                    //        {
+                    //            breakX = true;
+                    //            break;
+                    //        }
+                    //    }
+                    //}
+
+                    //if (breakX)
+                    //    break;
                     var id = new BufferSegmentId(result.RequestCorrelation);
-                    if (id.PoolId != RioBufferPools.ReceivePoolId)
-                    {
-                        _pools.ReturnSegment(result.ConnectionCorrelation);
-                        _sendSemaphore.Release();
-                    }
-                    else
+                    //if (id.PoolId != RioBufferPools.ReceivePoolId)
+                    //{
+                    //    _pools.ReturnSegment(result.ConnectionCorrelation);
+                    //    _sendSemaphore.Release();
+                    //}
+                    //else
                     {
                         var segment = _pools[id];
+                        var span = segment.Span.Slice(0, (int)result.BytesTransferred);
+                        OnSegmentReceived(span);
                         // return receive segment back ro RQ
                         _sr.Receive(segment);
                     }
@@ -343,6 +373,7 @@ namespace Abc.Zerio.Alt
                     //// return receive segment back ro RQ
                     //_sr.Receive(segment);
                 }
+                
             }
         }
     }

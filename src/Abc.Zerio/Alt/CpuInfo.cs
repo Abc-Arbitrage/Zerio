@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -268,5 +269,79 @@ namespace Abc.Zerio.Alt
 
         [DllImport(Kernel_32, SetLastError = true)]
         private static extern long GetLastError();
+
+        [DllImport("kernel32.dll")]
+        private static extern int GetCurrentThreadId();
+
+        public static ProcessThread GetCurrentThread()
+        {
+            var id = GetCurrentThreadId();
+            var processThreads = Process.GetCurrentProcess().Threads;
+
+            for (var i = 0; i < processThreads.Count; i++)
+            {
+                var thread = processThreads[i];
+                if (thread.Id == id)
+                {
+                    return thread;
+                }
+            }
+
+            return null;
+        }
+
+        public static ulong GetAffinity(int threadId)
+        {
+            const int lshift = sizeof(ulong) * 8 - 1;
+
+            var bitMask = CpuInfo.PhysicalCoreMask;
+            var coreId = 0;
+
+            for (var i = 0; i <= lshift; i++)
+            {
+                var bitTest = 1UL << i;
+
+                if ((bitMask & bitTest) == bitTest)
+                {
+                    if (coreId == threadId)
+                    {
+                        return bitTest;
+                    }
+                    coreId++;
+                }
+            }
+
+            unchecked
+            {
+                return (ulong)-1;
+            }
+        }
+
+        public static ulong GetPairedAffinity(int threadId)
+        {
+            const int lshift = sizeof(ulong) * 8 - 1;
+
+            var bitMask = CpuInfo.SecondaryCoreMask;
+            var coreId = 0;
+
+            for (var i = 0; i <= lshift; i++)
+            {
+                var bitTest = 1UL << i;
+
+                if ((bitMask & bitTest) == bitTest)
+                {
+                    if (coreId == threadId)
+                    {
+                        return bitTest;
+                    }
+                    coreId++;
+                }
+            }
+
+            unchecked
+            {
+                return (ulong)-1;
+            }
+        }
     }
 }

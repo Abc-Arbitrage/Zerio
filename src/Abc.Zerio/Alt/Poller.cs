@@ -37,13 +37,16 @@ namespace Abc.Zerio.Alt
         private int Wait()
         {
             // could wait on RQ events here
-            // Thread.SpinWait(1);
-            Thread.Sleep(0);
+            Thread.SpinWait(1);
             return 0;
         }
 
         private void Poll()
         {
+            //var nativeThread = CpuInfo.GetCurrentThread();
+            //var affinity = CpuInfo.GetAffinity(1);
+            //nativeThread.ProcessorAffinity = new IntPtr((long)affinity);
+
             while (!_ct.IsCancellationRequested)
             {
                 try
