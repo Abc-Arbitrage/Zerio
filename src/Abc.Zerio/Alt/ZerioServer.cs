@@ -48,7 +48,7 @@ namespace Abc.Zerio.Alt
 
             var tcpNoDelay = -1;
             WinSock.setsockopt(listeningSocket, WinSock.Consts.IPPROTO_TCP, WinSock.Consts.TCP_NODELAY, (char*)&tcpNoDelay, sizeof(int));
-
+            
             var reuseAddr = 1;
             WinSock.setsockopt(listeningSocket, WinSock.Consts.SOL_SOCKET, WinSock.Consts.SO_REUSEADDR, (char*)&reuseAddr, sizeof(int));
 

@@ -22,7 +22,7 @@ namespace Abc.Zerio.Interop
         internal static extern int WSAIoctl2([In] IntPtr socket, [In] uint dwIoControlCode, [In] ref Guid lpvInBuffer, [In] uint cbInBuffer, [In, Out] ref IntPtr lpvOutBuffer, [In] int cbOutBuffer, [Out] out uint lpcbBytesReturned, [In] IntPtr lpOverlapped, [In] IntPtr lpCompletionRoutine);
 
         [DllImport("WS2_32.dll", SetLastError = true, EntryPoint = "WSAIoctl")]
-        internal static extern int WSAIoctlGeneral([In] IntPtr socket, [In] uint dwIoControlCode, [In] int* lpvInBuffer, [In] uint cbInBuffer, [In] int* lpvOutBuffer, [In] int cbOutBuffer, [Out] out uint lpcbBytesReturned, [In] IntPtr lpOverlapped, [In] IntPtr lpCompletionRoutine);
+        internal static extern int WSAIoctlGeneral([In] IntPtr socket, [In] IntPtr dwIoControlCode, [In] int* lpvInBuffer, [In] uint cbInBuffer, [In] int* lpvOutBuffer, [In] int cbOutBuffer, [Out] out uint lpcbBytesReturned, [In] IntPtr lpOverlapped, [In] IntPtr lpCompletionRoutine);
 
         [DllImport("ws2_32.dll", EntryPoint = "WSAIoctl", SetLastError = true)]
         internal static extern SocketError WSAIoctl_Blocking([In] IntPtr socketHandle, [In] int ioControlCode, [In] byte[] inBuffer, [In] int inBufferSize, [Out] byte[] outBuffer, [In] int outBufferSize, out int bytesTransferred, [In] IntPtr overlapped, [In] IntPtr completionRoutine);

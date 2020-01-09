@@ -43,10 +43,6 @@ namespace Abc.Zerio.Alt
 
         private void Poll()
         {
-            //var nativeThread = CpuInfo.GetCurrentThread();
-            //var affinity = CpuInfo.GetAffinity(1);
-            //nativeThread.ProcessorAffinity = new IntPtr((long)affinity);
-
             while (!_ct.IsCancellationRequested)
             {
                 try

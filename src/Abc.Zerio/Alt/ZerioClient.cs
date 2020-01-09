@@ -61,7 +61,7 @@ namespace Abc.Zerio.Alt
             _socket = CreateSocket();
             Connect(_socket, _serverEndpoint);
 
-            _session = new Session(0, _socket, _pools, _poller, (_, bytes) => {MessageReceived?.Invoke(bytes);}, OnSessionClosed);
+            _session = new Session(0, _socket, _pools, _poller, (_, bytes) => { MessageReceived?.Invoke(bytes); }, OnSessionClosed);
             var peerIdBytes = Encoding.ASCII.GetBytes(peerId);
             Send(peerIdBytes.AsSpan());
             _session.HandshakeSignal.WaitOne();
@@ -121,7 +121,7 @@ namespace Abc.Zerio.Alt
         }
 
         private void Dispose(bool disposing)
-        {   
+        {
             if (disposing)
             {
                 _session.Dispose();
@@ -132,7 +132,7 @@ namespace Abc.Zerio.Alt
             else
             {
                 if (_socket != IntPtr.Zero)
-                    WinSock.closesocket(_socket); 
+                    WinSock.closesocket(_socket);
             }
         }
 

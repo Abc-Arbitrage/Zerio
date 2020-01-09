@@ -552,9 +552,9 @@ namespace Abc.Zerio.Client
                                                                    int serverCount,
                                                                    int clientsPerServer)
         {
-            var msgSizes = new[] { 32, 512, 128 }; //  2500, , 128, 32 
-            var delays = new[] {   40, 100, 1000 }; // 20,10,, 2000
-            var bursts = new[] {  5, 2, 1 }; // 50,
+            var msgSizes = new[] { 1020, 32, 512, 128 }; //  2500, , 128, 32 
+            var delays = new[] { 10, 40, 100, 1000 }; // 20,10,, 2000
+            var bursts = new[] { 50, 5, 2, 1 }; // 50,
 
             var transportFeedClients = clients.ToList();
 
