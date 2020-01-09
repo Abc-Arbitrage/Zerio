@@ -8,7 +8,7 @@ using Disruptor.Dsl;
 
 namespace Abc.Zerio.Core
 {
-    internal class RequestProcessingEngine : IDisposable
+    internal class SendRequestProcessingEngine : IDisposable
     {
         private readonly InternalZerioConfiguration _configuration;
         private readonly UnmanagedRioBuffer<RequestEntry> _unmanagedRioBuffer;
@@ -16,7 +16,7 @@ namespace Abc.Zerio.Core
         private readonly UnmanagedRingBuffer<RequestEntry> _ringBuffer;
         private readonly UnmanagedDisruptor<RequestEntry> _disruptor;
 
-        public RequestProcessingEngine(InternalZerioConfiguration configuration, RioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
+        public SendRequestProcessingEngine(InternalZerioConfiguration configuration, RioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
         {
             _configuration = configuration;
 
@@ -38,22 +38,22 @@ namespace Abc.Zerio.Core
                                                                  ProducerType.Multi,
                                                                  waitStrategy);
 
-            var requestProcessor = CreateRequestProcessor(sessionManager);
+            var sendRequestProcessor = CreateSendRequestProcessor(sessionManager);
             var sendCompletionProcessor = new SendCompletionProcessor(_configuration, sendingCompletionQueue);
 
-            disruptor.HandleEventsWith(requestProcessor).Then(sendCompletionProcessor);
+            disruptor.HandleEventsWith(sendRequestProcessor).Then(sendCompletionProcessor);
 
             ConfigureWaitStrategy(waitStrategy, disruptor, sendCompletionProcessor);
 
             return disruptor;
         }
 
-        private IValueEventHandler<RequestEntry> CreateRequestProcessor(ISessionManager sessionManager)
+        private IValueEventHandler<RequestEntry> CreateSendRequestProcessor(ISessionManager sessionManager)
         {
             if (_configuration.BatchRequests)
-                return new BatchingRequestProcessor(_configuration, sessionManager);
+                return new BatchingSendRequestProcessor(_configuration, sessionManager);
 
-            return new RequestProcessor(sessionManager);
+            return new SendRequestProcessor(sessionManager);
         }
 
         private static void ConfigureWaitStrategy(IWaitStrategy waitStrategy, UnmanagedDisruptor<RequestEntry> disruptor, SendCompletionProcessor sendCompletionProcessor)

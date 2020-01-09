@@ -9,17 +9,15 @@ namespace Abc.Zerio.Core
         private readonly InternalZerioConfiguration _configuration;
         private readonly RioCompletionQueue _receivingCompletionQueue;
         private readonly ISessionManager _sessionManager;
-        private readonly RequestProcessingEngine _requestProcessingEngine;
 
         private bool _isRunning;
         private Thread _completionWorkerThread;
 
-        public ReceiveCompletionProcessor(InternalZerioConfiguration configuration, RioCompletionQueue receivingCompletionQueue, ISessionManager sessionManager, RequestProcessingEngine requestProcessingEngine)
+        public ReceiveCompletionProcessor(InternalZerioConfiguration configuration, RioCompletionQueue receivingCompletionQueue, ISessionManager sessionManager)
         {
             _configuration = configuration;
             _receivingCompletionQueue = receivingCompletionQueue;
             _sessionManager = sessionManager;
-            _requestProcessingEngine = requestProcessingEngine;
         }
 
         public void Start()

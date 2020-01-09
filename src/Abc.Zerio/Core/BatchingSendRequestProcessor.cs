@@ -6,23 +6,23 @@ using Disruptor;
 
 namespace Abc.Zerio.Core
 {
-    internal unsafe class BatchingRequestProcessor : IValueEventHandler<RequestEntry>, ILifecycleAware
+    internal unsafe class BatchingSendRequestProcessor : IValueEventHandler<RequestEntry>, ILifecycleAware
     {
-        private readonly Dictionary<(int sessionId, RequestType), Action> _pendingFlushOperations;
+        private readonly Dictionary<int, Action> _pendingFlushOperations;
         private readonly ISessionManager _sessionManager;
         private readonly int _maxSendBatchSize;
         private int _currentBatchSize;
 
-        public BatchingRequestProcessor(InternalZerioConfiguration configuration, ISessionManager sessionManager)
+        public BatchingSendRequestProcessor(InternalZerioConfiguration configuration, ISessionManager sessionManager)
         {
             _sessionManager = sessionManager;
             _maxSendBatchSize = configuration.MaxSendBatchSize;
-            _pendingFlushOperations = new Dictionary<(int sessionId, RequestType), Action>(configuration.SessionCount * 2);
+            _pendingFlushOperations = new Dictionary<int, Action>(configuration.SessionCount);
         }
 
         public void OnStart()
         {
-            Thread.CurrentThread.Name = nameof(BatchingRequestProcessor);
+            Thread.CurrentThread.Name = nameof(BatchingSendRequestProcessor);
         }
 
         public void OnEvent(ref RequestEntry entry, long sequence, bool endOfBatch)
@@ -33,22 +33,7 @@ namespace Abc.Zerio.Core
                 return;
             }
 
-            switch (entry.Type)
-            {
-                case RequestType.Receive:
-                    OnReceiveRequest(ref entry, endOfBatch, session);
-                    break;
-                case RequestType.Send:
-                    OnSendRequest(ref entry, sequence, endOfBatch, session);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-        }
-
-        private void OnReceiveRequest(ref RequestEntry entry, bool endOfBatch, Session session)
-        {
-            EnqueueToRioReceiveBatch(session, ref entry, endOfBatch);
+            OnSendRequest(ref entry, sequence, endOfBatch, session);
         }
 
         public void OnSendRequest(ref RequestEntry entry, long sequence, bool endOfBatch, Session session)
@@ -95,38 +80,24 @@ namespace Abc.Zerio.Core
         {
             var shouldFlush = endOfBatch || _maxSendBatchSize == _currentBatchSize;
             session.RequestQueue.Send(sequence, data.GetRioBufferDescriptor(), shouldFlush);
-            TryToFlushRioBatches(ref data, RequestType.Send, shouldFlush, session.RequestQueue.FlushSendsOperation);
-        }
-
-        private void EnqueueToRioReceiveBatch(Session session, ref RequestEntry data, bool endOfBatch)
-        {
-            var shouldFlush = endOfBatch || _maxSendBatchSize == _currentBatchSize;
-            session.RequestQueue.Receive(session.ReadBuffer(data.BufferSegmentId), data.BufferSegmentId, shouldFlush);
-            TryToFlushRioBatches(ref data, RequestType.Receive, shouldFlush, session.RequestQueue.FlushReceivesOperation);
-        }
-
-        private void TryToFlushRioBatches(ref RequestEntry data, RequestType requestType, bool shouldFlush, Action pendingFlushOperation)
-        {
-            var flushOperationKey = (data.SessionId, requestType);
 
             if (shouldFlush)
             {
-                FlushRequestQueues(flushOperationKey);
+                FlushRequestQueues(session.Id);
             }
             else
             {
-                if (pendingFlushOperation != null)
-                    _pendingFlushOperations[flushOperationKey] = pendingFlushOperation;
+                _pendingFlushOperations[session.Id] = session.RequestQueue.FlushSendsOperation;
 
                 _currentBatchSize++;
             }
         }
 
-        private void FlushRequestQueues((int sessionId, RequestType requestType) noLongerPendingFlushOperationKey)
+        private void FlushRequestQueues(int noLongerPendingFlushOperationSessionId)
         {
-            foreach (var (pendingFlushOperationKey, pendingFlushOperation) in _pendingFlushOperations)
+            foreach (var (sessionId, pendingFlushOperation) in _pendingFlushOperations)
             {
-                if (pendingFlushOperationKey == noLongerPendingFlushOperationKey)
+                if (sessionId == noLongerPendingFlushOperationSessionId)
                     continue;
 
                 pendingFlushOperation.Invoke();
