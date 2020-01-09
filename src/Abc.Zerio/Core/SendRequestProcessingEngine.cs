@@ -20,7 +20,7 @@ namespace Abc.Zerio.Core
         {
             _configuration = configuration;
 
-            var ringBufferSize = InternalZerioConfiguration.GetNextPowerOfTwo(configuration.RequestProcessingEngineRingBufferSize);
+            var ringBufferSize = configuration.SendRequestProcessingEngineRingBufferSize;
             _unmanagedRioBuffer = new UnmanagedRioBuffer<RequestEntry>(ringBufferSize, _configuration.SendingBufferLength);
 
             _disruptor = CreateDisruptor(sendingCompletionQueue, sessionManager);
@@ -50,7 +50,7 @@ namespace Abc.Zerio.Core
 
         private IValueEventHandler<RequestEntry> CreateSendRequestProcessor(ISessionManager sessionManager)
         {
-            if (_configuration.BatchRequests)
+            if (_configuration.BatchSendRequests)
                 return new BatchingSendRequestProcessor(_configuration, sessionManager);
 
             return new SendRequestProcessor(sessionManager);

@@ -16,9 +16,10 @@ namespace Abc.Zerio
             var configuration = base.ToInternalConfiguration();
             
             configuration.SessionCount = SessionCount;
-            configuration.SendingCompletionQueueSize *= SessionCount;
+            
+            configuration.MaxReceiveCompletionResults *= SessionCount;
+            configuration.RequestQueueMaxOutstandingReceives *= SessionCount;
             configuration.ReceivingCompletionQueueSize *= SessionCount;
-            configuration.RequestProcessingEngineRingBufferSize *= SessionCount;
 
             return configuration;
         }

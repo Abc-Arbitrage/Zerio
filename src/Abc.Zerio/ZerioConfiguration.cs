@@ -7,7 +7,7 @@ namespace Abc.Zerio
         public int SendingBufferCount { get; set; }
         public int SendingBufferLength { get; set; }
         public int MaxSendBatchSize { get; set; }
-        public bool BatchRequests { get; set; }
+        public bool BatchSendRequests { get; set; }
 
         public int ReceivingBufferCount { get; set; }
         public int ReceivingBufferLength { get; set; }
@@ -19,7 +19,7 @@ namespace Abc.Zerio
 
         protected ZerioConfiguration()
         {
-            BatchRequests = true;
+            BatchSendRequests = true;
             
             MaxSendBatchSize = 16;
             SendingBufferLength = 1024 + 512;
@@ -49,21 +49,20 @@ namespace Abc.Zerio
                 ReceiveCompletionPollingWaitStrategyType = ReceiveCompletionPollingWaitStrategyType,
                 SendCompletionPollingWaitStrategyType = SendCompletionPollingWaitStrategyType,
                 FramingBufferLength = ReceivingBufferLength,
-                
-                MaxSendCompletionResults = SendingBufferCount,
-                MaxReceiveCompletionResults = ReceivingBufferCount,
-                
-                BatchRequests = BatchRequests,
+                BatchSendRequests = BatchSendRequests,
             };
 
-            configuration.RequestQueueMaxOutstandingReceives = configuration.ReceivingBufferCount * 2;
-            configuration.RequestQueueMaxOutstandingSends = configuration.SendingBufferCount * 2;
+            var sendBufferCount = InternalZerioConfiguration.GetNextPowerOfTwo(configuration.SendingBufferCount);
             
-            configuration.SendingCompletionQueueSize = (configuration.MaxSendCompletionResults + configuration.MaxReceiveCompletionResults) * 2;
-            configuration.ReceivingCompletionQueueSize = (configuration.MaxSendCompletionResults + configuration.MaxReceiveCompletionResults) *  2;
+            configuration.RequestQueueMaxOutstandingSends = sendBufferCount;
+            configuration.SendingCompletionQueueSize = sendBufferCount;
+            configuration.SendRequestProcessingEngineRingBufferSize = sendBufferCount;
+            configuration.MaxSendCompletionResults = sendBufferCount;
 
-            configuration.RequestProcessingEngineRingBufferSize = configuration.SendingBufferCount + configuration.ReceivingBufferCount;
-            
+            configuration.MaxReceiveCompletionResults = ReceivingBufferCount;
+            configuration.RequestQueueMaxOutstandingReceives = ReceivingBufferCount;
+            configuration.ReceivingCompletionQueueSize = ReceivingBufferCount;
+
             return configuration;
         }
     }

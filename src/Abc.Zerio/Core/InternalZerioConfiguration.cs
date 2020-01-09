@@ -23,8 +23,8 @@ namespace Abc.Zerio.Core
         
         public int SendingCompletionQueueSize { get; set; }
         public int ReceivingCompletionQueueSize { get; set; }
-        public int RequestProcessingEngineRingBufferSize { get; set; }
-        public bool BatchRequests { get; set; }
+        public int SendRequestProcessingEngineRingBufferSize { get; set; }
+        public bool BatchSendRequests { get; set; }
 
         public static int GetNextPowerOfTwo(int value)
         {
