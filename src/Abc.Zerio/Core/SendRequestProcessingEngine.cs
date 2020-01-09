@@ -38,7 +38,8 @@ namespace Abc.Zerio.Core
                                                                  ProducerType.Multi,
                                                                  waitStrategy);
 
-            var sendRequestProcessor = CreateSendRequestProcessor(sessionManager);
+            var sendRequestProcessor = new SendRequestProcessor(_configuration, sessionManager);
+
             var sendCompletionProcessor = new SendCompletionProcessor(_configuration, sendingCompletionQueue);
 
             disruptor.HandleEventsWith(sendRequestProcessor).Then(sendCompletionProcessor);
@@ -46,14 +47,6 @@ namespace Abc.Zerio.Core
             ConfigureWaitStrategy(waitStrategy, disruptor, sendCompletionProcessor);
 
             return disruptor;
-        }
-
-        private IValueEventHandler<RequestEntry> CreateSendRequestProcessor(ISessionManager sessionManager)
-        {
-            if (_configuration.BatchSendRequests)
-                return new BatchingSendRequestProcessor(_configuration, sessionManager);
-
-            return new SendRequestProcessor(sessionManager);
         }
 
         private static void ConfigureWaitStrategy(IWaitStrategy waitStrategy, UnmanagedDisruptor<RequestEntry> disruptor, SendCompletionProcessor sendCompletionProcessor)

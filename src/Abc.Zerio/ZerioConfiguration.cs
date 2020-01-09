@@ -7,8 +7,8 @@ namespace Abc.Zerio
         public int SendingBufferCount { get; set; }
         public int SendingBufferLength { get; set; }
         public int MaxSendBatchSize { get; set; }
-        public bool UseDeferCommit { get; set; }
         public bool BatchSendRequests { get; set; }
+        public bool ConflateSendRequests { get; set; }
 
         public int ReceivingBufferCount { get; set; }
         public int ReceivingBufferLength { get; set; }
@@ -21,7 +21,7 @@ namespace Abc.Zerio
         protected ZerioConfiguration()
         {
             BatchSendRequests = true;
-            UseDeferCommit = false;
+            ConflateSendRequests = true;
             
             MaxSendBatchSize = 16;
             SendingBufferLength = 1024 + 512;
@@ -51,7 +51,6 @@ namespace Abc.Zerio
                 ReceiveCompletionPollingWaitStrategyType = ReceiveCompletionPollingWaitStrategyType,
                 SendCompletionPollingWaitStrategyType = SendCompletionPollingWaitStrategyType,
                 FramingBufferLength = ReceivingBufferLength,
-                BatchSendRequests = BatchSendRequests,
             };
 
             var sendBufferCount = InternalZerioConfiguration.GetNextPowerOfTwo(configuration.SendingBufferCount);
@@ -60,7 +59,9 @@ namespace Abc.Zerio
             configuration.SendingCompletionQueueSize = sendBufferCount;
             configuration.MaxSendCompletionResults = sendBufferCount;
             configuration.SendRequestProcessingEngineRingBufferSize = sendBufferCount;
-            configuration.UseDeferCommit = UseDeferCommit; 
+            
+            configuration.BatchSendRequests = BatchSendRequests; 
+            configuration.ConflateSendRequests = ConflateSendRequests; 
     
             configuration.MaxReceiveCompletionResults = ReceivingBufferCount;
             configuration.RequestQueueMaxOutstandingReceives = ReceivingBufferCount;
@@ -68,5 +69,6 @@ namespace Abc.Zerio
 
             return configuration;
         }
+
     }
 }
