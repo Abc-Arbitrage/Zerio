@@ -35,6 +35,8 @@ namespace Abc.Zerio.Core
 
                 var rioSendFlags = flush ? RIO_RECEIVE_FLAGS.NONE : RIO_RECEIVE_FLAGS.DEFER;
 
+                rioSendFlags |= RIO_RECEIVE_FLAGS.DONT_NOTIFY;
+                
                 if (!WinSock.Extensions.Receive(_handle, bufferSegment->GetRioBufferDescriptor(), 1, rioSendFlags, bufferSegmentId))
                     WinSock.ThrowLastWsaError();
             }
@@ -55,6 +57,8 @@ namespace Abc.Zerio.Core
 
                 var rioSendFlags = flush ? RIO_SEND_FLAGS.NONE : RIO_SEND_FLAGS.DEFER;
 
+                rioSendFlags |= RIO_SEND_FLAGS.DONT_NOTIFY;
+                
                 if (!WinSock.Extensions.Send(_handle, bufferSegmentDescriptor, 1, rioSendFlags, sequence))
                     WinSock.ThrowLastWsaError();
             }
