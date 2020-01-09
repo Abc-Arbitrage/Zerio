@@ -15,7 +15,7 @@ namespace Abc.Zerio.Core
 
         private readonly UnmanagedRingBuffer<RequestEntry> _ringBuffer;
         private readonly UnmanagedDisruptor<RequestEntry> _disruptor;
-        
+
         public RequestProcessingEngine(InternalZerioConfiguration configuration, RioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
         {
             _configuration = configuration;
@@ -30,7 +30,7 @@ namespace Abc.Zerio.Core
         private unsafe UnmanagedDisruptor<RequestEntry> CreateDisruptor(RioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
         {
             var waitStrategy = CreateWaitStrategy();
-            
+
             var disruptor = new UnmanagedDisruptor<RequestEntry>((IntPtr)_unmanagedRioBuffer.FirstEntry,
                                                                  _unmanagedRioBuffer.EntryReservedSpaceSize,
                                                                  _unmanagedRioBuffer.Length,
@@ -44,15 +44,15 @@ namespace Abc.Zerio.Core
             disruptor.HandleEventsWith(requestProcessor).Then(sendCompletionProcessor);
 
             ConfigureWaitStrategy(waitStrategy, disruptor, sendCompletionProcessor);
-            
+
             return disruptor;
         }
 
         private IValueEventHandler<RequestEntry> CreateRequestProcessor(ISessionManager sessionManager)
         {
-            if(_configuration.BatchRequests)
+            if (_configuration.BatchRequests)
                 return new BatchingRequestProcessor(_configuration, sessionManager);
-            
+
             return new RequestProcessor(sessionManager);
         }
 
@@ -102,29 +102,6 @@ namespace Abc.Zerio.Core
 
             return sequence;
         }
-        
-        private long GetReceivingNextSequence()
-        {
-            long sequence;
-            while (!_ringBuffer.TryNext(out sequence))
-                Counters.FailedReceivingNextCount++;
-
-            return sequence;
-        }
-
-        public void RequestReceive(int sessionId, int bufferSegmentId)
-        {
-            var sequence = GetReceivingNextSequence();
-            try
-            {
-                ref var requestEntry = ref _ringBuffer[sequence];
-                requestEntry.SetReadRequest(sessionId, bufferSegmentId);
-            }
-            finally
-            {
-                _ringBuffer.Publish(sequence);
-            }
-        }
 
         public void Start()
         {
@@ -144,14 +121,17 @@ namespace Abc.Zerio.Core
         }
 
         private class ThreadPerTaskScheduler : TaskScheduler
-        { 
-            protected override IEnumerable<Task> GetScheduledTasks() { return Enumerable.Empty<Task>(); }
-      
+        {
+            protected override IEnumerable<Task> GetScheduledTasks()
+            {
+                return Enumerable.Empty<Task>();
+            }
+
             protected override void QueueTask(Task task)
             {
                 new Thread(() => TryExecuteTask(task)) { IsBackground = true }.Start();
             }
- 
+
             protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued)
             {
                 return TryExecuteTask(task);

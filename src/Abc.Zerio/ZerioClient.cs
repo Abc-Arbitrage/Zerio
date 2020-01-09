@@ -109,7 +109,7 @@ namespace Abc.Zerio
 
             Connect(_socket, _serverEndpoint);
 
-            _session.InitiateReceiving(_requestProcessingEngine);
+            _session.InitiateReceiving();
 
             Handshake(peerId);
 

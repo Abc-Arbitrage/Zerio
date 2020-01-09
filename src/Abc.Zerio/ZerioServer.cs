@@ -172,7 +172,7 @@ namespace Abc.Zerio
 
             clientSession.Open(acceptSocket);
             clientSession.HandshakeReceived += OnHandshakeReceived;
-            clientSession.InitiateReceiving(_requestProcessingEngine);
+            clientSession.InitiateReceiving();
 
             _handshakeSignal.WaitOne();
             

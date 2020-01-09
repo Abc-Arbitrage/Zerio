@@ -6,6 +6,7 @@ namespace Abc.Zerio.Core
     public class RioRequestQueue
     {
         private readonly IntPtr _handle;
+        private readonly object _lock = new object();
 
         public Action FlushSendsOperation { get; }
         public Action FlushReceivesOperation { get; }
@@ -28,30 +29,42 @@ namespace Abc.Zerio.Core
 
         public unsafe void Receive(RioBufferSegment* bufferSegment, int bufferSegmentId, bool flush)
         {
-            var rioSendFlags = flush ? RIO_RECEIVE_FLAGS.NONE : RIO_RECEIVE_FLAGS.DEFER;
-            
-            if (!WinSock.Extensions.Receive(_handle, bufferSegment->GetRioBufferDescriptor(), 1, rioSendFlags, bufferSegmentId))
-                WinSock.ThrowLastWsaError();
+            lock (_lock)
+            {
+                var rioSendFlags = flush ? RIO_RECEIVE_FLAGS.NONE : RIO_RECEIVE_FLAGS.DEFER;
+
+                if (!WinSock.Extensions.Receive(_handle, bufferSegment->GetRioBufferDescriptor(), 1, rioSendFlags, bufferSegmentId))
+                    WinSock.ThrowLastWsaError();
+            }
         }
 
         public unsafe void Send(long sequence, RIO_BUF* bufferSegmentDescriptor, bool flush)
         {
-            var rioSendFlags = flush ? RIO_SEND_FLAGS.NONE : RIO_SEND_FLAGS.DEFER;
+            lock (_lock)
+            {
+                var rioSendFlags = flush ? RIO_SEND_FLAGS.NONE : RIO_SEND_FLAGS.DEFER;
 
-            if (!WinSock.Extensions.Send(_handle, bufferSegmentDescriptor, 1, rioSendFlags, sequence))
-                WinSock.ThrowLastWsaError();
+                if (!WinSock.Extensions.Send(_handle, bufferSegmentDescriptor, 1, rioSendFlags, sequence))
+                    WinSock.ThrowLastWsaError();
+            }
         }
 
         private unsafe void FlushSends()
         {
-            if (!WinSock.Extensions.Send(_handle, null, 0, RIO_SEND_FLAGS.COMMIT_ONLY, 0))
-                WinSock.ThrowLastWsaError();
+            lock (_lock)
+            {
+                if (!WinSock.Extensions.Send(_handle, null, 0, RIO_SEND_FLAGS.COMMIT_ONLY, 0))
+                    WinSock.ThrowLastWsaError();
+            }
         }
-        
+
         private unsafe void FlushReceives()
         {
-            if (!WinSock.Extensions.Receive(_handle, null, 0, RIO_RECEIVE_FLAGS.COMMIT_ONLY, 0))
-                WinSock.ThrowLastWsaError();
+            lock (_lock)
+            {
+                if (!WinSock.Extensions.Receive(_handle, null, 0, RIO_RECEIVE_FLAGS.COMMIT_ONLY, 0))
+                    WinSock.ThrowLastWsaError();
+            }
         }
     }
 }

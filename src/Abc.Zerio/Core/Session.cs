@@ -76,11 +76,11 @@ namespace Abc.Zerio.Core
             return _receivingBuffer[bufferSegmentId];
         }
 
-        public void InitiateReceiving(RequestProcessingEngine requestProcessingEngine)
+        public void InitiateReceiving()
         {
             for (var bufferSegmentId = 0; bufferSegmentId < _configuration.ReceivingBufferCount; bufferSegmentId++)
             {
-                requestProcessingEngine.RequestReceive(Id, bufferSegmentId);
+                RequestReceive(bufferSegmentId);
             }
         }
 
@@ -107,6 +107,12 @@ namespace Abc.Zerio.Core
 
             var receivedBytes = new Span<byte>(bufferSegment->GetBufferSegmentStart(), bytesTransferred);
             _messageFramer.SubmitBytes(receivedBytes);
+        }
+
+        public unsafe void RequestReceive(int bufferSegmentId)
+        {
+            var bufferSegment = ReadBuffer(bufferSegmentId);
+            _requestQueue.Receive(bufferSegment, bufferSegmentId, true);
         }
     }
 }

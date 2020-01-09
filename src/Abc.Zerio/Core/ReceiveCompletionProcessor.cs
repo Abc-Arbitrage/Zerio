@@ -78,7 +78,7 @@ namespace Abc.Zerio.Core
             }
             finally
             {
-                _requestProcessingEngine.RequestReceive(session.Id, bufferSegmentId);
+                session.RequestReceive(bufferSegmentId);
             }
         }
 

@@ -22,7 +22,7 @@ namespace Abc.Zerio
             BatchRequests = true;
             
             MaxSendBatchSize = 16;
-            SendingBufferLength = 1024;
+            SendingBufferLength = 1024 + 512;
             SendingBufferCount = 64 * 1024;
 
             FramingBufferLength = 64 * 1024;
@@ -31,7 +31,7 @@ namespace Abc.Zerio
 
             RequestEngineWaitStrategyType = RequestEngineWaitStrategyType.HybridWaitStrategy;
             ReceiveCompletionPollingWaitStrategyType = CompletionPollingWaitStrategyType.BusySpinWaitStrategy;
-            SendCompletionPollingWaitStrategyType = CompletionPollingWaitStrategyType.SpinWaitWaitStrategy;
+            SendCompletionPollingWaitStrategyType = CompletionPollingWaitStrategyType.BusySpinWaitStrategy;
         }
 
         internal virtual InternalZerioConfiguration ToInternalConfiguration()
