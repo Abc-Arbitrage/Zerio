@@ -36,7 +36,7 @@ namespace Abc.Zerio.Alt.Buffers
         /// Called by a single <see cref="Poller"/> thread. 
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Push(T item)
+        public void Return(T item)
         {
             if (Count == _capacity)
                 ThrowExceededCapacity();
@@ -56,7 +56,7 @@ namespace Abc.Zerio.Alt.Buffers
         /// </summary>
         /// <param name="item"></param>
         /// <returns></returns>
-        public bool TryPop(out T item)
+        public bool TryRent(out T item)
         {
             item = default;
             if (Count == 0)

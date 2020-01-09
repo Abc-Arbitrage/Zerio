@@ -5,11 +5,13 @@ namespace Abc.Zerio.Alt
 {
     internal class Poller : IDisposable
     {
+        // TODO Support WSA events
+
         private readonly CancellationToken _ct;
-        private Session[] _sessions = new Session[64];
+        private readonly Session[] _sessions = new Session[64];
         private volatile int _sessionCount;
         private int _lastIdx;
-        private Thread _thread;
+        private readonly Thread _thread;
 
         public Poller(string name, CancellationToken ct)
         {
@@ -22,16 +24,40 @@ namespace Abc.Zerio.Alt
 
         public void AddSession(Session session)
         {
-            for (int i = 0; i < _sessions.Length; i++)
+            lock (_sessions)
             {
-                if (null == Interlocked.CompareExchange(ref _sessions[i], session, null))
+                for (int i = 0; i < _sessions.Length; i++)
                 {
-                    Interlocked.Increment(ref _sessionCount);
-                    return;
+                    if (null == Interlocked.CompareExchange(ref _sessions[i], session, null))
+                    {
+                        Interlocked.Increment(ref _sessionCount);
+                        return;
+                    }
                 }
             }
 
             throw new NotSupportedException();
+        }
+
+        public void RemoveSession(Session session)
+        {
+            lock (_sessions)
+            {
+                int idx = -1;
+                for (int i = 0; i < _sessions.Length; i++)
+                {
+                    if (session == _sessions[i])
+                    {
+                        idx = i;
+                    }
+                }
+
+                if (idx == -1)
+                    throw new InvalidOperationException("Session is not registered with this poller.");
+
+                Interlocked.Exchange(ref _sessions[idx], null);
+                Interlocked.Decrement(ref _sessionCount);
+            }
         }
 
         private int Wait()
@@ -48,7 +74,6 @@ namespace Abc.Zerio.Alt
                 try
                 {
                     var sessions = _sessions;
-                    var sessionCount = _sessionCount;
                     var count = 0;
                     var totalCount = 0;
                     var init = _lastIdx;

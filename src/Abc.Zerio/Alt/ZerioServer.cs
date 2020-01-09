@@ -19,7 +19,7 @@ namespace Abc.Zerio.Alt
         private bool _isListening;
         private Thread _listeningThread;
         private int _started;
-        private RioBufferPools _pools;
+        private RioBufferPool _pool;
         private CancellationTokenSource _cts;
         private Poller _poller;
 
@@ -32,7 +32,7 @@ namespace Abc.Zerio.Alt
             _listeningPort = listeningPort;
             _listeningSocket = CreateListeningSocket();
             _cts = new CancellationTokenSource();
-            _pools = new RioBufferPools(ct: _cts.Token);
+            _pool = new RioBufferPool(ct: _cts.Token);
             _poller = new Poller("server_poller", _cts.Token);
         }
 
@@ -48,7 +48,7 @@ namespace Abc.Zerio.Alt
 
             var tcpNoDelay = -1;
             WinSock.setsockopt(listeningSocket, WinSock.Consts.IPPROTO_TCP, WinSock.Consts.TCP_NODELAY, (char*)&tcpNoDelay, sizeof(int));
-            
+
             var reuseAddr = 1;
             WinSock.setsockopt(listeningSocket, WinSock.Consts.SOL_SOCKET, WinSock.Consts.SO_REUSEADDR, (char*)&reuseAddr, sizeof(int));
 
@@ -136,7 +136,7 @@ namespace Abc.Zerio.Alt
 
         private void InitClientSession(IntPtr acceptSocket)
         {
-            var clientSession = new Session(0, acceptSocket, _pools, _poller, OnMessageReceived, OnClientSessionClosed);
+            var clientSession = new Session(acceptSocket, _pool, _poller, OnMessageReceived, OnClientSessionClosed);
             clientSession.HandshakeSignal.WaitOne(); // TODO timeout
             _sessions.TryAdd(clientSession.PeerId, clientSession);
             ClientConnected?.Invoke(clientSession.PeerId);

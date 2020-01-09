@@ -1,69 +1,74 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Runtime.ConstrainedExecution;
 using System.Threading;
-using Abc.Zerio.Interop;
 
 namespace Abc.Zerio.Alt.Buffers
 {
-    // TODO add proper (fast) pool implementation, drop interface
-
-    internal interface ISegmentPool
+    internal interface ISegmentPool : IDisposable
     {
-        RioSegment Rent();
+        bool TryRent(out RioSegment segment);
         void Return(RioSegment segment);
-        void AddBuffer(RegisteredBuffer segment);
+        void AddBuffer(RegisteredBuffer buffer);
         RegisteredBuffer GetBuffer(int bufferId);
         int SegmentLength { get; }
     }
 
-    internal class DefaultSegmentPool : ISegmentPool
+    internal class DefaultSegmentPool : CriticalFinalizerObject, ISegmentPool
     {
         private readonly List<RegisteredBuffer> _buffers = new List<RegisteredBuffer>(64);
-
+        private volatile int _capacity;
         private readonly byte _poolId;
 
         private readonly CancellationToken _ct;
-        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(0, int.MaxValue);
-        private ConcurrentQueue<RioSegment> _cb;
+        private ConcurrentQueue<RioSegment> _queue;
 
         public DefaultSegmentPool(byte poolId, int segmentLength, CancellationToken ct = default)
         {
             _poolId = poolId;
             SegmentLength = segmentLength;
             _ct = ct;
-            _cb = new ConcurrentQueue<RioSegment>();
+            _queue = new ConcurrentQueue<RioSegment>();
         }
 
         public int SegmentLength { get; }
 
-        public RioSegment Rent()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool TryRent(out RioSegment segment)
         {
-            _semaphore.Wait(_ct);
-            if (_cb.TryDequeue(out var segment))
-            {
-                return segment;
-            }
-
-            throw new InvalidOperationException("The semaphore must guarantee that we have an available segment.");
+            return _queue.TryDequeue(out segment);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Return(RioSegment segment)
         {
-            var buffer = segment.RioBuf.GetBuffer();
+            if (_poolId != segment.Id.PoolId)
+                ThrowSegmentNotFromPool();
+
+            var buffer = GetBuffer(segment.Id.BufferId);
             if (buffer.IsPooled)
             {
-                _cb.Enqueue(segment);
-                _semaphore.Release();
+                // reset length
+                segment.RioBuf.Length = SegmentLength;
+                _queue.Enqueue(segment);
             }
             else
             {
+                Interlocked.Decrement(ref _capacity);
                 var remaining = Interlocked.Decrement(ref buffer.PooledSegmentCount);
                 if (remaining == 0)
                 {
                     buffer.Dispose();
                 }
             }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void ThrowSegmentNotFromPool()
+        {
+            throw new InvalidOperationException("Segment not from pool");
         }
 
         public void AddBuffer(RegisteredBuffer buffer)
@@ -97,13 +102,27 @@ namespace Abc.Zerio.Alt.Buffers
 
             for (int i = 0; i < buffer.Count; i++)
             {
-                _cb.Enqueue(buffer[i]);
+                _queue.Enqueue(buffer[i]);
             }
 
-            _semaphore.Release(buffer.Count);
+            Interlocked.Add(ref _capacity, buffer.Count);
         }
 
         // ReSharper disable once InconsistentlySynchronizedField
         public RegisteredBuffer GetBuffer(int bufferId) => _buffers[bufferId];
+
+        public void Dispose()
+        {
+            foreach (var registeredBuffer in _buffers)
+            {
+                registeredBuffer.IsPooled = false;
+            }
+
+            // Wait until all buffers are returned.
+            while (_capacity > 0)
+            {
+                Thread.Sleep(1);
+            }
+        }
     }
 }

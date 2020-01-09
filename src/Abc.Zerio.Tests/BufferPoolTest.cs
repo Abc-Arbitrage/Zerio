@@ -209,13 +209,13 @@ namespace Abc.Zerio.Tests
             var cb2 = new BoundedLocalPool<TestStruct>(capacity);
             for (int i = 0; i < capacity; i++)
             {
-                cb1.Push(new TestStruct());
-                cb2.Push(new TestStruct());
+                cb1.Return(new TestStruct());
+                cb2.Return(new TestStruct());
             }
 
             for (int i = 0; i < capacity; i++)
             {
-                cb2.TryPop(out _);
+                cb2.TryRent(out _);
             }
 
             GC.Collect(2, GCCollectionMode.Forced, true);
@@ -235,14 +235,14 @@ namespace Abc.Zerio.Tests
                             return;
                         }
 
-                        if (cb2.TryPop(out var ts))
+                        if (cb2.TryRent(out var ts))
                         {
-                            cb1.Push(ts);
+                            cb1.Return(ts);
                         }
 
-                        if (cb1.TryPop(out ts))
+                        if (cb1.TryRent(out ts))
                         {
-                            cb2.Push(ts);
+                            cb2.Return(ts);
                         }
                     }
                 },

@@ -108,11 +108,11 @@ namespace Abc.Zerio.Alt.Buffers
         }
     }
 
-    public static class RioBufExtensions
-    {
-        internal static RegisteredBuffer GetBuffer(this RIO_BUF buf)
-        {
-            return RegisteredBuffer.GetBuffer(buf.BufferId);
-        }
-    }
+    //public static class RioBufExtensions
+    //{
+    //    internal static RegisteredBuffer GetBuffer(this RIO_BUF buf)
+    //    {
+    //        return RegisteredBuffer.GetBuffer(buf.BufferId);
+    //    }
+    //}
 }

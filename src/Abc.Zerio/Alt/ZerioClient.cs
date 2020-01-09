@@ -23,7 +23,7 @@ namespace Abc.Zerio.Alt
         public event Action Disconnected;
         public event ClientMessageReceivedDelegate MessageReceived;
 
-        private RioBufferPools _pools;
+        private RioBufferPool _pool;
         private CancellationTokenSource _cts;
         private Poller _poller;
 
@@ -34,7 +34,7 @@ namespace Abc.Zerio.Alt
             WinSock.EnsureIsInitialized();
 
             _cts = new CancellationTokenSource();
-            _pools = new RioBufferPools(ct: _cts.Token);
+            _pool = new RioBufferPool(ct: _cts.Token);
             _poller = new Poller("client_poller", _cts.Token);
         }
 
@@ -61,7 +61,7 @@ namespace Abc.Zerio.Alt
             _socket = CreateSocket();
             Connect(_socket, _serverEndpoint);
 
-            _session = new Session(0, _socket, _pools, _poller, (_, bytes) => { MessageReceived?.Invoke(bytes); }, OnSessionClosed);
+            _session = new Session( _socket, _pool, _poller, (_, bytes) => { MessageReceived?.Invoke(bytes); }, OnSessionClosed);
             var peerIdBytes = Encoding.ASCII.GetBytes(peerId);
             Send(peerIdBytes.AsSpan());
             _session.HandshakeSignal.WaitOne();
@@ -126,7 +126,7 @@ namespace Abc.Zerio.Alt
             {
                 _session.Dispose();
                 _session = null;
-                _pools.Dispose();
+                _pool.Dispose();
                 _poller.Dispose();
             }
             else
