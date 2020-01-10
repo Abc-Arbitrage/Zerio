@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
@@ -6,30 +7,20 @@ namespace Abc.Zerio.Alt.Buffers
 {
     public class BoundedLocalPool<T>
     {
+        private readonly ConcurrentQueue<T> _queue = new ConcurrentQueue<T>();
         private readonly int _capacity;
-        private readonly T[] _items;
-        private int _mask;
-
-        // long is enough for 68 years at int.Max operations per second.
-        // [... head<- items -> tail ...]
-        private long _tail;
-        private long _head;
-
-        private SpinLock _spinLock = new SpinLock(false);
-
+        
         public BoundedLocalPool(int capacity)
         {
             if (!Utils.IsPowerOfTwo(capacity))
                 throw new ArgumentException("Capacity must be a power of 2");
             _capacity = capacity;
-            _items = new T[_capacity];
-            _mask = _capacity - 1;
         }
 
         public int Count
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => (int)(Volatile.Read(ref _tail) - Volatile.Read(ref _head));
+            get => _queue.Count; // (Volatile.Read(ref _tail) - Volatile.Read(ref _head));
         }
 
         /// <summary>
@@ -38,11 +29,9 @@ namespace Abc.Zerio.Alt.Buffers
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Return(T item)
         {
-            if (Count == _capacity)
+            if (Count >= _capacity)
                 ThrowExceededCapacity();
-            var idx = (int)(_tail & _mask);
-            _items[idx] = item;
-            Volatile.Write(ref _tail, Volatile.Read(ref _tail) + 1);
+            _queue.Enqueue(item);
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -56,31 +45,10 @@ namespace Abc.Zerio.Alt.Buffers
         /// </summary>
         /// <param name="item"></param>
         /// <returns></returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool TryRent(out T item)
         {
-            item = default;
-            if (Count == 0)
-                return false;
-
-            var taken = false;
-            try
-            {
-                _spinLock.Enter(ref taken);
-
-                if (Count == 0)
-                    return false;
-
-                var idx = (int)(_head & _mask);
-                item = _items[idx];
-                Volatile.Write(ref _head, Volatile.Read(ref _head) + 1);
-            }
-            finally
-            {
-                if (taken)
-                    _spinLock.Exit(useMemoryBarrier: false);
-            }
-
-            return false;
+            return _queue.TryDequeue(out item);
         }
     }
 }

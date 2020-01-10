@@ -7,16 +7,7 @@ using System.Threading;
 
 namespace Abc.Zerio.Alt.Buffers
 {
-    internal interface ISegmentPool : IDisposable
-    {
-        bool TryRent(out RioSegment segment);
-        void Return(RioSegment segment);
-        void AddBuffer(RegisteredBuffer buffer);
-        RegisteredBuffer GetBuffer(int bufferId);
-        int SegmentLength { get; }
-    }
-
-    internal class DefaultSegmentPool : CriticalFinalizerObject, ISegmentPool
+    internal class SharedSegmentPool : CriticalFinalizerObject
     {
         private readonly List<RegisteredBuffer> _buffers = new List<RegisteredBuffer>(64);
         private volatile int _capacity;
@@ -25,7 +16,7 @@ namespace Abc.Zerio.Alt.Buffers
         private readonly CancellationToken _ct;
         private ConcurrentQueue<RioSegment> _queue;
 
-        public DefaultSegmentPool(byte poolId, int segmentLength, CancellationToken ct = default)
+        public SharedSegmentPool(byte poolId, int segmentLength, CancellationToken ct = default)
         {
             _poolId = poolId;
             SegmentLength = segmentLength;

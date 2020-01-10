@@ -49,8 +49,17 @@ namespace Abc.Zerio.Alt
             var tcpNoDelay = -1;
             WinSock.setsockopt(listeningSocket, WinSock.Consts.IPPROTO_TCP, WinSock.Consts.TCP_NODELAY, (char*)&tcpNoDelay, sizeof(int));
 
-            var reuseAddr = 1;
-            WinSock.setsockopt(listeningSocket, WinSock.Consts.SOL_SOCKET, WinSock.Consts.SO_REUSEADDR, (char*)&reuseAddr, sizeof(int));
+            var fastLoopback = 1;
+            const int SIO_LOOPBACK_FAST_PATH = -1744830448;
+            WinSock.WSAIoctlGeneral(listeningSocket,
+                (IntPtr)SIO_LOOPBACK_FAST_PATH,
+                &fastLoopback,
+                4,
+                null,
+                0,
+                out _,
+                IntPtr.Zero,
+                IntPtr.Zero);
 
             return listeningSocket;
         }

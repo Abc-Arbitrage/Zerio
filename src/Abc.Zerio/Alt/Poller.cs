@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace Abc.Zerio.Alt
 {
     internal class Poller : IDisposable
     {
+        public int ThreadId { get; private set; }
         // TODO Support WSA events
 
         private readonly CancellationToken _ct;
@@ -67,8 +69,12 @@ namespace Abc.Zerio.Alt
             return 0;
         }
 
+        #if NETCOREAPP3_0
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        #endif
         private void Poll()
         {
+            ThreadId = Thread.CurrentThread.ManagedThreadId;
             while (!_ct.IsCancellationRequested)
             {
                 try

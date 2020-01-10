@@ -23,7 +23,7 @@ namespace Abc.Zerio.Tests
         [Test, Explicit("Long running")]
         public void ConcurrentBagTest()
         {
-            int iterations = 100_000_000;
+            int iterations = 10_000_000;
             int count = 0;
             var capacity = 64 * 1024;
             var cb1 = new ConcurrentBag<TestStruct>();
@@ -83,7 +83,7 @@ namespace Abc.Zerio.Tests
         [Test, Explicit("Long running")]
         public void ConcurrentQueueTest()
         {
-            int iterations = 100_000_000;
+            int iterations = 10_000_000;
             int count = 0;
             var capacity = 64 * 1024;
             var cb1 = new ConcurrentQueue<TestStruct>();
@@ -142,7 +142,7 @@ namespace Abc.Zerio.Tests
         [Test, Explicit("Long running")]
         public void ConcurrentStackTest()
         {
-            int iterations = 100_000_000;
+            int iterations = 10_000_000;
             int count = 0;
             var capacity = 64 * 1024;
             var cb1 = new ConcurrentStack<TestStruct>();
@@ -198,11 +198,10 @@ namespace Abc.Zerio.Tests
             Console.WriteLine($"MOPS: {2 * mops:N2}");
         }
 
-
         [Test, Explicit("Long running")]
         public void BoundedLocalPoolTest()
         {
-            int iterations = 100_000_000;
+            int iterations = 10_000_000;
             int count = 0;
             var capacity = 64 * 1024;
             var cb1 = new BoundedLocalPool<TestStruct>(capacity);
