@@ -84,9 +84,9 @@ namespace Abc.Zerio
 
         public void Send(ReadOnlySpan<byte> message)
         {
-            _sendRequestProcessingEngine.RequestSend(_session.Id, message);
+            _session.Conflater.AddOrMerge(message, _sendRequestProcessingEngine);
         }
-
+        
         private void CheckOnlyStartedOnce()
         {
             if (Interlocked.Exchange(ref _started, 1) != 0)

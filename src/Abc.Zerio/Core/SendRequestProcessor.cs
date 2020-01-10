@@ -35,13 +35,15 @@ namespace Abc.Zerio.Core
         }
 
         public void OnEvent(ref RequestEntry entry, long sequence, bool endOfBatch)
-        {
+        {   
             if (!_sessionManager.TryGetSession(entry.SessionId, out var session))
             {
                 entry.Type = RequestType.ExpiredOperation;
                 return;
             }
 
+            session.Conflater.DetachFrom((RequestEntry*)Unsafe.AsPointer(ref entry));
+            
             if (_conflateSendRequests)
                 ConflateAndEnqueueSendRequest(session, ref entry, sequence, endOfBatch);
             else

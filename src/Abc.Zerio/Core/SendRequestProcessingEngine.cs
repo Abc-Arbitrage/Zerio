@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Disruptor;
@@ -8,6 +9,26 @@ using Disruptor.Dsl;
 
 namespace Abc.Zerio.Core
 {
+    public unsafe ref struct AcquiredRequestEntry
+    {
+        public readonly RequestEntry* Value;
+
+        private readonly ISequenced _sequencer;
+        private readonly long _sequence;
+
+        public AcquiredRequestEntry(ISequenced sequencer, long sequence, RequestEntry* value)
+        {
+            _sequencer = sequencer;
+            _sequence = sequence;
+            Value = value;
+        }
+
+        public void Dispose()
+        {
+            _sequencer.Publish(_sequence);
+        }
+    }
+
     internal class SendRequestProcessingEngine : IDisposable
     {
         private readonly InternalZerioConfiguration _configuration;
@@ -129,6 +150,12 @@ namespace Abc.Zerio.Core
             {
                 return TryExecuteTask(task);
             }
+        }
+
+        public unsafe AcquiredRequestEntry AcquireRequestEntry()
+        {
+            var sequence = _ringBuffer.Next();
+            return new AcquiredRequestEntry(_ringBuffer, sequence, (RequestEntry*)Unsafe.AsPointer(ref _ringBuffer[sequence]));
         }
     }
 }

@@ -97,7 +97,7 @@ namespace Abc.Zerio
             if (!_sessionManager.TryGetSession(peerId, out Session session))
                 return;
 
-            _sendRequestProcessingEngine.RequestSend(session.Id, message);
+            session.Conflater.AddOrMerge(message, _sendRequestProcessingEngine);
         }
 
         public void Start(string peerId)

@@ -47,7 +47,7 @@ namespace Abc.Zerio.Core
                 }
 
                 waitStrategy.Reset();
-                
+
                 for (var i = 0; i < resultCount; i++)
                 {
                     var result = results[i];

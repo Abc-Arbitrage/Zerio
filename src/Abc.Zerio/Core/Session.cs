@@ -24,6 +24,7 @@ namespace Abc.Zerio.Core
         public event Action<string> HandshakeReceived;
         public event Action<Session> Closed;
 
+        public readonly SendingRequestConflater Conflater;
         public readonly SessionSendingBatch SendingBatch;
 
         public Session(int sessionId, InternalZerioConfiguration configuration, CompletionQueues completionQueues)
@@ -37,6 +38,7 @@ namespace Abc.Zerio.Core
             _messageFramer.MessageFramed += OnMessageFramed;
 
             SendingBatch = new SessionSendingBatch(configuration.SendingBufferLength);
+            Conflater = new SendingRequestConflater(sessionId, configuration.SendingBufferLength);
         }
 
         private void OnMessageFramed(ReadOnlySpan<byte> message)
