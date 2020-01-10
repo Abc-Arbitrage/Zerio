@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Runtime.ConstrainedExecution;
@@ -7,7 +8,7 @@ using static Abc.Zerio.Utils;
 
 namespace Abc.Zerio.Alt.Buffers
 {
-    internal unsafe class RegisteredBuffer : CriticalFinalizerObject, IDisposable
+    internal unsafe class RegisteredBuffer : MemoryManager<byte>, IDisposable
     {
         private static readonly ConcurrentDictionary<IntPtr, RegisteredBuffer> _buffers = new ConcurrentDictionary<IntPtr, RegisteredBuffer>();
 
@@ -16,7 +17,7 @@ namespace Abc.Zerio.Alt.Buffers
             return _buffers.TryGetValue(bufferId, out var value) ? value : null;
         }
 
-        private readonly byte* _start;
+        public byte* Start { get; }
         public int SegmentLength { get; }
         public int Count { get; }
 
@@ -53,12 +54,12 @@ namespace Abc.Zerio.Alt.Buffers
             uint totalBufferLength = checked((uint)(segmentCount * segmentLength));
 
             const int allocationType = Kernel32.Consts.MEM_COMMIT | Kernel32.Consts.MEM_RESERVE;
-            _start = (byte*)Kernel32.VirtualAlloc(IntPtr.Zero, totalBufferLength, allocationType, Kernel32.Consts.PAGE_READWRITE);
-            Debug.Assert(IsAligned((long)_start, pageSize));
+            Start = (byte*)Kernel32.VirtualAlloc(IntPtr.Zero, totalBufferLength, allocationType, Kernel32.Consts.PAGE_READWRITE);
+            Debug.Assert(IsAligned((long)Start, pageSize));
             Count = (int)(totalBufferLength / segmentLength);
             SegmentLength = segmentLength;
 
-            RegisteredBufferId = WinSock.Extensions.RegisterBuffer((IntPtr)_start, totalBufferLength);
+            RegisteredBufferId = WinSock.Extensions.RegisterBuffer((IntPtr)Start, totalBufferLength);
             if (RegisteredBufferId == WinSock.Consts.RIO_INVALID_BUFFERID)
                 WinSock.ThrowLastWsaError();
 
@@ -76,9 +77,9 @@ namespace Abc.Zerio.Alt.Buffers
                 var offset = index * SegmentLength;
 
                 var rioBuf = new RIO_BUF() { BufferId = RegisteredBufferId, Offset = offset, Length = SegmentLength };
-                var pointer = _start + offset;
+                var pointer = Start + offset;
                 var id = new BufferSegmentId(PoolId, BufferId, index);
-                return new RioSegment(pointer, rioBuf, id);
+                return new RioSegment(this, pointer, rioBuf, id);
             }
         }
 
@@ -92,19 +93,40 @@ namespace Abc.Zerio.Alt.Buffers
             }
             finally
             {
-                Kernel32.VirtualFree((IntPtr)_start, 0, Kernel32.Consts.MEM_RELEASE);
+                Kernel32.VirtualFree((IntPtr)Start, 0, Kernel32.Consts.MEM_RELEASE);
             }
         }
 
         public void Dispose()
         {
-            ReleaseUnmanagedResources();
+            Dispose(true);
+            
             GC.SuppressFinalize(this);
         }
 
         ~RegisteredBuffer()
         {
             ReleaseUnmanagedResources();
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            ReleaseUnmanagedResources();
+        }
+
+        public override Span<byte> GetSpan()
+        {
+            return new Span<byte>(Start, Count * SegmentLength);
+        }
+
+        public override MemoryHandle Pin(int elementIndex = 0)
+        {
+            return new MemoryHandle(Start);
+        }
+
+        public override void Unpin()
+        {
+            // noop;
         }
     }
 
