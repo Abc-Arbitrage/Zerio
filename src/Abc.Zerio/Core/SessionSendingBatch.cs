@@ -6,6 +6,7 @@ namespace Abc.Zerio.Core
     {
         private readonly int _bufferSegmentLength;
 
+        public int Size;
         public RequestEntry* BatchingEntry;
         public long BatchingEntrySequence;
 
@@ -20,6 +21,7 @@ namespace Abc.Zerio.Core
         {
             BatchingEntry = (RequestEntry*)Unsafe.AsPointer(ref currentEntry);
             BatchingEntrySequence = sequence;
+            Size = 1;
         }
 
         public bool TryAppend(ref RequestEntry otherEntry)
@@ -33,7 +35,7 @@ namespace Abc.Zerio.Core
 
             Unsafe.CopyBlockUnaligned(endOfBatchingEntryData, startOfCurrentEntryData, (uint)otherEntryLength);
             BatchingEntry->RioBufferSegmentDescriptor.Length += otherEntryLength;
-
+            Size++;
             return true;
         }
 

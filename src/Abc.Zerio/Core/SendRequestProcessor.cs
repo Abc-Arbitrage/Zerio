@@ -11,6 +11,8 @@ namespace Abc.Zerio.Core
         private readonly Dictionary<int, Action> _pendingFlushOperations;
         private readonly ISessionManager _sessionManager;
         private readonly int _maxSendBatchSize;
+        private readonly int _maxConflation;
+        
         private int _currentBatchSize;
 
         private readonly bool _batchSendRequests;
@@ -21,6 +23,7 @@ namespace Abc.Zerio.Core
             _batchSendRequests = configuration.BatchSendRequests;
             _conflateSendRequests = configuration.ConflateSendRequests;
             _maxSendBatchSize = configuration.MaxSendBatchSize;
+            _maxConflation = configuration.MaxConflation;
 
             _sessionManager = sessionManager;
             _pendingFlushOperations = new Dictionary<int, Action>(configuration.SessionCount);
@@ -63,7 +66,7 @@ namespace Abc.Zerio.Core
                     entry.Type = RequestType.AddedToSendBatch;
             }
 
-            var shouldEnqueueToRioBatch = endOfBatch || !currentEntryWasConsumed;
+            var shouldEnqueueToRioBatch = endOfBatch || !currentEntryWasConsumed || sendingBatch.Size > _maxConflation;
             if (!shouldEnqueueToRioBatch)
                 return;
 

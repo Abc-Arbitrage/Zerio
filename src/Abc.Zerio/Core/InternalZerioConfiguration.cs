@@ -7,7 +7,8 @@ namespace Abc.Zerio.Core
         public int MaxSendCompletionResults { get; set; }
         public bool BatchSendRequests { get; set; }
         public bool ConflateSendRequests { get; set; }
-        
+        public int MaxConflation { get; set; }
+
         public int ReceivingBufferCount { get; set; }
         public int ReceivingBufferLength { get; set; }
         public int MaxReceiveCompletionResults { get; set; }
@@ -26,7 +27,6 @@ namespace Abc.Zerio.Core
         public int SendingCompletionQueueSize { get; set; }
         public int ReceivingCompletionQueueSize { get; set; }
         public int SendRequestProcessingEngineRingBufferSize { get; set; }
-   
 
         public static int GetNextPowerOfTwo(int value)
         {
