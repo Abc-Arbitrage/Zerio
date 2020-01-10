@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace Abc.Zerio.Core
@@ -52,8 +53,9 @@ namespace Abc.Zerio.Core
                 return false;
 
             var endOfBatchingEntryData = currentEntry->GetBufferSegmentStart() + currentEntry->RioBufferSegmentDescriptor.Length;
-            message.CopyTo(new Span<byte>(endOfBatchingEntryData, message.Length));
-            currentEntry->RioBufferSegmentDescriptor.Length += message.Length;
+            Unsafe.Write(endOfBatchingEntryData, message.Length);
+            message.CopyTo(new Span<byte>(sizeof(int) +endOfBatchingEntryData, message.Length));
+            currentEntry->RioBufferSegmentDescriptor.Length += sizeof(int) + message.Length;
             return true;
         }
 
