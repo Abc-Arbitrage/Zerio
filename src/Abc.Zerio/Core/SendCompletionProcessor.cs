@@ -9,25 +9,23 @@ namespace Abc.Zerio.Core
     internal unsafe class SendCompletionProcessor : IValueEventHandler<RequestEntry>, ILifecycleAware, IEventProcessorSequenceAware
     {
         private readonly CompletionTracker _completionTracker = new CompletionTracker();
-        private readonly InternalZerioConfiguration _configuration;
         private readonly RioCompletionQueue _sendCompletionQueue;
 
         private readonly RIO_RESULT[] _completionResults;
         private readonly RIO_RESULT* _completionResultsPointer;
-        private readonly GCHandle _completionResultsHandle;
+        private GCHandle _completionResultsHandle;
 
         private readonly ICompletionPollingWaitStrategy _waitStrategy;
         private ISequence _entryReleasingSequence;
 
         public SendCompletionProcessor(InternalZerioConfiguration configuration, RioCompletionQueue sendCompletionQueue)
         {
-            _configuration = configuration;
             _sendCompletionQueue = sendCompletionQueue;
             _completionResults = new RIO_RESULT[configuration.MaxSendCompletionResults];
             _completionResultsHandle = GCHandle.Alloc(_completionResults, GCHandleType.Pinned);
             _completionResultsPointer = (RIO_RESULT*)_completionResultsHandle.AddrOfPinnedObject().ToPointer();
 
-            _waitStrategy = CompletionPollingWaitStrategyFactory.Create(_configuration.SendCompletionPollingWaitStrategyType);
+            _waitStrategy = CompletionPollingWaitStrategyFactory.Create(configuration.SendCompletionPollingWaitStrategyType);
         }
 
         public void OnEvent(ref RequestEntry entry, long sequence, bool endOfBatch)

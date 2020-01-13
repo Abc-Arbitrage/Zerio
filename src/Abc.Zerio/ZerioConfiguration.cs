@@ -10,7 +10,7 @@ namespace Abc.Zerio
         public int MaxSendBatchSize { get; set; }
         public bool ConflateSendRequestsOnProcessing { get; set; }
         public bool ConflateSendRequestsOnEnqueuing { get; set; }
-        public int MaxConflationSendRequestCount { get; set; }
+        public int MaxConflatedSendRequestCount { get; set; }
 
         public int ReceivingBufferCount { get; set; }
         public int ReceivingBufferLength { get; set; }
@@ -26,7 +26,7 @@ namespace Abc.Zerio
             ConflateSendRequestsOnProcessing = true;
             ConflateSendRequestsOnEnqueuing = true;
 
-            MaxConflationSendRequestCount = 8;
+            MaxConflatedSendRequestCount = 8;
             MaxSendBatchSize = 8;
             SendingBufferLength = 16 * 1024;
             SendingBufferCount = 64 * 1024;
@@ -67,7 +67,7 @@ namespace Abc.Zerio
             configuration.BatchSendRequests = BatchSendRequests; 
             configuration.ConflateSendRequestsOnProcessing = ConflateSendRequestsOnProcessing;
             configuration.ConflateSendRequestsOnEnqueuing = ConflateSendRequestsOnEnqueuing;
-            configuration.MaxConflationSendRequestCount = MaxConflationSendRequestCount;
+            configuration.MaxConflatedSendRequestCount = MaxConflatedSendRequestCount;
     
             configuration.MaxReceiveCompletionResults = ReceivingBufferCount;
             configuration.RequestQueueMaxOutstandingReceives = ReceivingBufferCount;

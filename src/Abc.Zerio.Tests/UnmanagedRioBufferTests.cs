@@ -35,14 +35,14 @@ namespace Abc.Zerio.Tests
             // Act
             for (var i = 0; i < buffer.Length; i++)
             {
-                buffer[i]->Type = RequestType.Receive;
+                buffer[i]->Type = RequestType.Send;
                 buffer[i]->SessionId = 42;
             }
             
             // Assert
             for (var i = 0; i < buffer.Length; i++)
             {
-                Assert.AreEqual(RequestType.Receive, buffer[i]->Type);
+                Assert.AreEqual(RequestType.Send, buffer[i]->Type);
                 Assert.AreEqual(42, buffer[i]->SessionId);
             }
         }

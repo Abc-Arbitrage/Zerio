@@ -47,6 +47,7 @@ namespace Abc.Zerio.Core
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool TryMerge(RequestEntry* currentEntry, ReadOnlySpan<byte> message)
         {
             if (message.Length > _bufferSegmentLength - currentEntry->RioBufferSegmentDescriptor.Length)

@@ -1,5 +1,4 @@
 using System;
-using System.Threading.Tasks;
 
 namespace Abc.Zerio.Core
 {
@@ -16,6 +15,4 @@ namespace Abc.Zerio.Core
        void Start(string peerId);
        void Stop();
     }
-    
-    public delegate void ServerMessageReceivedDelegate(string peerId, ReadOnlySpan<byte> message);
 }

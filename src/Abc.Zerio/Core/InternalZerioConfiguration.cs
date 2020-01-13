@@ -6,15 +6,15 @@ namespace Abc.Zerio.Core
         public int SendingBufferLength { get; set; }
         public int MaxSendCompletionResults { get; set; }
         public bool BatchSendRequests { get; set; }
+        public int MaxSendBatchSize { get; set; }
         public bool ConflateSendRequestsOnProcessing { get; set; }
+        public int MaxConflatedSendRequestCount { get; set; }
         public bool ConflateSendRequestsOnEnqueuing { get; set; }
-        public int MaxConflationSendRequestCount { get; set; }
 
         public int ReceivingBufferCount { get; set; }
         public int ReceivingBufferLength { get; set; }
         public int MaxReceiveCompletionResults { get; set; }
 
-        public int MaxSendBatchSize { get; set; }
         public int SessionCount { get; set; }
         public int FramingBufferLength { get; set; }
 

@@ -9,26 +9,6 @@ using Disruptor.Dsl;
 
 namespace Abc.Zerio.Core
 {
-    public unsafe ref struct AcquiredRequestEntry
-    {
-        public readonly RequestEntry* Value;
-
-        private readonly ISequenced _sequencer;
-        private readonly long _sequence;
-
-        public AcquiredRequestEntry(ISequenced sequencer, long sequence, RequestEntry* value)
-        {
-            _sequencer = sequencer;
-            _sequence = sequence;
-            Value = value;
-        }
-
-        public void Dispose()
-        {
-            _sequencer.Publish(_sequence);
-        }
-    }
-
     internal class SendRequestProcessingEngine : IDisposable
     {
         private readonly InternalZerioConfiguration _configuration;
@@ -60,7 +40,6 @@ namespace Abc.Zerio.Core
                                                                  waitStrategy);
 
             var sendRequestProcessor = new SendRequestProcessor(_configuration, sessionManager);
-
             var sendCompletionProcessor = new SendCompletionProcessor(_configuration, sendingCompletionQueue);
 
             disruptor.HandleEventsWith(sendRequestProcessor).Then(sendCompletionProcessor);
@@ -125,6 +104,12 @@ namespace Abc.Zerio.Core
             _unmanagedRioBuffer?.Dispose();
         }
 
+        internal unsafe AcquiredRequestEntry AcquireRequestEntry()
+        {
+            var sequence = _ringBuffer.Next();
+            return new AcquiredRequestEntry(_ringBuffer, sequence, (RequestEntry*)Unsafe.AsPointer(ref _ringBuffer[sequence]));
+        }
+
         private class ThreadPerTaskScheduler : TaskScheduler
         {
             protected override IEnumerable<Task> GetScheduledTasks()
@@ -141,12 +126,6 @@ namespace Abc.Zerio.Core
             {
                 return TryExecuteTask(task);
             }
-        }
-
-        public unsafe AcquiredRequestEntry AcquireRequestEntry()
-        {
-            var sequence = _ringBuffer.Next();
-            return new AcquiredRequestEntry(_ringBuffer, sequence, (RequestEntry*)Unsafe.AsPointer(ref _ringBuffer[sequence]));
         }
     }
 }

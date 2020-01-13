@@ -15,6 +15,4 @@ namespace Abc.Zerio.Core
         void Start(string peerId);
         void Stop();
     }
-
-    public delegate void ClientMessageReceivedDelegate(ReadOnlySpan<byte> message);
 }
