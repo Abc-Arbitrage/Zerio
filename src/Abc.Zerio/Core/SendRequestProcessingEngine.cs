@@ -96,7 +96,7 @@ namespace Abc.Zerio.Core
 
         public void RequestSend(int sessionId, ReadOnlySpan<byte> message)
         {
-            var sequence = GetSendingNextSequence();
+            var sequence = _ringBuffer.Next();
             try
             {
                 ref var sendingEntry = ref _ringBuffer[sequence];
@@ -106,15 +106,6 @@ namespace Abc.Zerio.Core
             {
                 _ringBuffer.Publish(sequence);
             }
-        }
-
-        private long GetSendingNextSequence()
-        {
-            long sequence;
-            while (!_ringBuffer.TryNext(out sequence))
-                Counters.FailedSendingNextCount++;
-
-            return sequence;
         }
 
         public void Start()

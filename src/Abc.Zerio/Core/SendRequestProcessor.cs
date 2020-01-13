@@ -16,14 +16,16 @@ namespace Abc.Zerio.Core
         private int _currentBatchSize;
 
         private readonly bool _batchSendRequests;
-        private readonly bool _conflateSendRequests;
+        private readonly bool _conflateSendRequestsOnProcessing;
+        private readonly bool _conflateSendRequestsOnEnqueuing;
 
         public SendRequestProcessor(InternalZerioConfiguration configuration, ISessionManager sessionManager)
         {
             _batchSendRequests = configuration.BatchSendRequests;
-            _conflateSendRequests = configuration.ConflateSendRequests;
+            _conflateSendRequestsOnProcessing = configuration.ConflateSendRequestsOnProcessing;
+            _conflateSendRequestsOnEnqueuing = configuration.ConflateSendRequestsOnEnqueuing;
             _maxSendBatchSize = configuration.MaxSendBatchSize;
-            _maxConflation = configuration.MaxConflation;
+            _maxConflation = configuration.MaxConflationSendRequestCount;
 
             _sessionManager = sessionManager;
             _pendingFlushOperations = new Dictionary<int, Action>(configuration.SessionCount);
@@ -42,9 +44,10 @@ namespace Abc.Zerio.Core
                 return;
             }
 
-            session.Conflater.DetachFrom((RequestEntry*)Unsafe.AsPointer(ref entry));
+            if(_conflateSendRequestsOnEnqueuing)
+                session.Conflater.DetachFrom((RequestEntry*)Unsafe.AsPointer(ref entry));
             
-            if (_conflateSendRequests)
+            if (_conflateSendRequestsOnProcessing)
                 ConflateAndEnqueueSendRequest(session, ref entry, sequence, endOfBatch);
             else
                 EnqueueSendRequest(session, ref entry, sequence, endOfBatch);

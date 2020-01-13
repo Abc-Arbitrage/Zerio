@@ -70,7 +70,7 @@ namespace Abc.Zerio.Core
             WinSock.closesocket(_socket);
             _socket = IntPtr.Zero;
 
-            Closed(this);
+            Closed?.Invoke(this);
         }
 
         public unsafe RioBufferSegment* ReadBuffer(int bufferSegmentId)

@@ -6,8 +6,9 @@ namespace Abc.Zerio.Core
         public int SendingBufferLength { get; set; }
         public int MaxSendCompletionResults { get; set; }
         public bool BatchSendRequests { get; set; }
-        public bool ConflateSendRequests { get; set; }
-        public int MaxConflation { get; set; }
+        public bool ConflateSendRequestsOnProcessing { get; set; }
+        public bool ConflateSendRequestsOnEnqueuing { get; set; }
+        public int MaxConflationSendRequestCount { get; set; }
 
         public int ReceivingBufferCount { get; set; }
         public int ReceivingBufferLength { get; set; }
