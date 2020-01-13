@@ -2,6 +2,7 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp3.0</TargetFramework>
     <OutputType>Exe</OutputType>
+    <TieredCompilation>False</TieredCompilation>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Abc.Zerio\Abc.Zerio.csproj" />

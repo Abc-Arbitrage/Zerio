@@ -20,6 +20,7 @@ namespace Abc.Zerio.Client
     {
         public const int RIO_PORT = 48654;
         public const int TCP_PORT = 48655;
+        public const int ALT_PORT = 48656;
 
         private readonly int _hostCount;
         private readonly int _serversPerHost;
@@ -408,7 +409,7 @@ namespace Abc.Zerio.Client
 
                     var code = string.IsNullOrWhiteSpace(suffix) ? "tcp" : "tcp" + "_" + suffix;
                     results.AddRange(RunWithClients(tcpClients, code, secondsPerTest, maxBandwidthMb, outFolder, hosts.Count, serverCount, clientsPerServer));
-
+                    WriteResults(outFolder, dateString, results);
                     foreach (var tcpClient in tcpClients)
                     {
                         tcpClient.Dispose();
@@ -442,6 +443,42 @@ namespace Abc.Zerio.Client
 
                     var code = string.IsNullOrWhiteSpace(suffix) ? "rio" : "rio" + "_" + suffix;
                     results.AddRange(RunWithClients(rioClients, code, secondsPerTest, maxBandwidthMb, outFolder, hosts.Count, serverCount, clientsPerServer));
+                    WriteResults(outFolder, dateString, results);
+                    foreach (var rioClient in rioClients)
+                    {
+                        rioClient.Dispose();
+                    }
+                }
+                    break;
+
+                case "a":
+                case "alt":
+                {
+                    var rioClients = new List<Alt.ZerioClient>();
+                    foreach (var host in hosts)
+                    {
+                        for (int i = 0; i < serverCount * clientsPerServer; i++)
+                        {
+                            var portDelta = i % serverCount;
+                            var tcpClient = new Alt.ZerioClient(new IPEndPoint(IPAddress.Parse(host), ALT_PORT + portDelta));
+
+                            var connectedMre = new ManualResetEvent(false);
+                            tcpClient.Connected += () => { connectedMre.Set(); };
+                            tcpClient.Start($"alt_client_{i}");
+                            if (!connectedMre.WaitOne(1000))
+                            {
+                                Console.WriteLine("Cannot connect");
+                                return;
+                            }
+
+                            rioClients.Add(tcpClient);
+                        }
+                    }
+
+                    var code = string.IsNullOrWhiteSpace(suffix) ? "alt" : "alt" + "_" + suffix;
+                    results.AddRange(RunWithClients(rioClients, code, secondsPerTest, maxBandwidthMb, outFolder, hosts.Count, serverCount, clientsPerServer));
+
+                    WriteResults(outFolder, dateString, results);
 
                     foreach (var rioClient in rioClients)
                     {
@@ -453,6 +490,12 @@ namespace Abc.Zerio.Client
                     throw new InvalidOperationException($"Unknown transport type: {transportType}");
             }
 
+            Console.WriteLine("------------------------------");
+            Console.WriteLine("RunAll finished");
+        }
+
+        private static void WriteResults(string outFolder, string dateString, List<BenchmarkResult> results)
+        {
             var fileName = $"Stats_{dateString}.csv";
 
             using (var writer = new StreamWriter(Path.Combine(outFolder, fileName)))
@@ -466,9 +509,6 @@ namespace Abc.Zerio.Client
                 csvWriter.WriteRecords(results);
                 Console.Out.Flush();
             }
-
-            Console.WriteLine("------------------------------");
-            Console.WriteLine("RunAll finished");
         }
 
         private static IEnumerable<BenchmarkResult> RunLoadWithClients(IEnumerable<IFeedClient> clients, string transportId, string outFolder, int hostCount)
@@ -551,9 +591,9 @@ namespace Abc.Zerio.Client
                                                                    int serverCount,
                                                                    int clientsPerServer)
         {
-            var msgSizes = new[] { 32, 1024, 512, 128 }; //  2500, , 128, 32 
-            var delays = new[] { 10, 20, 40, 100 }; // , 1000, 2000
-            var bursts = new[] { 50, 5, 2, 1 };
+            var msgSizes = new[] { 1024, 32, 512, 128 }; //  2500, , 128, 32 
+            var delays = new[] { 10, 40, 100, 1000 }; // 20,10,, 2000
+            var bursts = new[] { 50, 5, 2, 1 }; // 50,
 
             var transportFeedClients = clients.ToList();
 

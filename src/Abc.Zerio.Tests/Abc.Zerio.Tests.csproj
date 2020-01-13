@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netcoreapp3.0</TargetFramework>
+    <TieredCompilation>False</TieredCompilation>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Abc.Zerio\Abc.Zerio.csproj" />
