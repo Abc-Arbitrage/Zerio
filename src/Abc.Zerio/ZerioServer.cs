@@ -10,12 +10,12 @@ namespace Abc.Zerio
     public class ZerioServer : IFeedServer
     {
         private readonly CompletionQueues _completionQueues;
-        private readonly ZerioConfiguration _configuration;
+        private readonly InternalZerioConfiguration _configuration;
         private readonly ISessionManager _sessionManager;
         private readonly int _listeningPort;
         private readonly IntPtr _listeningSocket;
 
-        private readonly RequestProcessingEngine _requestProcessingEngine;
+        private readonly SendRequestProcessingEngine _sendRequestProcessingEngine;
         private readonly ReceiveCompletionProcessor _receiveCompletionProcessor;
 
         private bool _isListening;
@@ -25,17 +25,17 @@ namespace Abc.Zerio
 
         public int ListeningPort { get; set; }
 
-        public ZerioServer(int listeningPort)
+        public ZerioServer(int listeningPort, ZerioServerConfiguration serverConfiguration = null)
         {
             WinSock.EnsureIsInitialized();
 
             _listeningPort = listeningPort;
 
-            _configuration = CreateConfiguration();
+            _configuration = CreateConfiguration(serverConfiguration);
             _completionQueues = CreateCompletionQueues();
             _sessionManager = CreateSessionManager();
 
-            _requestProcessingEngine = CreateRequestProcessingEngine();
+            _sendRequestProcessingEngine = CreateRequestProcessingEngine();
             _receiveCompletionProcessor = CreateReceiveCompletionProcessor();
 
             _listeningSocket = CreateListeningSocket();
@@ -55,7 +55,7 @@ namespace Abc.Zerio
 
         private ReceiveCompletionProcessor CreateReceiveCompletionProcessor()
         {
-            var receiver = new ReceiveCompletionProcessor(_configuration, _completionQueues.ReceivingQueue, _sessionManager, _requestProcessingEngine);
+            var receiver = new ReceiveCompletionProcessor(_configuration, _completionQueues.ReceivingQueue, _sessionManager);
             return receiver;
         }
 
@@ -97,7 +97,7 @@ namespace Abc.Zerio
             if (!_sessionManager.TryGetSession(peerId, out Session session))
                 return;
 
-            _requestProcessingEngine.RequestSend(session.Id, message);
+            _sendRequestProcessingEngine.RequestSend(session.Id, message);
         }
 
         public void Start(string peerId)
@@ -108,7 +108,7 @@ namespace Abc.Zerio
             CheckOnlyStartedOnce();
             
             _receiveCompletionProcessor.Start();
-            _requestProcessingEngine.Start();
+            _sendRequestProcessingEngine.Start();
 
             StartListening();
 
@@ -122,7 +122,7 @@ namespace Abc.Zerio
             
             StopAcceptLoop();
 
-            _requestProcessingEngine.Stop();
+            _sendRequestProcessingEngine.Stop();
             _receiveCompletionProcessor.Stop();
 
             IsRunning = false;
@@ -172,7 +172,7 @@ namespace Abc.Zerio
 
             clientSession.Open(acceptSocket);
             clientSession.HandshakeReceived += OnHandshakeReceived;
-            clientSession.InitiateReceiving(_requestProcessingEngine);
+            clientSession.InitiateReceiving();
 
             _handshakeSignal.WaitOne();
             
@@ -243,14 +243,15 @@ namespace Abc.Zerio
             _listeningThread.Join(TimeSpan.FromSeconds(10));
         }
 
-        private static ZerioConfiguration CreateConfiguration()
+        private static InternalZerioConfiguration CreateConfiguration(ZerioServerConfiguration serverConfiguration)
         {
-            return ZerioConfiguration.CreateDefault();
+            serverConfiguration ??= new ZerioServerConfiguration();
+            return serverConfiguration.ToInternalConfiguration();
         }
 
-        private RequestProcessingEngine CreateRequestProcessingEngine()
+        private SendRequestProcessingEngine CreateRequestProcessingEngine()
         {
-            return new RequestProcessingEngine(_configuration, _completionQueues.SendingQueue, _sessionManager);
+            return new SendRequestProcessingEngine(_configuration, _completionQueues.SendingQueue, _sessionManager);
         }
 
         public bool IsRunning { get; private set; }
@@ -272,7 +273,7 @@ namespace Abc.Zerio
                 Stop();
 
                 _completionQueues?.Dispose();
-                _requestProcessingEngine?.Dispose();
+                _sendRequestProcessingEngine?.Dispose();
                 _sessionManager?.Dispose();
             }
         }

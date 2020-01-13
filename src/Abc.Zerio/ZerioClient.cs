@@ -14,10 +14,10 @@ namespace Abc.Zerio
         private readonly IPEndPoint _serverEndpoint;
         private readonly CompletionQueues _completionQueues;
         private readonly ISessionManager _sessionManager;
-        private readonly ZerioConfiguration _configuration;
+        private readonly InternalZerioConfiguration _configuration;
         private readonly Session _session;
 
-        private readonly RequestProcessingEngine _requestProcessingEngine;
+        private readonly SendRequestProcessingEngine _sendRequestProcessingEngine;
         private readonly ReceiveCompletionProcessor _receiveCompletionProcessor;
 
         private readonly AutoResetEvent _handshakeSignal = new AutoResetEvent(false);
@@ -30,17 +30,17 @@ namespace Abc.Zerio
         public event Action Disconnected;
         public event ClientMessageReceivedDelegate MessageReceived;
 
-        public ZerioClient(IPEndPoint serverEndpoint)
+        public ZerioClient(IPEndPoint serverEndpoint, ZerioClientConfiguration clientConfiguration = null)
         {
             _serverEndpoint = serverEndpoint;
 
             WinSock.EnsureIsInitialized();
 
-            _configuration = CreateConfiguration();
+            _configuration = CreateConfiguration(clientConfiguration);
             _completionQueues = CreateCompletionQueues();
             _sessionManager = CreateSessionManager();
 
-            _requestProcessingEngine = CreateRequestProcessingEngine();
+            _sendRequestProcessingEngine = CreateRequestProcessingEngine();
             _receiveCompletionProcessor = CreateReceiveCompletionProcessor();
 
             _session = _sessionManager.Acquire();
@@ -67,25 +67,24 @@ namespace Abc.Zerio
 
         private ReceiveCompletionProcessor CreateReceiveCompletionProcessor()
         {
-            var receiver = new ReceiveCompletionProcessor(_configuration, _completionQueues.ReceivingQueue, _sessionManager, _requestProcessingEngine);
+            var receiver = new ReceiveCompletionProcessor(_configuration, _completionQueues.ReceivingQueue, _sessionManager);
             return receiver;
         }
 
-        private static ZerioConfiguration CreateConfiguration()
+        private static InternalZerioConfiguration CreateConfiguration(ZerioClientConfiguration clientConfiguration)
         {
-            var zerioConfiguration = ZerioConfiguration.CreateDefault();
-            zerioConfiguration.SessionCount = 1;
-            return zerioConfiguration;
+            clientConfiguration ??= new ZerioClientConfiguration();
+            return clientConfiguration.ToInternalConfiguration();
         }
 
-        private RequestProcessingEngine CreateRequestProcessingEngine()
+        private SendRequestProcessingEngine CreateRequestProcessingEngine()
         {
-            return new RequestProcessingEngine(_configuration, _completionQueues.SendingQueue, _sessionManager);
+            return new SendRequestProcessingEngine(_configuration, _completionQueues.SendingQueue, _sessionManager);
         }
 
         public void Send(ReadOnlySpan<byte> message)
         {
-            _requestProcessingEngine.RequestSend(_session.Id, message);
+            _sendRequestProcessingEngine.RequestSend(_session.Id, message);
         }
 
         private void CheckOnlyStartedOnce()
@@ -102,7 +101,7 @@ namespace Abc.Zerio
             CheckOnlyStartedOnce();
 
             _receiveCompletionProcessor.Start();
-            _requestProcessingEngine.Start();
+            _sendRequestProcessingEngine.Start();
 
             _socket = CreateSocket();
 
@@ -110,7 +109,7 @@ namespace Abc.Zerio
 
             Connect(_socket, _serverEndpoint);
 
-            _session.InitiateReceiving(_requestProcessingEngine);
+            _session.InitiateReceiving();
 
             Handshake(peerId);
 
@@ -182,11 +181,11 @@ namespace Abc.Zerio
                 _session.Close();
                 
                 _receiveCompletionProcessor.Stop();
-                _requestProcessingEngine.Stop();
+                _sendRequestProcessingEngine.Stop();
                 
                 _completionQueues?.Dispose();
                 _sessionManager?.Dispose();
-                _requestProcessingEngine?.Dispose();
+                _sendRequestProcessingEngine?.Dispose();
                 _handshakeSignal?.Dispose();
             }
             else

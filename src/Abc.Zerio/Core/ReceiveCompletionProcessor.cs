@@ -6,20 +6,18 @@ namespace Abc.Zerio.Core
 {
     internal class ReceiveCompletionProcessor
     {
-        private readonly ZerioConfiguration _configuration;
+        private readonly InternalZerioConfiguration _configuration;
         private readonly RioCompletionQueue _receivingCompletionQueue;
         private readonly ISessionManager _sessionManager;
-        private readonly RequestProcessingEngine _requestProcessingEngine;
 
         private bool _isRunning;
         private Thread _completionWorkerThread;
 
-        public ReceiveCompletionProcessor(ZerioConfiguration configuration, RioCompletionQueue receivingCompletionQueue, ISessionManager sessionManager, RequestProcessingEngine requestProcessingEngine)
+        public ReceiveCompletionProcessor(InternalZerioConfiguration configuration, RioCompletionQueue receivingCompletionQueue, ISessionManager sessionManager)
         {
             _configuration = configuration;
             _receivingCompletionQueue = receivingCompletionQueue;
             _sessionManager = sessionManager;
-            _requestProcessingEngine = requestProcessingEngine;
         }
 
         public void Start()
@@ -78,7 +76,7 @@ namespace Abc.Zerio.Core
             }
             finally
             {
-                _requestProcessingEngine.RequestReceive(session.Id, bufferSegmentId);
+                session.RequestReceive(bufferSegmentId);
             }
         }
 

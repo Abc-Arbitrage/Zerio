@@ -37,7 +37,6 @@ namespace Abc.Zerio.Tests
             {
                 buffer[i]->Type = RequestType.Receive;
                 buffer[i]->SessionId = 42;
-                buffer[i]->BufferSegmentId = 123;
             }
             
             // Assert
@@ -45,7 +44,6 @@ namespace Abc.Zerio.Tests
             {
                 Assert.AreEqual(RequestType.Receive, buffer[i]->Type);
                 Assert.AreEqual(42, buffer[i]->SessionId);
-                Assert.AreEqual(123, buffer[i]->BufferSegmentId);
             }
         }
     }

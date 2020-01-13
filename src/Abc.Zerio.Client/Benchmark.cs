@@ -409,7 +409,7 @@ namespace Abc.Zerio.Client
 
                     var code = string.IsNullOrWhiteSpace(suffix) ? "tcp" : "tcp" + "_" + suffix;
                     results.AddRange(RunWithClients(tcpClients, code, secondsPerTest, maxBandwidthMb, outFolder, hosts.Count, serverCount, clientsPerServer));
-
+                    WriteResults(outFolder, dateString, results);
                     foreach (var tcpClient in tcpClients)
                     {
                         tcpClient.Dispose();
@@ -443,7 +443,7 @@ namespace Abc.Zerio.Client
 
                     var code = string.IsNullOrWhiteSpace(suffix) ? "rio" : "rio" + "_" + suffix;
                     results.AddRange(RunWithClients(rioClients, code, secondsPerTest, maxBandwidthMb, outFolder, hosts.Count, serverCount, clientsPerServer));
-
+                    WriteResults(outFolder, dateString, results);
                     foreach (var rioClient in rioClients)
                     {
                         rioClient.Dispose();
@@ -478,6 +478,8 @@ namespace Abc.Zerio.Client
                     var code = string.IsNullOrWhiteSpace(suffix) ? "alt" : "alt" + "_" + suffix;
                     results.AddRange(RunWithClients(rioClients, code, secondsPerTest, maxBandwidthMb, outFolder, hosts.Count, serverCount, clientsPerServer));
 
+                    WriteResults(outFolder, dateString, results);
+
                     foreach (var rioClient in rioClients)
                     {
                         rioClient.Dispose();
@@ -488,6 +490,12 @@ namespace Abc.Zerio.Client
                     throw new InvalidOperationException($"Unknown transport type: {transportType}");
             }
 
+            Console.WriteLine("------------------------------");
+            Console.WriteLine("RunAll finished");
+        }
+
+        private static void WriteResults(string outFolder, string dateString, List<BenchmarkResult> results)
+        {
             var fileName = $"Stats_{dateString}.csv";
 
             using (var writer = new StreamWriter(Path.Combine(outFolder, fileName)))
@@ -501,9 +509,6 @@ namespace Abc.Zerio.Client
                 csvWriter.WriteRecords(results);
                 Console.Out.Flush();
             }
-
-            Console.WriteLine("------------------------------");
-            Console.WriteLine("RunAll finished");
         }
 
         private static IEnumerable<BenchmarkResult> RunLoadWithClients(IEnumerable<IFeedClient> clients, string transportId, string outFolder, int hostCount)

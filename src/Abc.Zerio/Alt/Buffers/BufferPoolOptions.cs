@@ -8,7 +8,7 @@
         public int ReceiveSegmentSize { get; }
         public bool UseSharedSendPool { get; }
 
-        public BufferPoolOptions(int sendSegmentCount = 2048, int sendSegmentSize = 2048, int receiveSegmentCount = 128, int receiveSegmentSize = 16384, bool useSharedSendPool = true)
+        public BufferPoolOptions(int sendSegmentCount = 32768, int sendSegmentSize = 2048, int receiveSegmentCount = 4096, int receiveSegmentSize = 16384, bool useSharedSendPool = true)
         {
             SendSegmentCount = sendSegmentCount;
             SendSegmentSize = sendSegmentSize;

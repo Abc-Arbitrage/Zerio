@@ -70,8 +70,7 @@ namespace Abc.Zerio.Client
 
             if (string.IsNullOrEmpty(transport))
             {
-                // Console.WriteLine("Enter transport: t for TCP, r for RIO, a for ALT");
-                transport = "a"; // Console.ReadLine();
+                Console.ReadLine();
             }
 
             if (hosts.Count == 0)

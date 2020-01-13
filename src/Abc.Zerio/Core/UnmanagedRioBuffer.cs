@@ -52,7 +52,9 @@ namespace Abc.Zerio.Core
 
             const int allocationType = Kernel32.Consts.MEM_COMMIT | Kernel32.Consts.MEM_RESERVE;
             _buffer = Kernel32.VirtualAlloc(IntPtr.Zero, totalBufferLength, allocationType, Kernel32.Consts.PAGE_READWRITE);
-
+            if (_buffer == IntPtr.Zero)
+                WinSock.ThrowLastWsaError();
+            
             _bufferId = WinSock.Extensions.RegisterBuffer(_buffer, totalBufferLength);
             if (_bufferId == WinSock.Consts.RIO_INVALID_BUFFERID)
                 WinSock.ThrowLastWsaError();

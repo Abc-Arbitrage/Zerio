@@ -2,59 +2,75 @@ using Abc.Zerio.Core;
 
 namespace Abc.Zerio
 {
-    public class ZerioConfiguration
+    public abstract class ZerioConfiguration
     {
-        public int SendingBufferSegmentCount { get; set; }
-        public int SendingBufferSegmentLength { get; set; }
-        public int MaxSendCompletionResults { get; set; }
+        public int SendingBufferCount { get; set; }
+        public int SendingBufferLength { get; set; }
+        public bool BatchSendRequests { set; get; }
+        public int MaxSendBatchSize { get; set; }
+        public bool ConflateSendRequests { get; set; }
+        public int MaxConflation { get; set; }
 
         public int ReceivingBufferCount { get; set; }
-        public int ReceivingBufferSegmentLength { get; set; }
-        public int MaxReceiveCompletionResults { get; set; }
-
-        public int MaxSendBatchSize { get; set; }
-        public int SessionCount { get; set; }
+        public int ReceivingBufferLength { get; set; }
         public int FramingBufferLength { get; set; }
 
         public RequestEngineWaitStrategyType RequestEngineWaitStrategyType { get; set; }
         public CompletionPollingWaitStrategyType ReceiveCompletionPollingWaitStrategyType { get; set; }
         public CompletionPollingWaitStrategyType SendCompletionPollingWaitStrategyType { get; set; }
 
-        public static ZerioConfiguration CreateDefault()
+        protected ZerioConfiguration()
         {
-            // const int allocationGranularity = 65536;
-            var configuration = new ZerioConfiguration
-            {
-                MaxSendBatchSize = 16,
-                SessionCount = 1,
-                
-                SendingBufferSegmentLength = 1024,
-                SendingBufferSegmentCount = 64 * 1024,
-                
-                ReceivingBufferSegmentLength = 1024,
-                ReceivingBufferCount = 1024,
-                
-                RequestEngineWaitStrategyType = RequestEngineWaitStrategyType.HybridWaitStrategy,
-                ReceiveCompletionPollingWaitStrategyType = CompletionPollingWaitStrategyType.BusySpinWaitStrategy,
-                SendCompletionPollingWaitStrategyType = CompletionPollingWaitStrategyType.BusySpinWaitStrategy,
-            };
+            BatchSendRequests = true;
+            ConflateSendRequests = true;
 
-            configuration.FramingBufferLength = configuration.ReceivingBufferSegmentLength;
-            configuration.MaxSendCompletionResults = configuration.SendingBufferSegmentCount;
-            configuration.MaxReceiveCompletionResults = configuration.ReceivingBufferCount;
+            MaxConflation = 8;
+            MaxSendBatchSize = 8;
+            SendingBufferLength = 16 * 1024;
+            SendingBufferCount = 64 * 1024;
 
-            return configuration;
+            FramingBufferLength = 64 * 1024;
+            ReceivingBufferLength = 64 * 1024;
+            ReceivingBufferCount = 256;
+
+            RequestEngineWaitStrategyType = RequestEngineWaitStrategyType.BusySpinWaitStrategy;
+            ReceiveCompletionPollingWaitStrategyType = CompletionPollingWaitStrategyType.BusySpinWaitStrategy;
+            SendCompletionPollingWaitStrategyType = CompletionPollingWaitStrategyType.BusySpinWaitStrategy;
         }
 
-        public static int GetNextPowerOfTwo(int value)
+        internal virtual InternalZerioConfiguration ToInternalConfiguration()
         {
-            var powerOfTwo = 2;
-            while (powerOfTwo < value)
+            // const int allocationGranularity = 65536;
+            
+            var configuration = new InternalZerioConfiguration
             {
-                powerOfTwo *= 2;
-            }
+                MaxSendBatchSize = MaxSendBatchSize,
+                SendingBufferLength = SendingBufferLength,
+                SendingBufferCount = SendingBufferCount,
+                ReceivingBufferLength = ReceivingBufferLength,
+                ReceivingBufferCount = ReceivingBufferCount,
+                RequestEngineWaitStrategyType = RequestEngineWaitStrategyType,
+                ReceiveCompletionPollingWaitStrategyType = ReceiveCompletionPollingWaitStrategyType,
+                SendCompletionPollingWaitStrategyType = SendCompletionPollingWaitStrategyType,
+                FramingBufferLength = ReceivingBufferLength,
+            };
 
-            return powerOfTwo;
+            var sendBufferCount = InternalZerioConfiguration.GetNextPowerOfTwo(configuration.SendingBufferCount);
+            
+            configuration.RequestQueueMaxOutstandingSends = sendBufferCount;
+            configuration.SendingCompletionQueueSize = sendBufferCount;
+            configuration.MaxSendCompletionResults = sendBufferCount;
+            configuration.SendRequestProcessingEngineRingBufferSize = sendBufferCount;
+            
+            configuration.BatchSendRequests = BatchSendRequests; 
+            configuration.ConflateSendRequests = ConflateSendRequests;
+            configuration.MaxConflation = MaxConflation;
+    
+            configuration.MaxReceiveCompletionResults = ReceivingBufferCount;
+            configuration.RequestQueueMaxOutstandingReceives = ReceivingBufferCount;
+            configuration.ReceivingCompletionQueueSize = ReceivingBufferCount;
+
+            return configuration;
         }
     }
 }

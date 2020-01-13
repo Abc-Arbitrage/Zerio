@@ -8,20 +8,20 @@ using Disruptor.Dsl;
 
 namespace Abc.Zerio.Core
 {
-    internal class RequestProcessingEngine : IDisposable
+    internal class SendRequestProcessingEngine : IDisposable
     {
-        private readonly ZerioConfiguration _configuration;
+        private readonly InternalZerioConfiguration _configuration;
         private readonly UnmanagedRioBuffer<RequestEntry> _unmanagedRioBuffer;
 
         private readonly UnmanagedRingBuffer<RequestEntry> _ringBuffer;
         private readonly UnmanagedDisruptor<RequestEntry> _disruptor;
-        
-        public RequestProcessingEngine(ZerioConfiguration configuration, RioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
+
+        public SendRequestProcessingEngine(InternalZerioConfiguration configuration, RioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
         {
             _configuration = configuration;
 
-            var ringBufferSize =  ZerioConfiguration.GetNextPowerOfTwo(_configuration.SendingBufferSegmentCount + _configuration.ReceivingBufferCount * _configuration.SessionCount);
-            _unmanagedRioBuffer = new UnmanagedRioBuffer<RequestEntry>(ringBufferSize, _configuration.SendingBufferSegmentLength);
+            var ringBufferSize = configuration.SendRequestProcessingEngineRingBufferSize;
+            _unmanagedRioBuffer = new UnmanagedRioBuffer<RequestEntry>(ringBufferSize, _configuration.SendingBufferLength);
 
             _disruptor = CreateDisruptor(sendingCompletionQueue, sessionManager);
             _ringBuffer = _disruptor.RingBuffer;
@@ -30,7 +30,7 @@ namespace Abc.Zerio.Core
         private unsafe UnmanagedDisruptor<RequestEntry> CreateDisruptor(RioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
         {
             var waitStrategy = CreateWaitStrategy();
-            
+
             var disruptor = new UnmanagedDisruptor<RequestEntry>((IntPtr)_unmanagedRioBuffer.FirstEntry,
                                                                  _unmanagedRioBuffer.EntryReservedSpaceSize,
                                                                  _unmanagedRioBuffer.Length,
@@ -38,13 +38,14 @@ namespace Abc.Zerio.Core
                                                                  ProducerType.Multi,
                                                                  waitStrategy);
 
-            var requestProcessor = new RequestProcessor(_configuration, sessionManager);
+            var sendRequestProcessor = new SendRequestProcessor(_configuration, sessionManager);
+
             var sendCompletionProcessor = new SendCompletionProcessor(_configuration, sendingCompletionQueue);
 
-            disruptor.HandleEventsWith(requestProcessor).Then(sendCompletionProcessor);
+            disruptor.HandleEventsWith(sendRequestProcessor).Then(sendCompletionProcessor);
 
             ConfigureWaitStrategy(waitStrategy, disruptor, sendCompletionProcessor);
-            
+
             return disruptor;
         }
 
@@ -94,29 +95,6 @@ namespace Abc.Zerio.Core
 
             return sequence;
         }
-        
-        private long GetReceivingNextSequence()
-        {
-            long sequence;
-            while (!_ringBuffer.TryNext(out sequence))
-                Counters.FailedReceivingNextCount++;
-
-            return sequence;
-        }
-
-        public void RequestReceive(int sessionId, int bufferSegmentId)
-        {
-            var sequence = GetReceivingNextSequence();
-            try
-            {
-                ref var requestEntry = ref _ringBuffer[sequence];
-                requestEntry.SetReadRequest(sessionId, bufferSegmentId);
-            }
-            finally
-            {
-                _ringBuffer.Publish(sequence);
-            }
-        }
 
         public void Start()
         {
@@ -136,14 +114,17 @@ namespace Abc.Zerio.Core
         }
 
         private class ThreadPerTaskScheduler : TaskScheduler
-        { 
-            protected override IEnumerable<Task> GetScheduledTasks() { return Enumerable.Empty<Task>(); }
-      
+        {
+            protected override IEnumerable<Task> GetScheduledTasks()
+            {
+                return Enumerable.Empty<Task>();
+            }
+
             protected override void QueueTask(Task task)
             {
                 new Thread(() => TryExecuteTask(task)) { IsBackground = true }.Start();
             }
- 
+
             protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued)
             {
                 return TryExecuteTask(task);

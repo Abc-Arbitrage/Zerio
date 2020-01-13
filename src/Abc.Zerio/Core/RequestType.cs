@@ -1,10 +1,11 @@
 namespace Abc.Zerio.Core
 {
-    public enum RequestType : byte
+    public enum RequestType
     {
         Undefined,
         Send,
         Receive,
-        BatchedSend,
+        AddedToSendBatch,
+        ExpiredOperation
     }
 }
