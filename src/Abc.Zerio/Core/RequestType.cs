@@ -4,7 +4,7 @@ namespace Abc.Zerio.Core
     {
         Undefined,
         Send,
-        AddedToSendBatch,
-        ExpiredOperation,
+        ConflatedSend,
+        ExpiredSend,
     }
 }

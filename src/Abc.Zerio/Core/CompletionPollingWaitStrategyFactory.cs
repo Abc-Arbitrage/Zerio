@@ -10,7 +10,7 @@ namespace Abc.Zerio.Core
             return waitStrategyType switch
             {
                 CompletionPollingWaitStrategyType.BusySpinWaitStrategy => new BusySpinCompletionPollingWaitStrategy(),
-                CompletionPollingWaitStrategyType.SpinWaitWaitStrategy => new SpinWaitCompletionPollingWaitStrategy(new SpinWait()),
+                CompletionPollingWaitStrategyType.SpinWaitWaitStrategy => new SpinWaitCompletionPollingWaitStrategy(),
                 _                                                      => throw new ArgumentOutOfRangeException()
             };
         }

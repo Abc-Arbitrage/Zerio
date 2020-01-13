@@ -13,7 +13,6 @@ namespace Abc.Zerio.Core
     {
         private readonly InternalZerioConfiguration _configuration;
         private readonly UnmanagedRioBuffer<RequestEntry> _unmanagedRioBuffer;
-
         private readonly UnmanagedRingBuffer<RequestEntry> _ringBuffer;
         private readonly UnmanagedDisruptor<RequestEntry> _disruptor;
 

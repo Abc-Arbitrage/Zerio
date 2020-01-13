@@ -73,31 +73,12 @@ namespace Abc.Zerio.Core
             Closed?.Invoke(this);
         }
 
-        public unsafe RioBufferSegment* ReadBuffer(int bufferSegmentId)
-        {
-            return _receivingBuffer[bufferSegmentId];
-        }
-
         public void InitiateReceiving()
         {
             for (var bufferSegmentId = 0; bufferSegmentId < _configuration.ReceivingBufferCount; bufferSegmentId++)
             {
                 RequestReceive(bufferSegmentId);
             }
-        }
-
-        public void Dispose()
-        {
-            Close();
-
-            _receivingBuffer?.Dispose();
-        }
-
-        public void Reset()
-        {
-            Id = default;
-            _messageFramer.Reset();
-            _isWaitingForHandshake = true;
         }
 
         public unsafe void OnBytesReceived(int bufferSegmentId, int bytesTransferred)
@@ -113,8 +94,22 @@ namespace Abc.Zerio.Core
 
         public unsafe void RequestReceive(int bufferSegmentId)
         {
-            var bufferSegment = ReadBuffer(bufferSegmentId);
+            var bufferSegment = _receivingBuffer[bufferSegmentId];
             _requestQueue.Receive(bufferSegment, bufferSegmentId, true);
+        }
+
+        public void Reset()
+        {
+            Id = default;
+            _messageFramer.Reset();
+            _isWaitingForHandshake = true;
+        }
+
+        public void Dispose()
+        {
+            Close();
+
+            _receivingBuffer?.Dispose();
         }
     }
 }

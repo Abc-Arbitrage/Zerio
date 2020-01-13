@@ -3,7 +3,7 @@ using Abc.Zerio.Interop;
 
 namespace Abc.Zerio.Core
 {
-    internal sealed unsafe class UnmanagedRioBuffer<T> : IDisposable
+    internal unsafe sealed class UnmanagedRioBuffer<T> : IDisposable
         where T : unmanaged, IRioBufferSegmentDescriptorContainer
     {
         private const int _padding = 128;

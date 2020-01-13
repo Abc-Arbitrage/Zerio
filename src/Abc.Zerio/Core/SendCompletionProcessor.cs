@@ -10,12 +10,12 @@ namespace Abc.Zerio.Core
     {
         private readonly CompletionTracker _completionTracker = new CompletionTracker();
         private readonly RioCompletionQueue _sendCompletionQueue;
+        private readonly ICompletionPollingWaitStrategy _waitStrategy;
 
         private readonly RIO_RESULT[] _completionResults;
         private readonly RIO_RESULT* _completionResultsPointer;
         private GCHandle _completionResultsHandle;
 
-        private readonly ICompletionPollingWaitStrategy _waitStrategy;
         private ISequence _entryReleasingSequence;
 
         public SendCompletionProcessor(InternalZerioConfiguration configuration, RioCompletionQueue sendCompletionQueue)
@@ -71,6 +71,11 @@ namespace Abc.Zerio.Core
             Thread.CurrentThread.Name = nameof(SendCompletionProcessor);
         }
 
+        public void SetSequenceCallback(ISequence entryReleasingSequence)
+        {
+            _entryReleasingSequence = entryReleasingSequence;
+        }
+
         public void OnShutdown()
         {
             Dispose(true);
@@ -88,11 +93,6 @@ namespace Abc.Zerio.Core
         ~SendCompletionProcessor()
         {
             Dispose(false);
-        }
-
-        public void SetSequenceCallback(ISequence sequenceCallback)
-        {
-            _entryReleasingSequence = sequenceCallback;
         }
     }
 }

@@ -8,12 +8,9 @@ namespace Abc.Zerio.Core
     {
         private readonly IntPtr _handle;
 
-        public Action FlushSendsOperation { get; }
-
         private RioRequestQueue(IntPtr handle)
         {
             _handle = handle;
-            FlushSendsOperation = FlushSends;
         }
 
         public static RioRequestQueue Create(int correlationId, IntPtr socket, RioCompletionQueue sendingCompletionQueue, uint maxOutstandingSends, RioCompletionQueue receivingCompletionQueue, uint maxOutstandingReceives)
@@ -33,11 +30,11 @@ namespace Abc.Zerio.Core
             {
                 spinlock.Enter(ref lockTaken);
 
-                var rioSendFlags = flush ? RIO_RECEIVE_FLAGS.NONE : RIO_RECEIVE_FLAGS.DEFER;
+                var rioReceiveFlags = flush ? RIO_RECEIVE_FLAGS.NONE : RIO_RECEIVE_FLAGS.DEFER;
 
-                rioSendFlags |= RIO_RECEIVE_FLAGS.DONT_NOTIFY;
+                rioReceiveFlags |= RIO_RECEIVE_FLAGS.DONT_NOTIFY;
                 
-                if (!WinSock.Extensions.Receive(_handle, bufferSegment->GetRioBufferDescriptor(), 1, rioSendFlags, bufferSegmentId))
+                if (!WinSock.Extensions.Receive(_handle, bufferSegment->GetRioBufferDescriptor(), 1, rioReceiveFlags, bufferSegmentId))
                     WinSock.ThrowLastWsaError();
             }
             finally
@@ -69,7 +66,7 @@ namespace Abc.Zerio.Core
             }
         }
 
-        private unsafe void FlushSends()
+        public unsafe void FlushSends()
         {
             var lockTaken = false;
             var spinlock = new SpinLock();

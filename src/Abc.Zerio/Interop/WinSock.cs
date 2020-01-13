@@ -130,8 +130,8 @@ namespace Abc.Zerio.Interop
         }
 
         private static readonly object _lock = new object();
-        private static bool _initalized;
-        private static Exception _initalizationException;
+        private static bool _initialized;
+        private static Exception _initializationException;
 
         public static void EnsureIsInitialized()
         {
@@ -140,15 +140,15 @@ namespace Abc.Zerio.Interop
 
             lock (_lock)
             {
-                if (!_initalized)
+                if (!_initialized)
                 {
                     Initialize();
-                    _initalized = true;
+                    _initialized = true;
                 }
             }
 
-            if (_initalizationException != null)
-                throw new InvalidOperationException("Unable to initialize WinSock", _initalizationException);
+            if (_initializationException != null)
+                throw new InvalidOperationException("Unable to initialize WinSock", _initializationException);
         }
 
         private static void Initialize()
@@ -250,7 +250,7 @@ namespace Abc.Zerio.Interop
             var error = WSAGetLastError();
             if (error != 0 && error != 997)
             {
-                _initalizationException = new Win32Exception(error);
+                _initializationException = new Win32Exception(error);
                 return true;
             }
             return false;

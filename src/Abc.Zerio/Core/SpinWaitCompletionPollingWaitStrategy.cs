@@ -2,14 +2,9 @@ using System.Threading;
 
 namespace Abc.Zerio.Core
 {
-    internal struct SpinWaitCompletionPollingWaitStrategy : ICompletionPollingWaitStrategy
+    internal class SpinWaitCompletionPollingWaitStrategy : ICompletionPollingWaitStrategy
     {
-        private SpinWait _spinWait;
-
-        public SpinWaitCompletionPollingWaitStrategy(SpinWait spinWait)
-        {
-            _spinWait = spinWait;
-        }
+        private SpinWait _spinWait = new SpinWait();
 
         public void Wait()
         {

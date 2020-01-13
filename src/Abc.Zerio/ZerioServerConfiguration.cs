@@ -8,7 +8,7 @@ namespace Abc.Zerio
 
         public ZerioServerConfiguration()
         {
-            SessionCount = 2;
+            SessionCount = 16;
         }
 
         internal override InternalZerioConfiguration ToInternalConfiguration()

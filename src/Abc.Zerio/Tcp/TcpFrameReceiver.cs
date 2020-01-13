@@ -17,7 +17,7 @@ namespace Abc.Zerio.Tcp
         {
             _socket = socket;
             _socket.ReceiveBufferSize = _buffer.Length;
-            _framer.MessageFramed += message => MessageReceived(message);
+            _framer.MessageFramed += message => MessageReceived?.Invoke(message);
         }
 
         public void StartReceive()

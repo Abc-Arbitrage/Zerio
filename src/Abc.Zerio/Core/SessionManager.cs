@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 
 namespace Abc.Zerio.Core
 {
@@ -7,7 +8,6 @@ namespace Abc.Zerio.Core
     {
         private readonly InternalZerioConfiguration _configuration;
         private readonly CompletionQueues _completionQueues;
-        
         private readonly ConcurrentStack<Session> _sessions = new ConcurrentStack<Session>();
         private readonly ConcurrentDictionary<int, Session> _activeSessions = new ConcurrentDictionary<int, Session>();
         private readonly ConcurrentDictionary<string, Session> _activeSessionsByPeerId = new ConcurrentDictionary<string, Session>();
@@ -66,6 +66,8 @@ namespace Abc.Zerio.Core
         {
             return _activeSessions.TryGetValue(sessionId, out rioSession);
         }
+
+        public IEnumerable<Session> Sessions => _sessions;
 
         public bool TryGetSession(string peerId, out Session rioSession)
         {

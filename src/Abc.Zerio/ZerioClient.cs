@@ -85,7 +85,7 @@ namespace Abc.Zerio
         public void Send(ReadOnlySpan<byte> message)
         {
             if(_configuration.ConflateSendRequestsOnEnqueuing)
-                _session.Conflater.AddOrMerge(message, _sendRequestProcessingEngine);
+                _session.Conflater.EnqueueOrMergeSendRequest(message, _sendRequestProcessingEngine);
             else
                 _sendRequestProcessingEngine.RequestSend(_session.Id, message);
         }
@@ -127,7 +127,7 @@ namespace Abc.Zerio
             _handshakeSignal.WaitOne();
         }
 
-        private static unsafe void Connect(IntPtr socket, IPEndPoint ipEndPoint)
+        private unsafe static void Connect(IntPtr socket, IPEndPoint ipEndPoint)
         {
             var endPointAddressBytes = ipEndPoint.Address.GetAddressBytes();
             var inAddress = new InAddr(endPointAddressBytes);
@@ -144,7 +144,7 @@ namespace Abc.Zerio
                 WinSock.ThrowLastWsaError();
         }
 
-        private static unsafe IntPtr CreateSocket()
+        private unsafe static IntPtr CreateSocket()
         {
             var socketFlags = SocketFlags.WSA_FLAG_REGISTERED_IO | SocketFlags.WSA_FLAG_OVERLAPPED;
             var connectionSocket = WinSock.WSASocket(AddressFamilies.AF_INET, SocketType.SOCK_STREAM, Protocol.IPPROTO_TCP, IntPtr.Zero, 0, socketFlags);

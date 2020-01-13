@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Abc.Zerio.Core
 {
@@ -9,5 +10,7 @@ namespace Abc.Zerio.Core
         
         bool TryGetSession(string peerId, out Session session);
         bool TryGetSession(int sessionId, out Session session);
+        
+        IEnumerable<Session> Sessions { get; }
     }
 }

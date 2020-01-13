@@ -17,7 +17,7 @@ namespace Abc.Zerio.Core
             _bufferSegmentLength = bufferSegmentLength;
         }
 
-        public void AddOrMerge(ReadOnlySpan<byte> message, SendRequestProcessingEngine engine)
+        public void EnqueueOrMergeSendRequest(ReadOnlySpan<byte> message, SendRequestProcessingEngine engine)
         {
             var lockTaken = false;
             try
@@ -28,7 +28,7 @@ namespace Abc.Zerio.Core
 
                 if (currentEntry != null)
                 {
-                    if (TryMerge(currentEntry, message))
+                    if (TryAddMessageToExistingRequest(currentEntry, message))
                         return;
                 }
 
@@ -40,15 +40,11 @@ namespace Abc.Zerio.Core
                     _lock.Exit();
             }
 
-            using (var entry = engine.AcquireRequestEntry())
-            {
-                entry.Value->SetWriteRequest(_sessionId, message);
-                _currentRequestEntry = entry.Value;
-            }
+            EnqueueNewMergeRequest(message, engine);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool TryMerge(RequestEntry* currentEntry, ReadOnlySpan<byte> message)
+        private bool TryAddMessageToExistingRequest(RequestEntry* currentEntry, ReadOnlySpan<byte> message)
         {
             if (message.Length > _bufferSegmentLength - currentEntry->RioBufferSegmentDescriptor.Length)
                 return false;
@@ -58,6 +54,16 @@ namespace Abc.Zerio.Core
             message.CopyTo(new Span<byte>(sizeof(int) +endOfBatchingEntryData, message.Length));
             currentEntry->RioBufferSegmentDescriptor.Length += sizeof(int) + message.Length;
             return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void EnqueueNewMergeRequest(ReadOnlySpan<byte> message, SendRequestProcessingEngine engine)
+        {
+            using (var entry = engine.AcquireRequestEntry())
+            {
+                entry.Value->SetWriteRequest(_sessionId, message);
+                _currentRequestEntry = entry.Value;
+            }
         }
 
         public void DetachFrom(RequestEntry* entry)

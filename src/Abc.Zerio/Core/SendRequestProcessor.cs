@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -8,14 +7,14 @@ namespace Abc.Zerio.Core
 {
     internal unsafe class SendRequestProcessor : IValueEventHandler<RequestEntry>, ILifecycleAware
     {
-        private readonly Dictionary<int, Action> _pendingFlushOperations;
+        private readonly HashSet<Session> _sessionsWithPendingSends;
         private readonly ISessionManager _sessionManager;
         private readonly int _maxSendBatchSize;
         private readonly int _maxConflatedSendRequestCount;
         private readonly bool _batchSendRequests;
         private readonly bool _conflateSendRequestsOnProcessing;
         private readonly bool _conflateSendRequestsOnEnqueuing;
-        
+
         private int _currentBatchSize;
 
         public SendRequestProcessor(InternalZerioConfiguration configuration, ISessionManager sessionManager)
@@ -27,7 +26,10 @@ namespace Abc.Zerio.Core
             _maxConflatedSendRequestCount = configuration.MaxConflatedSendRequestCount;
 
             _sessionManager = sessionManager;
-            _pendingFlushOperations = new Dictionary<int, Action>(configuration.SessionCount);
+
+            // Preallocating session hashset
+            _sessionsWithPendingSends = new HashSet<Session>(sessionManager.Sessions);
+            _sessionsWithPendingSends.Clear(); 
         }
 
         public void OnStart()
@@ -36,23 +38,23 @@ namespace Abc.Zerio.Core
         }
 
         public void OnEvent(ref RequestEntry entry, long sequence, bool endOfBatch)
-        {   
+        {
             if (!_sessionManager.TryGetSession(entry.SessionId, out var session))
             {
-                entry.Type = RequestType.ExpiredOperation;
+                entry.Type = RequestType.ExpiredSend;
                 return;
             }
 
-            if(_conflateSendRequestsOnEnqueuing)
+            if (_conflateSendRequestsOnEnqueuing)
                 session.Conflater.DetachFrom((RequestEntry*)Unsafe.AsPointer(ref entry));
-            
+
             if (_conflateSendRequestsOnProcessing)
                 ConflateAndEnqueueSendRequest(session, ref entry, sequence, endOfBatch);
             else
                 EnqueueSendRequest(session, ref entry, sequence, endOfBatch);
         }
 
-        public void ConflateAndEnqueueSendRequest(Session session, ref RequestEntry entry, long sequence, bool endOfBatch)
+        public void ConflateAndEnqueueSendRequest(Session session, ref RequestEntry currentEntry, long sequence, bool endOfBatch)
         {
             bool currentEntryWasConsumed;
 
@@ -60,35 +62,37 @@ namespace Abc.Zerio.Core
 
             if (sendingBatch.IsEmpty)
             {
-                sendingBatch.Initialize(ref entry, sequence);
+                sendingBatch.Initialize(ref currentEntry, sequence);
                 currentEntryWasConsumed = true;
             }
             else
             {
-                currentEntryWasConsumed = sendingBatch.TryAppend(ref entry);
+                currentEntryWasConsumed = sendingBatch.TryAppend(ref currentEntry);
                 if (currentEntryWasConsumed)
-                    entry.Type = RequestType.AddedToSendBatch;
+                    currentEntry.Type = RequestType.ConflatedSend;
             }
 
             var shouldEnqueueToRioBatch = endOfBatch || !currentEntryWasConsumed || sendingBatch.Size > _maxConflatedSendRequestCount;
             if (!shouldEnqueueToRioBatch)
                 return;
 
+            ref var batchingEntry = ref Unsafe.AsRef<RequestEntry>(sendingBatch.BatchingEntry);
+            
             if (currentEntryWasConsumed)
             {
-                EnqueueSendRequest(session, ref Unsafe.AsRef<RequestEntry>(sendingBatch.BatchingEntry), sendingBatch.BatchingEntrySequence, true);
+                EnqueueSendRequest(session, ref batchingEntry, sendingBatch.BatchingEntrySequence, true);
                 sendingBatch.Reset();
             }
             else if (endOfBatch)
             {
-                EnqueueSendRequest(session, ref Unsafe.AsRef<RequestEntry>(sendingBatch.BatchingEntry), sendingBatch.BatchingEntrySequence, false);
-                EnqueueSendRequest(session, ref entry, sequence, true);
+                EnqueueSendRequest(session, ref batchingEntry, sendingBatch.BatchingEntrySequence, false);
+                EnqueueSendRequest(session, ref currentEntry, sequence, true);
                 sendingBatch.Reset();
             }
             else
             {
-                EnqueueSendRequest(session, ref Unsafe.AsRef<RequestEntry>(sendingBatch.BatchingEntry), sendingBatch.BatchingEntrySequence, false);
-                sendingBatch.Initialize(ref entry, sequence);
+                EnqueueSendRequest(session, ref batchingEntry, sendingBatch.BatchingEntrySequence, false);
+                sendingBatch.Initialize(ref currentEntry, sequence);
             }
         }
 
@@ -99,33 +103,33 @@ namespace Abc.Zerio.Core
                 session.RequestQueue.Send(sequence, data.GetRioBufferDescriptor(), true);
                 return;
             }
-
+            
             var shouldFlush = endOfBatch || _maxSendBatchSize == _currentBatchSize;
             session.RequestQueue.Send(sequence, data.GetRioBufferDescriptor(), shouldFlush);
 
             if (shouldFlush)
             {
-                FlushRequestQueues(session.Id);
+                FlushRequestQueues(session);
             }
             else
             {
-                _pendingFlushOperations[session.Id] = session.RequestQueue.FlushSendsOperation;
+                _sessionsWithPendingSends.Add(session);
                 _currentBatchSize++;
             }
         }
 
-        private void FlushRequestQueues(int noLongerPendingFlushOperationSessionId)
+        private void FlushRequestQueues(Session noLongerNeedingFLushSession)
         {
-            foreach (var (sessionId, pendingFlushOperation) in _pendingFlushOperations)
+            foreach (var sessionWithPendingSends in _sessionsWithPendingSends)
             {
-                if (sessionId == noLongerPendingFlushOperationSessionId)
+                if (sessionWithPendingSends == noLongerNeedingFLushSession)
                     continue;
 
-                pendingFlushOperation.Invoke();
+                sessionWithPendingSends.RequestQueue?.FlushSends();
             }
 
             _currentBatchSize = 0;
-            _pendingFlushOperations.Clear();
+            _sessionsWithPendingSends.Clear();
         }
 
         public void OnShutdown()

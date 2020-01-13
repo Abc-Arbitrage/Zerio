@@ -59,7 +59,7 @@ namespace Abc.Zerio
             return receiver;
         }
 
-        private static unsafe IntPtr CreateListeningSocket()
+        private unsafe static IntPtr CreateListeningSocket()
         {
             var socketFlags = SocketFlags.WSA_FLAG_REGISTERED_IO | SocketFlags.WSA_FLAG_OVERLAPPED;
             var listeningSocket = WinSock.WSASocket(AddressFamilies.AF_INET, SocketType.SOCK_STREAM, Protocol.IPPROTO_TCP, IntPtr.Zero, 0, socketFlags);
@@ -87,7 +87,7 @@ namespace Abc.Zerio
             _listeningThread = new Thread(() => ListenAndRunAcceptLoop(listeningSignal)) { IsBackground = true };
             _listeningThread.Start();
 
-            listeningSignal.Wait(2000);
+            listeningSignal.Wait(TimeSpan.FromSeconds(2));
         }
 
         public event ServerMessageReceivedDelegate MessageReceived;
@@ -98,7 +98,7 @@ namespace Abc.Zerio
                 return;
 
             if(_configuration.ConflateSendRequestsOnEnqueuing)
-                session.Conflater.AddOrMerge(message, _sendRequestProcessingEngine);
+                session.Conflater.EnqueueOrMergeSendRequest(message, _sendRequestProcessingEngine);
             else
                 _sendRequestProcessingEngine.RequestSend(session.Id, message);
         }
@@ -189,7 +189,7 @@ namespace Abc.Zerio
             _handshakeSignal.Set();
         }
 
-        private static unsafe bool Bind(IntPtr listeningSocket, int listeningPort)
+        private unsafe static bool Bind(IntPtr listeningSocket, int listeningPort)
         {
             var endPointAddressBytes = IPAddress.Any.GetAddressBytes();
             var inAddress = new InAddr(endPointAddressBytes);

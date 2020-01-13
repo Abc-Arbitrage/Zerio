@@ -5,7 +5,6 @@ namespace Abc.Zerio.Core
     public class HybridWaitStrategy : INonBlockingWaitStrategy
     {
         private readonly BusySpinWaitStrategy _busySpinWaitStrategy = new BusySpinWaitStrategy();
-
         private readonly SpinWaitWaitStrategy _spinWaitWaitStrategy = new SpinWaitWaitStrategy();
 
         public ISequenceBarrier SequenceBarrierForSendCompletionProcessor { get; set; }

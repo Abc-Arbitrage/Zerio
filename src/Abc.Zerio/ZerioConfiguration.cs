@@ -28,7 +28,7 @@ namespace Abc.Zerio
 
             MaxConflatedSendRequestCount = 8;
             MaxSendBatchSize = 8;
-            SendingBufferLength = 16 * 1024;
+            SendingBufferLength = 4096;
             SendingBufferCount = 64 * 1024;
 
             FramingBufferLength = 64 * 1024;

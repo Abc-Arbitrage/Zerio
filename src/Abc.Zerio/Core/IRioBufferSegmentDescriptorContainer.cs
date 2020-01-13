@@ -6,4 +6,5 @@ namespace Abc.Zerio.Core
     {
         RIO_BUF* GetRioBufferDescriptor();
     }
+    
 }

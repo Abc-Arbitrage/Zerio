@@ -17,8 +17,10 @@ namespace Abc.Zerio.Core
         [FieldOffset(8)]
         internal RIO_BUF RioBufferSegmentDescriptor;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public RIO_BUF* GetRioBufferDescriptor() => (RIO_BUF*)Unsafe.AsPointer(ref RioBufferSegmentDescriptor);
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public byte* GetBufferSegmentStart() => (byte*)(GetRioBufferDescriptor() + 1);
 
         public void SetWriteRequest(int sessionId, ReadOnlySpan<byte> message)
