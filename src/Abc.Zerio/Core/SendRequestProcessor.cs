@@ -27,9 +27,8 @@ namespace Abc.Zerio.Core
 
             _sessionManager = sessionManager;
 
-            // Preallocating session hashset
             _sessionsWithPendingSends = new HashSet<Session>(sessionManager.Sessions);
-            _sessionsWithPendingSends.Clear(); 
+            _sessionsWithPendingSends.Clear(); // clear once preallocated 
         }
 
         public void OnStart()
@@ -109,7 +108,8 @@ namespace Abc.Zerio.Core
 
             if (shouldFlush)
             {
-                FlushRequestQueues(session);
+                _sessionsWithPendingSends.Remove(session);
+                FlushRequestQueues();
             }
             else
             {
@@ -118,13 +118,10 @@ namespace Abc.Zerio.Core
             }
         }
 
-        private void FlushRequestQueues(Session noLongerNeedingFLushSession)
+        private void FlushRequestQueues()
         {
             foreach (var sessionWithPendingSends in _sessionsWithPendingSends)
             {
-                if (sessionWithPendingSends == noLongerNeedingFLushSession)
-                    continue;
-
                 sessionWithPendingSends.RequestQueue?.FlushSends();
             }
 
