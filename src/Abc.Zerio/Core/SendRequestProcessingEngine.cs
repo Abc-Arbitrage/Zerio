@@ -16,7 +16,7 @@ namespace Abc.Zerio.Core
         private readonly UnmanagedRingBuffer<RequestEntry> _ringBuffer;
         private readonly UnmanagedDisruptor<RequestEntry> _disruptor;
 
-        public SendRequestProcessingEngine(InternalZerioConfiguration configuration, RioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
+        public SendRequestProcessingEngine(InternalZerioConfiguration configuration, IRioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
         {
             _configuration = configuration;
 
@@ -27,7 +27,7 @@ namespace Abc.Zerio.Core
             _ringBuffer = _disruptor.RingBuffer;
         }
 
-        private unsafe UnmanagedDisruptor<RequestEntry> CreateDisruptor(RioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
+        private unsafe UnmanagedDisruptor<RequestEntry> CreateDisruptor(IRioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
         {
             var waitStrategy = CreateWaitStrategy();
 

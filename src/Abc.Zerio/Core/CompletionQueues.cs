@@ -2,7 +2,7 @@ using System;
 
 namespace Abc.Zerio.Core
 {
-    public class CompletionQueues : IDisposable
+    internal class CompletionQueues : IDisposable
     {
         public CompletionQueues(InternalZerioConfiguration configuration)
         {
@@ -10,8 +10,8 @@ namespace Abc.Zerio.Core
             ReceivingQueue = new RioCompletionQueue(configuration.ReceivingCompletionQueueSize);
         }
 
-        public RioCompletionQueue SendingQueue { get; }
-        public RioCompletionQueue ReceivingQueue { get; }
+        public IRioCompletionQueue SendingQueue { get; }
+        public IRioCompletionQueue ReceivingQueue { get; }
 
         public void Dispose()
         {

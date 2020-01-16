@@ -9,7 +9,7 @@ namespace Abc.Zerio.Core
     internal unsafe class SendCompletionProcessor : IValueEventHandler<RequestEntry>, ILifecycleAware, IEventProcessorSequenceAware
     {
         private readonly CompletionTracker _completionTracker = new CompletionTracker();
-        private readonly RioCompletionQueue _sendCompletionQueue;
+        private readonly IRioCompletionQueue _sendCompletionQueue;
         private readonly ICompletionPollingWaitStrategy _waitStrategy;
 
         private readonly RIO_RESULT[] _completionResults;
@@ -18,7 +18,7 @@ namespace Abc.Zerio.Core
 
         private ISequence _entryReleasingSequence;
 
-        public SendCompletionProcessor(InternalZerioConfiguration configuration, RioCompletionQueue sendCompletionQueue)
+        public SendCompletionProcessor(InternalZerioConfiguration configuration, IRioCompletionQueue sendCompletionQueue)
         {
             _sendCompletionQueue = sendCompletionQueue;
             _completionResults = new RIO_RESULT[configuration.MaxSendCompletionResults];

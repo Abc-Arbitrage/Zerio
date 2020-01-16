@@ -7,13 +7,13 @@ namespace Abc.Zerio.Core
     internal class ReceiveCompletionProcessor
     {
         private readonly InternalZerioConfiguration _configuration;
-        private readonly RioCompletionQueue _receivingCompletionQueue;
+        private readonly IRioCompletionQueue _receivingCompletionQueue;
         private readonly ISessionManager _sessionManager;
 
         private bool _isRunning;
         private Thread _completionWorkerThread;
 
-        public ReceiveCompletionProcessor(InternalZerioConfiguration configuration, RioCompletionQueue receivingCompletionQueue, ISessionManager sessionManager)
+        public ReceiveCompletionProcessor(InternalZerioConfiguration configuration, IRioCompletionQueue receivingCompletionQueue, ISessionManager sessionManager)
         {
             _configuration = configuration;
             _receivingCompletionQueue = receivingCompletionQueue;
@@ -31,7 +31,7 @@ namespace Abc.Zerio.Core
         {
             Thread.CurrentThread.Name = nameof(ReceiveCompletionProcessor);
 
-            var completionQueue = (RioCompletionQueue)state;
+            var completionQueue = (IRioCompletionQueue)state;
             var maxCompletionResults = _configuration.MaxReceiveCompletionResults;
             var results = stackalloc RIO_RESULT[maxCompletionResults];
 

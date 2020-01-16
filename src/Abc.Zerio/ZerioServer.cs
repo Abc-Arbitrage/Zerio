@@ -94,7 +94,7 @@ namespace Abc.Zerio
 
         public void Send(string peerId, ReadOnlySpan<byte> message)
         {
-            if (!_sessionManager.TryGetSession(peerId, out Session session))
+            if (!_sessionManager.TryGetSession(peerId, out ISession session))
                 return;
 
             if(_configuration.ConflateSendRequestsOnEnqueuing)
@@ -211,7 +211,7 @@ namespace Abc.Zerio
             return true;
         }
 
-        private void OnClientSessionClosed(Session session)
+        private void OnClientSessionClosed(ISession session)
         {
             session.Closed -= OnClientSessionClosed;
 

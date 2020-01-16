@@ -15,7 +15,7 @@ namespace Abc.Zerio
         private readonly CompletionQueues _completionQueues;
         private readonly ISessionManager _sessionManager;
         private readonly InternalZerioConfiguration _configuration;
-        private readonly Session _session;
+        private readonly ISession _session;
 
         private readonly SendRequestProcessingEngine _sendRequestProcessingEngine;
         private readonly ReceiveCompletionProcessor _receiveCompletionProcessor;
@@ -163,7 +163,7 @@ namespace Abc.Zerio
             return connectionSocket;
         }
 
-        private void OnSessionClosed(Session session)
+        private void OnSessionClosed(ISession session)
         {
             IsConnected = false;
             Disconnected?.Invoke();

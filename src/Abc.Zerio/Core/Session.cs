@@ -5,7 +5,7 @@ using Abc.Zerio.Interop;
 
 namespace Abc.Zerio.Core
 {
-    internal class Session : IDisposable
+    internal class Session : ISession
     {
         private readonly InternalZerioConfiguration _configuration;
         private readonly CompletionQueues _completionQueues;
@@ -22,10 +22,10 @@ namespace Abc.Zerio.Core
 
         public event ServerMessageReceivedDelegate MessageReceived;
         public event Action<string> HandshakeReceived;
-        public event Action<Session> Closed;
+        public event Action<ISession> Closed;
 
-        public readonly SendingRequestConflater Conflater;
-        public readonly SessionSendingBatch SendingBatch;
+        public SendingRequestConflater Conflater { get; }
+        public SessionSendingBatch SendingBatch { get; }
 
         public Session(int sessionId, InternalZerioConfiguration configuration, CompletionQueues completionQueues)
         {

@@ -7,7 +7,7 @@ namespace Abc.Zerio.Core
 {
     internal unsafe class SendRequestProcessor : IValueEventHandler<RequestEntry>, ILifecycleAware
     {
-        private readonly HashSet<Session> _sessionsWithPendingSends;
+        private readonly HashSet<ISession> _sessionsWithPendingSends;
         private readonly ISessionManager _sessionManager;
         private readonly int _maxSendBatchSize;
         private readonly int _maxConflatedSendRequestCount;
@@ -27,7 +27,7 @@ namespace Abc.Zerio.Core
 
             _sessionManager = sessionManager;
 
-            _sessionsWithPendingSends = new HashSet<Session>(sessionManager.Sessions);
+            _sessionsWithPendingSends = new HashSet<ISession>(sessionManager.Sessions);
             _sessionsWithPendingSends.Clear(); // clear once preallocated 
         }
 
@@ -53,7 +53,7 @@ namespace Abc.Zerio.Core
                 EnqueueSendRequest(session, ref entry, sequence, endOfBatch);
         }
 
-        public void ConflateAndEnqueueSendRequest(Session session, ref RequestEntry currentEntry, long sequence, bool endOfBatch)
+        public void ConflateAndEnqueueSendRequest(ISession session, ref RequestEntry currentEntry, long sequence, bool endOfBatch)
         {
             bool currentEntryWasConsumed;
 
@@ -95,7 +95,7 @@ namespace Abc.Zerio.Core
             }
         }
 
-        private void EnqueueSendRequest(Session session, ref RequestEntry data, long sequence, bool endOfBatch)
+        private void EnqueueSendRequest(ISession session, ref RequestEntry data, long sequence, bool endOfBatch)
         {
             if (!_batchSendRequests)
             {

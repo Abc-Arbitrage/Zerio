@@ -3,7 +3,7 @@ using Abc.Zerio.Interop;
 
 namespace Abc.Zerio.Core
 {
-    public sealed unsafe class RioCompletionQueue : IDisposable
+    internal unsafe sealed class RioCompletionQueue : IRioCompletionQueue
     {
         public CompletionQueueHandle QueueHandle { get; }
 
@@ -15,7 +15,7 @@ namespace Abc.Zerio.Core
                 WinSock.ThrowLastWsaError();
         }
 
-        internal int TryGetCompletionResults(RIO_RESULT* results, int maxCompletionResults)
+        public int TryGetCompletionResults(RIO_RESULT* results, int maxCompletionResults)
         {
             var completionQueue = QueueHandle;
 

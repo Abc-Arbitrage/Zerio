@@ -8,9 +8,9 @@ namespace Abc.Zerio.Core
     {
         private readonly InternalZerioConfiguration _configuration;
         private readonly CompletionQueues _completionQueues;
-        private readonly ConcurrentStack<Session> _sessions = new ConcurrentStack<Session>();
-        private readonly ConcurrentDictionary<int, Session> _activeSessions = new ConcurrentDictionary<int, Session>();
-        private readonly ConcurrentDictionary<string, Session> _activeSessionsByPeerId = new ConcurrentDictionary<string, Session>();
+        private readonly ConcurrentStack<ISession> _sessions = new ConcurrentStack<ISession>();
+        private readonly ConcurrentDictionary<int, ISession> _activeSessions = new ConcurrentDictionary<int, ISession>();
+        private readonly ConcurrentDictionary<string, ISession> _activeSessionsByPeerId = new ConcurrentDictionary<string, ISession>();
 
         public event ServerMessageReceivedDelegate MessageReceived;
 
@@ -43,7 +43,7 @@ namespace Abc.Zerio.Core
             _activeSessionsByPeerId.TryAdd(peerId, session);
         }
 
-        public Session Acquire()
+        public ISession Acquire()
         {
             if (!_sessions.TryPop(out var rioSession))
                 throw new InvalidOperationException("No session available");
@@ -52,7 +52,7 @@ namespace Abc.Zerio.Core
             return rioSession;
         }
 
-        public void Release(Session session)
+        public void Release(ISession session)
         {
             _activeSessions.TryRemove(session.Id, out _);
             _activeSessionsByPeerId.TryRemove(session.PeerId, out _);
@@ -62,14 +62,14 @@ namespace Abc.Zerio.Core
             _sessions.Push(session);
         }
 
-        public bool TryGetSession(int sessionId, out Session rioSession)
+        public bool TryGetSession(int sessionId, out ISession rioSession)
         {
             return _activeSessions.TryGetValue(sessionId, out rioSession);
         }
 
-        public IEnumerable<Session> Sessions => _sessions;
+        public IEnumerable<ISession> Sessions => _sessions;
 
-        public bool TryGetSession(string peerId, out Session rioSession)
+        public bool TryGetSession(string peerId, out ISession rioSession)
         {
             return _activeSessionsByPeerId.TryGetValue(peerId, out rioSession);
         }

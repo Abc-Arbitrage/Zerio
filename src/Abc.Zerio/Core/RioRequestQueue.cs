@@ -4,7 +4,7 @@ using Abc.Zerio.Interop;
 
 namespace Abc.Zerio.Core
 {
-    public class RioRequestQueue
+    internal class RioRequestQueue
     {
         private readonly IntPtr _handle;
 
@@ -13,7 +13,7 @@ namespace Abc.Zerio.Core
             _handle = handle;
         }
 
-        public static RioRequestQueue Create(int correlationId, IntPtr socket, RioCompletionQueue sendingCompletionQueue, uint maxOutstandingSends, RioCompletionQueue receivingCompletionQueue, uint maxOutstandingReceives)
+        public static RioRequestQueue Create(int correlationId, IntPtr socket, IRioCompletionQueue sendingCompletionQueue, uint maxOutstandingSends, IRioCompletionQueue receivingCompletionQueue, uint maxOutstandingReceives)
         {
             var requestQueue = WinSock.Extensions.CreateRequestQueue(socket, maxOutstandingReceives, 1, maxOutstandingSends, 1, receivingCompletionQueue.QueueHandle, sendingCompletionQueue.QueueHandle, correlationId);
             if (requestQueue == IntPtr.Zero)
