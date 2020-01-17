@@ -34,7 +34,7 @@ namespace Abc.Zerio.Core
             {
                 if (entry.EntryType != SendRequestEntryType.Send)
                 {
-                    _completionTracker.MarketAsCompleted(sequence);
+                    _completionTracker.MarkAsCompleted(sequence);
                     return;
                 }
 
@@ -54,7 +54,7 @@ namespace Abc.Zerio.Core
                     for (var i = 0; i < resultCount; i++)
                     {
                         var result = _completionResultsPointer[i];
-                        _completionTracker.MarketAsCompleted(result.RequestCorrelation);
+                        _completionTracker.MarkAsCompleted(result.RequestCorrelation);
                     }
                 }
             }

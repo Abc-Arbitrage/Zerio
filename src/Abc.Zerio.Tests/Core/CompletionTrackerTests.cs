@@ -25,7 +25,7 @@ namespace Abc.Zerio.Tests.Core
         {
             for (var i = 0; i < 50; i++)
             {
-                _tracker.MarketAsCompleted(i);
+                _tracker.MarkAsCompleted(i);
             }
 
             Assert.IsFalse(_tracker.IsCompleted(value));
@@ -34,11 +34,11 @@ namespace Abc.Zerio.Tests.Core
         [Test]
         public void should_identify_unsorted_completed_value_as_completed()
         {
-            _tracker.MarketAsCompleted(0);
-            _tracker.MarketAsCompleted(1);
-            _tracker.MarketAsCompleted(2);
-            _tracker.MarketAsCompleted(3);
-            _tracker.MarketAsCompleted(5);
+            _tracker.MarkAsCompleted(0);
+            _tracker.MarkAsCompleted(1);
+            _tracker.MarkAsCompleted(2);
+            _tracker.MarkAsCompleted(3);
+            _tracker.MarkAsCompleted(5);
 
             Assert.IsTrue(_tracker.IsCompleted(5));
         }
@@ -46,11 +46,11 @@ namespace Abc.Zerio.Tests.Core
         [Test]
         public void should_not_identify_unsorted_uncompleted_value_as_completed()
         {
-            _tracker.MarketAsCompleted(0);
-            _tracker.MarketAsCompleted(1);
-            _tracker.MarketAsCompleted(2);
-            _tracker.MarketAsCompleted(3);
-            _tracker.MarketAsCompleted(5);
+            _tracker.MarkAsCompleted(0);
+            _tracker.MarkAsCompleted(1);
+            _tracker.MarkAsCompleted(2);
+            _tracker.MarkAsCompleted(3);
+            _tracker.MarkAsCompleted(5);
 
             Assert.IsFalse(_tracker.IsCompleted(4));
         }
@@ -58,14 +58,14 @@ namespace Abc.Zerio.Tests.Core
         [Test]
         public void should_not_keep_unneeded_values_in_cache()
         {
-            _tracker.MarketAsCompleted(0);
-            _tracker.MarketAsCompleted(1);
+            _tracker.MarkAsCompleted(0);
+            _tracker.MarkAsCompleted(1);
             
-            _tracker.MarketAsCompleted(3);
-            _tracker.MarketAsCompleted(4);
-            _tracker.MarketAsCompleted(5);
+            _tracker.MarkAsCompleted(3);
+            _tracker.MarkAsCompleted(4);
+            _tracker.MarkAsCompleted(5);
             
-            _tracker.MarketAsCompleted(2);
+            _tracker.MarkAsCompleted(2);
 
             Assert.That(_tracker.CacheSize, Is.EqualTo(1));
         }

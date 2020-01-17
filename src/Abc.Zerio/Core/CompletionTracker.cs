@@ -18,7 +18,7 @@ namespace Abc.Zerio.Core
             return value <= _lastCompleted || _unorderedValues.Count != 0 && _unorderedValues.Contains(value);
         }
 
-        public void MarketAsCompleted(long value)
+        public void MarkAsCompleted(long value)
         {
             if (value != _lastCompleted + 1)
             {
