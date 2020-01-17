@@ -5,11 +5,11 @@ using Abc.Zerio.Interop;
 
 namespace Abc.Zerio.Core
 {
-    [StructLayout(LayoutKind.Explicit, Size = sizeof(RequestType) + sizeof(int) + RIO_BUF.Size)]
-    public unsafe struct RequestEntry : IRioBufferSegmentDescriptorContainer
+    [StructLayout(LayoutKind.Explicit, Size = sizeof(SendRequestEntryType) + sizeof(int) + RIO_BUF.Size)]
+    public unsafe struct SendRequestEntry : IRioBufferSegmentDescriptorContainer
     {
         [FieldOffset(0)]
-        public RequestType Type;
+        public SendRequestEntryType EntryType;
 
         [FieldOffset(4)]
         public int SessionId;
@@ -25,7 +25,7 @@ namespace Abc.Zerio.Core
 
         public void SetWriteRequest(int sessionId, ReadOnlySpan<byte> message)
         {
-            Type = RequestType.Send;
+            EntryType = SendRequestEntryType.Send;
             SessionId = sessionId;
             
             // The actual buffer segment is located right at the end of the current struct
@@ -39,7 +39,7 @@ namespace Abc.Zerio.Core
 
         public void Reset()
         {
-            Type = RequestType.Undefined;
+            EntryType = SendRequestEntryType.Undefined;
             RioBufferSegmentDescriptor.Length = default;
             SessionId = default;
         }

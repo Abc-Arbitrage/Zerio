@@ -35,7 +35,7 @@ namespace Abc.Zerio
             _completionQueues = CreateCompletionQueues();
             _sessionManager = CreateSessionManager();
 
-            _sendRequestProcessingEngine = CreateRequestProcessingEngine();
+            _sendRequestProcessingEngine = CreateSendRequestProcessingEngine();
             _receiveCompletionProcessor = CreateReceiveCompletionProcessor();
 
             _listeningSocket = CreateListeningSocket();
@@ -163,11 +163,11 @@ namespace Abc.Zerio
                     continue;
                 }
 
-                InitClientSession(acceptSocket);
+                InitializeClientSession(acceptSocket);
             }
         }
         
-        private void InitClientSession(IntPtr acceptSocket)
+        private void InitializeClientSession(IntPtr acceptSocket)
         {     
             var clientSession = _sessionManager.Acquire();
 
@@ -252,7 +252,7 @@ namespace Abc.Zerio
             return serverConfiguration.ToInternalConfiguration();
         }
 
-        private SendRequestProcessingEngine CreateRequestProcessingEngine()
+        private SendRequestProcessingEngine CreateSendRequestProcessingEngine()
         {
             return new SendRequestProcessingEngine(_configuration, _completionQueues.SendingQueue, _sessionManager);
         }

@@ -40,7 +40,7 @@ namespace Abc.Zerio
             _completionQueues = CreateCompletionQueues();
             _sessionManager = CreateSessionManager();
 
-            _sendRequestProcessingEngine = CreateRequestProcessingEngine();
+            _sendRequestProcessingEngine = CreateSendRequestProcessingEngine();
             _receiveCompletionProcessor = CreateReceiveCompletionProcessor();
 
             _session = _sessionManager.Acquire();
@@ -77,7 +77,7 @@ namespace Abc.Zerio
             return clientConfiguration.ToInternalConfiguration();
         }
 
-        private SendRequestProcessingEngine CreateRequestProcessingEngine()
+        private SendRequestProcessingEngine CreateSendRequestProcessingEngine()
         {
             return new SendRequestProcessingEngine(_configuration, _completionQueues.SendingQueue, _sessionManager);
         }

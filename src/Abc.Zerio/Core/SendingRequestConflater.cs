@@ -9,7 +9,7 @@ namespace Abc.Zerio.Core
         private readonly int _sessionId;
         private readonly int _bufferSegmentLength;
         private SpinLock _lock = new SpinLock(false);
-        private volatile RequestEntry* _currentRequestEntry;
+        private volatile SendRequestEntry* _currentRequestEntry;
 
         public SendingRequestConflater(int sessionId, int bufferSegmentLength)
         {
@@ -44,7 +44,7 @@ namespace Abc.Zerio.Core
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool TryAddMessageToExistingRequest(RequestEntry* currentEntry, ReadOnlySpan<byte> message)
+        private bool TryAddMessageToExistingRequest(SendRequestEntry* currentEntry, ReadOnlySpan<byte> message)
         {
             if (message.Length > _bufferSegmentLength - currentEntry->RioBufferSegmentDescriptor.Length)
                 return false;
@@ -59,14 +59,14 @@ namespace Abc.Zerio.Core
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void EnqueueNewMergeRequest(ReadOnlySpan<byte> message, SendRequestProcessingEngine engine)
         {
-            using (var entry = engine.AcquireRequestEntry())
+            using (var entry = engine.AcquireSendRequestEntry())
             {
                 entry.Value->SetWriteRequest(_sessionId, message);
                 _currentRequestEntry = entry.Value;
             }
         }
 
-        public void DetachFrom(RequestEntry* entry)
+        public void DetachFrom(SendRequestEntry* entry)
         {
             var lockTaken = false;
             try

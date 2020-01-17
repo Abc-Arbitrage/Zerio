@@ -2,14 +2,14 @@ using Disruptor;
 
 namespace Abc.Zerio.Core
 {
-    public unsafe readonly ref struct AcquiredRequestEntry
+    public unsafe readonly ref struct AcquiredSendRequestEntry
     {
-        private readonly UnmanagedRingBuffer<RequestEntry> _ringBuffer;
+        private readonly UnmanagedRingBuffer<SendRequestEntry> _ringBuffer;
         private readonly long _sequence;
         
-        public readonly RequestEntry* Value;
+        public readonly SendRequestEntry* Value;
 
-        public AcquiredRequestEntry(UnmanagedRingBuffer<RequestEntry> ringBuffer, long sequence, RequestEntry* value)
+        public AcquiredSendRequestEntry(UnmanagedRingBuffer<SendRequestEntry> ringBuffer, long sequence, SendRequestEntry* value)
         {
             _ringBuffer = ringBuffer;
             _sequence = sequence;

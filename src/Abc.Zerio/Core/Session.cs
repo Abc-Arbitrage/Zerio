@@ -18,12 +18,12 @@ namespace Abc.Zerio.Core
 
         public int Id { get; private set; }
         public string PeerId { get; private set; }
-        public RioRequestQueue RequestQueue => _requestQueue;
 
         public event ServerMessageReceivedDelegate MessageReceived;
         public event Action<string> HandshakeReceived;
         public event Action<ISession> Closed;
 
+        public RioRequestQueue RequestQueue => _requestQueue;
         public SendingRequestConflater Conflater { get; }
         public SessionSendingBatch SendingBatch { get; }
 
@@ -59,7 +59,9 @@ namespace Abc.Zerio.Core
             Close();
 
             _socket = socket;
-            _requestQueue = RioRequestQueue.Create(Id, socket, _completionQueues.SendingQueue, (uint)_configuration.RequestQueueMaxOutstandingSends, _completionQueues.ReceivingQueue, (uint)_configuration.RequestQueueMaxOutstandingReceives);
+            _requestQueue = RioRequestQueue.Create(Id,  socket, 
+                                                   _completionQueues.SendingQueue, (uint)_configuration.RequestQueueMaxOutstandingSends,
+                                                   _completionQueues.ReceivingQueue, (uint)_configuration.RequestQueueMaxOutstandingReceives);
         }
 
         public void Close()

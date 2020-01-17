@@ -12,26 +12,26 @@ namespace Abc.Zerio.Core
     internal class SendRequestProcessingEngine : IDisposable
     {
         private readonly InternalZerioConfiguration _configuration;
-        private readonly UnmanagedRioBuffer<RequestEntry> _unmanagedRioBuffer;
-        private readonly UnmanagedRingBuffer<RequestEntry> _ringBuffer;
-        private readonly UnmanagedDisruptor<RequestEntry> _disruptor;
+        private readonly UnmanagedRioBuffer<SendRequestEntry> _unmanagedRioBuffer;
+        private readonly UnmanagedRingBuffer<SendRequestEntry> _ringBuffer;
+        private readonly UnmanagedDisruptor<SendRequestEntry> _disruptor;
 
         public SendRequestProcessingEngine(InternalZerioConfiguration configuration, IRioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
         {
             _configuration = configuration;
 
             var ringBufferSize = configuration.SendRequestProcessingEngineRingBufferSize;
-            _unmanagedRioBuffer = new UnmanagedRioBuffer<RequestEntry>(ringBufferSize, _configuration.SendingBufferLength);
+            _unmanagedRioBuffer = new UnmanagedRioBuffer<SendRequestEntry>(ringBufferSize, _configuration.SendingBufferLength);
 
             _disruptor = CreateDisruptor(sendingCompletionQueue, sessionManager);
             _ringBuffer = _disruptor.RingBuffer;
         }
 
-        private unsafe UnmanagedDisruptor<RequestEntry> CreateDisruptor(IRioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
+        private unsafe UnmanagedDisruptor<SendRequestEntry> CreateDisruptor(IRioCompletionQueue sendingCompletionQueue, ISessionManager sessionManager)
         {
             var waitStrategy = CreateWaitStrategy();
 
-            var disruptor = new UnmanagedDisruptor<RequestEntry>((IntPtr)_unmanagedRioBuffer.FirstEntry,
+            var disruptor = new UnmanagedDisruptor<SendRequestEntry>((IntPtr)_unmanagedRioBuffer.FirstEntry,
                                                                  _unmanagedRioBuffer.EntryReservedSpaceSize,
                                                                  _unmanagedRioBuffer.Length,
                                                                  new ThreadPerTaskScheduler(),
@@ -48,7 +48,7 @@ namespace Abc.Zerio.Core
             return disruptor;
         }
 
-        private static void ConfigureWaitStrategy(IWaitStrategy waitStrategy, UnmanagedDisruptor<RequestEntry> disruptor, SendCompletionProcessor sendCompletionProcessor)
+        private static void ConfigureWaitStrategy(IWaitStrategy waitStrategy, UnmanagedDisruptor<SendRequestEntry> disruptor, SendCompletionProcessor sendCompletionProcessor)
         {
             switch (waitStrategy)
             {
@@ -103,10 +103,10 @@ namespace Abc.Zerio.Core
             _unmanagedRioBuffer?.Dispose();
         }
 
-        internal unsafe AcquiredRequestEntry AcquireRequestEntry()
+        internal unsafe AcquiredSendRequestEntry AcquireSendRequestEntry()
         {
             var sequence = _ringBuffer.Next();
-            return new AcquiredRequestEntry(_ringBuffer, sequence, (RequestEntry*)Unsafe.AsPointer(ref _ringBuffer[sequence]));
+            return new AcquiredSendRequestEntry(_ringBuffer, sequence, (SendRequestEntry*)Unsafe.AsPointer(ref _ringBuffer[sequence]));
         }
 
         private class ThreadPerTaskScheduler : TaskScheduler

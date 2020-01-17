@@ -7,7 +7,7 @@ namespace Abc.Zerio.Core
         private readonly int _bufferSegmentLength;
 
         public int Size;
-        public RequestEntry* BatchingEntry;
+        public SendRequestEntry* BatchingEntry;
         public long BatchingEntrySequence;
 
         public bool IsEmpty => BatchingEntry == null;
@@ -17,14 +17,14 @@ namespace Abc.Zerio.Core
             _bufferSegmentLength = bufferSegmentLength;
         }
 
-        public void Initialize(ref RequestEntry currentEntry, long sequence)
+        public void Initialize(ref SendRequestEntry currentEntry, long sequence)
         {
-            BatchingEntry = (RequestEntry*)Unsafe.AsPointer(ref currentEntry);
+            BatchingEntry = (SendRequestEntry*)Unsafe.AsPointer(ref currentEntry);
             BatchingEntrySequence = sequence;
             Size = 1;
         }
 
-        public bool TryAppend(ref RequestEntry otherEntry)
+        public bool TryAppend(ref SendRequestEntry otherEntry)
         {
             var otherEntryLength = otherEntry.RioBufferSegmentDescriptor.Length;
             if (otherEntryLength > _bufferSegmentLength - BatchingEntry->RioBufferSegmentDescriptor.Length)

@@ -1,5 +1,4 @@
-﻿using System;
-using Abc.Zerio.Interop;
+﻿using Abc.Zerio.Interop;
 
 namespace Abc.Zerio.Core
 {

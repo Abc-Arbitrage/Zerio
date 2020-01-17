@@ -5,15 +5,15 @@ using Disruptor;
 
 namespace Abc.Zerio.Core
 {
-    internal unsafe class SendRequestProcessor : IValueEventHandler<RequestEntry>, ILifecycleAware
+    internal unsafe class SendRequestProcessor : IValueEventHandler<SendRequestEntry>, ILifecycleAware
     {
         private readonly HashSet<ISession> _sessionsWithPendingSends;
         private readonly ISessionManager _sessionManager;
         private readonly int _maxSendBatchSize;
-        private readonly int _maxConflatedSendRequestCount;
         private readonly bool _batchSendRequests;
         private readonly bool _conflateSendRequestsOnProcessing;
         private readonly bool _conflateSendRequestsOnEnqueuing;
+        private readonly int _maxConflatedSendRequestCount;
 
         private int _currentBatchSize;
 
@@ -36,16 +36,16 @@ namespace Abc.Zerio.Core
             Thread.CurrentThread.Name = nameof(SendRequestProcessor);
         }
 
-        public void OnEvent(ref RequestEntry entry, long sequence, bool endOfBatch)
+        public void OnEvent(ref SendRequestEntry entry, long sequence, bool endOfBatch)
         {
             if (!_sessionManager.TryGetSession(entry.SessionId, out var session))
             {
-                entry.Type = RequestType.ExpiredSend;
+                entry.EntryType = SendRequestEntryType.ExpiredSend;
                 return;
             }
 
             if (_conflateSendRequestsOnEnqueuing)
-                session.Conflater.DetachFrom((RequestEntry*)Unsafe.AsPointer(ref entry));
+                session.Conflater.DetachFrom((SendRequestEntry*)Unsafe.AsPointer(ref entry));
 
             if (_conflateSendRequestsOnProcessing)
                 ConflateAndEnqueueSendRequest(session, ref entry, sequence, endOfBatch);
@@ -53,7 +53,7 @@ namespace Abc.Zerio.Core
                 EnqueueSendRequest(session, ref entry, sequence, endOfBatch);
         }
 
-        public void ConflateAndEnqueueSendRequest(ISession session, ref RequestEntry currentEntry, long sequence, bool endOfBatch)
+        public void ConflateAndEnqueueSendRequest(ISession session, ref SendRequestEntry currentEntry, long sequence, bool endOfBatch)
         {
             bool currentEntryWasConsumed;
 
@@ -68,14 +68,14 @@ namespace Abc.Zerio.Core
             {
                 currentEntryWasConsumed = sendingBatch.TryAppend(ref currentEntry);
                 if (currentEntryWasConsumed)
-                    currentEntry.Type = RequestType.ConflatedSend;
+                    currentEntry.EntryType = SendRequestEntryType.ConflatedSend;
             }
 
             var shouldEnqueueToRioBatch = endOfBatch || !currentEntryWasConsumed || sendingBatch.Size > _maxConflatedSendRequestCount;
             if (!shouldEnqueueToRioBatch)
                 return;
 
-            ref var batchingEntry = ref Unsafe.AsRef<RequestEntry>(sendingBatch.BatchingEntry);
+            ref var batchingEntry = ref Unsafe.AsRef<SendRequestEntry>(sendingBatch.BatchingEntry);
             
             if (currentEntryWasConsumed)
             {
@@ -95,7 +95,7 @@ namespace Abc.Zerio.Core
             }
         }
 
-        private void EnqueueSendRequest(ISession session, ref RequestEntry data, long sequence, bool endOfBatch)
+        private void EnqueueSendRequest(ISession session, ref SendRequestEntry data, long sequence, bool endOfBatch)
         {
             if (!_batchSendRequests)
             {

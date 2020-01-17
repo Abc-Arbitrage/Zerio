@@ -6,7 +6,7 @@ using Disruptor;
 
 namespace Abc.Zerio.Core
 {
-    internal unsafe class SendCompletionProcessor : IValueEventHandler<RequestEntry>, ILifecycleAware, IEventProcessorSequenceAware
+    internal unsafe class SendCompletionProcessor : IValueEventHandler<SendRequestEntry>, ILifecycleAware, IEventProcessorSequenceAware
     {
         private readonly CompletionTracker _completionTracker = new CompletionTracker();
         private readonly IRioCompletionQueue _sendCompletionQueue;
@@ -28,11 +28,11 @@ namespace Abc.Zerio.Core
             _waitStrategy = CompletionPollingWaitStrategyFactory.Create(configuration.SendCompletionPollingWaitStrategyType);
         }
 
-        public void OnEvent(ref RequestEntry entry, long sequence, bool endOfBatch)
+        public void OnEvent(ref SendRequestEntry entry, long sequence, bool endOfBatch)
         {
             try
             {
-                if (entry.Type != RequestType.Send)
+                if (entry.EntryType != SendRequestEntryType.Send)
                 {
                     _completionTracker.MarketAsCompleted(sequence);
                     return;

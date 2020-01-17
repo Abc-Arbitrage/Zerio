@@ -42,6 +42,24 @@ namespace Abc.Zerio.Core
             }
         }
 
+        private bool ConsumeLengthBytes(Span<byte> bytes, int bytesTransferred, ref int offset)
+        {
+            var bytesToCopy = Math.Min(sizeof(int) - _readBytes, bytesTransferred - offset);
+            Unsafe.CopyBlockUnaligned(ref _buffer[_readBytes], ref bytes[offset], (uint)bytesToCopy);
+            _readBytes += bytesToCopy;
+
+            if (_readBytes != sizeof(int))
+                return true;
+
+            _messageLength = Unsafe.ReadUnaligned<int>(ref _buffer[0]);
+
+            offset += bytesToCopy;
+
+            _readState = ReadState.AccumulatingMessage;
+            _readBytes = 0;
+            return false;
+        }
+
         private bool ConsumeMessageBytes(Span<byte> bytes, int bytesTransferred, ref int offset)
         {
             var bytesToCopy = Math.Min(_messageLength - _readBytes, bytesTransferred - offset);
@@ -57,24 +75,6 @@ namespace Abc.Zerio.Core
 
             _messageLength = 0;
             _readState = ReadState.AccumulatingLength;
-            _readBytes = 0;
-            return false;
-        }
-
-        private bool ConsumeLengthBytes(Span<byte> bytes, int bytesTransferred, ref int offset)
-        {
-            var bytesToCopy = Math.Min(sizeof(int) - _readBytes, bytesTransferred - offset);
-            Unsafe.CopyBlockUnaligned(ref _buffer[_readBytes], ref bytes[offset], (uint)bytesToCopy);
-            _readBytes += bytesToCopy;
-
-            if (_readBytes != sizeof(int))
-                return true;
-
-            _messageLength = Unsafe.ReadUnaligned<int>(ref _buffer[0]);
-
-            offset += bytesToCopy;
-
-            _readState = ReadState.AccumulatingMessage;
             _readBytes = 0;
             return false;
         }

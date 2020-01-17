@@ -1,6 +1,6 @@
 namespace Abc.Zerio.Core
 {
-    public enum RequestType
+    public enum SendRequestEntryType
     {
         Undefined,
         Send,
