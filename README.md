@@ -76,12 +76,12 @@ Both `ZerioClient` and `ZerioServer` can be used to communicate with each other 
 
 ## Design overview
 
-![Design overview](https://github.com/Abc-Arbitrage/Zerio/blob/master/doc/zerio_overview.png)
+![Design overview](https://github.com/Abc-Arbitrage/Zerio/blob/master/doc/zerio-overview.png)
 
 ## Sending path
 
-![Sending path](https://github.com/Abc-Arbitrage/Zerio/blob/master/doc/zerio_send.png)
+![Sending path](https://github.com/Abc-Arbitrage/Zerio/blob/master/doc/zerio-sending-path.png)
 
 ## Receiving path
 
-![Receiving path](https://github.com/Abc-Arbitrage/Zerio/blob/master/doc/zerio_receive.png)
+![Receiving path](https://github.com/Abc-Arbitrage/Zerio/blob/master/doc/zerio-receiving-path.png)
