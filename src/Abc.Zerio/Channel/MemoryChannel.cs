@@ -1,5 +1,7 @@
 using System;
+using System.Runtime.CompilerServices;
 using System.Threading;
+using Abc.Zerio.Core;
 
 namespace Abc.Zerio.Channel
 {
@@ -13,6 +15,8 @@ namespace Abc.Zerio.Channel
         private int _isRunning;
         private Thread _consumerThread;
 
+        public event ClientMessageReceivedDelegate MessageReceived;
+        
         public void Start()
         {
             if (_channelMemoryBuffer != null)
@@ -34,14 +38,17 @@ namespace Abc.Zerio.Channel
 
         public void Send(ReadOnlySpan<byte> messageBytes)
         {
-            var frame = _writer.AcquireFrame(messageBytes.Length);
+            var frameLength = sizeof(int) + messageBytes.Length;
+            
+            var frame = _writer.AcquireFrame(frameLength);
             if (frame.IsEmpty)
                 throw new InvalidOperationException($"Unable to acquire frame for message, Length: {messageBytes.Length}");
 
             var isValid = false;
             try
             {
-                var span = new Span<byte>(frame.DataPosition, (int)frame.DataLength);
+                Unsafe.Write(frame.DataPosition, messageBytes.Length);
+                var span = new Span<byte>(frame.DataPosition + sizeof(int), (int)frame.DataLength);
                 messageBytes.CopyTo(span);
                 
                 isValid = true;
@@ -67,16 +74,12 @@ namespace Abc.Zerio.Channel
 
                 spinWait.Reset();
 
-                if (frame.DataLength < sizeof(long) + sizeof(uint))
+                if (frame.DataLength < sizeof(int))
                     throw new InvalidOperationException($"Invalid frame length DataLength: {frame.DataLength} FrameLength: {frame.FrameLength}");
 
-                OnMessageBytesReceived(new ReadOnlySpan<byte>(frame.DataPosition, (int)frame.DataLength));
+                var messageLength = Unsafe.ReadUnaligned<int>(frame.DataPosition);
+                MessageReceived?.Invoke(new ReadOnlySpan<byte>(frame.DataPosition + sizeof(int), messageLength));
             }
-        }
-
-        private void OnMessageBytesReceived(ReadOnlySpan<byte> messageBytes)
-        {
-            throw new NotImplementedException();
         }
 
         public void Stop()
