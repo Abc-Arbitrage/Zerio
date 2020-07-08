@@ -11,6 +11,7 @@ namespace Abc.Zerio.Channel
         private long _readPosition;
 
         public IReadOnlyCollection<ChannelMemoryPartition> Partitions => _partitions;
+        public event Action<FrameBlock, bool> FrameRead;
 
         public ChannelMemoryReader(ChannelMemoryPartitionGroup partitions)
         {
@@ -18,7 +19,9 @@ namespace Abc.Zerio.Channel
             _partitionDataCapacity = _partitions[0].DataCapacity;
         }
 
-        public FrameBlock TryReadNextFrame()
+        private readonly List<FrameBlock> _currentBatch = new List<FrameBlock>(256);
+
+        public bool TryReadFrameBatch()
         {
             while (true)
             {
@@ -28,24 +31,26 @@ namespace Abc.Zerio.Channel
                 var partition = _partitions[partitionIndex];
 
                 if (!partition.IsReadyToRead)
-                    return FrameBlock.Empty;
+                    return TryRaiseBatch();
 
                 var frameLength = *(long*)(partition.DataPointer + readOffsetInPartition);
 
                 if (frameLength > 0)
                 {
                     _readPosition += frameLength;
-                    return new FrameBlock(partition.DataPointer + readOffsetInPartition, frameLength);
+                    _currentBatch.Add(new FrameBlock(partition.DataPointer + readOffsetInPartition, frameLength));
+                    continue;
                 }
 
                 switch (frameLength)
                 {
                     case 0:
-                        return FrameBlock.Empty;
+                        return TryRaiseBatch();
 
                     case FrameBlock.EndOfPartitionMarker:
                         var nextPartitionIndex = (partitionIndex + 1) % _partitions.Length;
                         _readPosition = nextPartitionIndex * _partitionDataCapacity;
+                        TryRaiseBatch();
                         partition.MarkAsReadEnded();
                         continue;
 
@@ -54,6 +59,20 @@ namespace Abc.Zerio.Channel
                         continue;
                 }
             }
+        }
+
+        private bool TryRaiseBatch()
+        {
+            if (_currentBatch.Count == 0)
+                return false;
+
+            for (var i = 0; i < _currentBatch.Count; i++)
+            {
+                FrameRead?.Invoke(_currentBatch[i], i == _currentBatch.Count - 1);
+            }
+
+            _currentBatch.Clear();
+            return true;
         }
     }
 }

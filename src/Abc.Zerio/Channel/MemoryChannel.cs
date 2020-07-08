@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Abc.Zerio.Core;
@@ -7,7 +8,7 @@ namespace Abc.Zerio.Channel
 {
     public unsafe class MemoryChannel
     {
-        private ChannelMemoryBuffer _channelMemoryBuffer;
+        private ChannelMemoryBuffer _buffer;
         private ChannelMemoryCleaner _cleaner;
         private ChannelMemoryReader _reader;
         private ChannelMemoryWriter _writer;
@@ -19,13 +20,14 @@ namespace Abc.Zerio.Channel
         
         public void Start()
         {
-            if (_channelMemoryBuffer != null)
-                throw new InvalidOperationException("The transport is already started");
+            if (_buffer != null)
+                throw new InvalidOperationException("The channel is already started");
 
-            _channelMemoryBuffer = new ChannelMemoryBuffer();
+            _buffer = new ChannelMemoryBuffer();
 
-            _reader = new ChannelMemoryReader(_channelMemoryBuffer.ConsumerPartitionGroup);
-            _writer = new ChannelMemoryWriter(_channelMemoryBuffer.ProducerPartitionGroup);
+            _reader = new ChannelMemoryReader(_buffer.ConsumerPartitionGroup);
+            _reader.FrameRead += OnFrameRead;
+            _writer = new ChannelMemoryWriter(_buffer.ProducerPartitionGroup);
             
             if (Interlocked.Exchange(ref _isRunning, 1) != 0)
                 return;
@@ -65,30 +67,29 @@ namespace Abc.Zerio.Channel
 
             while (_isRunning == 1)
             {
-                var frame = _reader.TryReadNextFrame();
-                if (frame.IsEmpty)
-                {
+                if (!_reader.TryReadFrameBatch())
                     spinWait.SpinOnce();
-                    continue;
-                }
-
+                
                 spinWait.Reset();
-
-                if (frame.DataLength < sizeof(int))
-                    throw new InvalidOperationException($"Invalid frame length DataLength: {frame.DataLength} FrameLength: {frame.FrameLength}");
-
-                var messageLength = Unsafe.ReadUnaligned<int>(frame.DataPosition);
-                MessageReceived?.Invoke(new ReadOnlySpan<byte>(frame.DataPosition + sizeof(int), messageLength));
             }
         }
 
+        private void OnFrameRead(FrameBlock frame, bool endOfBatch)
+        {
+            if (frame.DataLength < sizeof(int))
+                throw new InvalidOperationException($"Invalid frame length DataLength: {frame.DataLength} FrameLength: {frame.FrameLength}");
+
+            var messageLength = Unsafe.ReadUnaligned<int>(frame.DataPosition);
+            MessageReceived?.Invoke(new ReadOnlySpan<byte>(frame.DataPosition + sizeof(int), messageLength));
+        }
+        
         public void Stop()
         {
             if (Interlocked.Exchange(ref _isRunning, 0) != 1)
                 return;
 
             _cleaner.Dispose();
-            _channelMemoryBuffer.Dispose();
+            _buffer.Dispose();
             
             _consumerThread?.Join();
         }
