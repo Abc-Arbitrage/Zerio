@@ -7,14 +7,13 @@ namespace Abc.Zerio.Channel
     {
         private const int _partitionCount = 3;
         private const int _mainPartitionSize = 32 * 1024 * 1024;
-        private const int _bufferSize = _partitionCount * _mainPartitionSize;
 
         private byte* _dataPointer;
         private IntPtr _buffer;
 
-        public ChannelMemoryBuffer()
+        public ChannelMemoryBuffer(int partitionSize)
         {
-            _dataPointer = AllocateBuffer();
+            _dataPointer = AllocateBuffer(partitionSize);
 
             // The pointer is always aligned to the system allocation granularity, the assertion below should never fire
             if (!MemoryUtil.IsAlignedToCacheLine((long)_dataPointer))
@@ -29,10 +28,12 @@ namespace Abc.Zerio.Channel
 
         public byte* DataPointer => _dataPointer;
 
-        private byte* AllocateBuffer()
+        private byte* AllocateBuffer(int partitionSize)
         {
+            var bufferSize = _partitionCount * partitionSize;
+            
             const int allocationType = Kernel32.Consts.MEM_COMMIT | Kernel32.Consts.MEM_RESERVE;
-            _buffer = Kernel32.VirtualAlloc(IntPtr.Zero, _bufferSize, allocationType, Kernel32.Consts.PAGE_READWRITE);
+            _buffer = Kernel32.VirtualAlloc(IntPtr.Zero, (uint)bufferSize, allocationType, Kernel32.Consts.PAGE_READWRITE);
             if (_buffer == IntPtr.Zero)
                 WinSock.ThrowLastWsaError();
 
