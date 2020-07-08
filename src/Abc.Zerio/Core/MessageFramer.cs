@@ -57,7 +57,7 @@ namespace Abc.Zerio.Core
                 return true;
 
             _messageLength = Unsafe.ReadUnaligned<int>(ref _buffer[0]);
-            _frameLength = (int)FrameBlock.GetFrameLength(_messageLength); // Actual frame length we need to accumulate before 
+            _frameLength = (int)FrameBlock.GetFrameLength(sizeof(int) + _messageLength) - sizeof(int); // Actual frame length we need to accumulate before 
 
             offset += bytesToCopy;
 

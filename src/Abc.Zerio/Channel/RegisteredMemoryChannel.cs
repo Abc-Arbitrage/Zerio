@@ -68,7 +68,7 @@ namespace Abc.Zerio.Channel
         private void OnFrameRead(FrameBlock frame, bool endOfBatch, bool cleanupNeeded)
         {
 
-            FrameRead?.Invoke(new ChannelFrame(frame.DataPosition, frame.DataLength), endOfBatch, cleanupNeeded);
+            FrameRead?.Invoke(new ChannelFrame(frame.DataPosition, frame.FrameLength), endOfBatch, cleanupNeeded);
         }
 
         public void Stop()

@@ -3,7 +3,6 @@ using System.Linq;
 using System.Threading;
 using Abc.Zerio.Channel;
 using Abc.Zerio.Core;
-using Abc.Zerio.Interop;
 
 namespace Abc.Zerio
 {
