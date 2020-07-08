@@ -13,58 +13,6 @@ namespace Abc.Zerio.Tests.Channel
     public class MemoryChannelTests
     {
         [Test]
-        public void Should_write_from_multiple_threads()
-        {
-            // Arrange
-            const int taskCount = 5;
-            const int messageCountPerTask = 100_000;
-            var countdownSignal = new CountdownEvent(taskCount * messageCountPerTask);
-
-            var receivedMessages = new List<string>();
-
-            var memoryChannel = new RegisteredMemoryChannel();
-            memoryChannel.MessageReceived +=  (messageBytes, endOfBatch, cleanupNeeded)  =>
-            {
-                receivedMessages.Add(Encoding.ASCII.GetString(messageBytes.ToArray()));
-                countdownSignal.Signal();
-                
-                if(cleanupNeeded)
-                    memoryChannel.CleanupPartitions();
-            };
-
-            memoryChannel.Start(false);
-
-            // Act
-            var publishingTasks = Enumerable.Range(0, taskCount).Select(x => Task.Run(() =>
-            {
-                for (var i = 0; i < messageCountPerTask; i++)
-                {
-                    var messageBytes = Encoding.ASCII.GetBytes($"T{x};M{i}");
-                    memoryChannel.Send(messageBytes.AsSpan());
-                }
-            }));
-
-            Task.WaitAll(publishingTasks.ToArray());
-
-            // Assert
-            countdownSignal.Wait(TimeSpan.FromMilliseconds(500));
-            Assert.AreEqual(receivedMessages.Count, taskCount * messageCountPerTask);
-
-            for (var i = 0; i < taskCount; i++)
-            {
-                var taskMessages = receivedMessages.Where(x => x.StartsWith($"T{i}")).ToArray();
-                Assert.AreEqual(taskMessages.Length, messageCountPerTask);
-
-                for (var j = 0; j < messageCountPerTask; j++)
-                {
-                    Assert.AreEqual(taskMessages[j], $"T{i};M{j}");
-                }
-            }
-
-            memoryChannel.Stop();
-        }
-
-        [Test]
         public void Should_be_manually_polled()
         {
             // Arrange
@@ -83,8 +31,6 @@ namespace Abc.Zerio.Tests.Channel
                 if(cleanupNeeded)
                     memoryChannel.CleanupPartitions();
             };
-
-            memoryChannel.Start(true);
 
             Task.Run(() =>
             {
@@ -148,7 +94,6 @@ namespace Abc.Zerio.Tests.Channel
             {
                 var memoryChannel = new RegisteredMemoryChannel();
                 memoryChannel.MessageReceived += (messageBytes, batch, cleanupNeeded) =>  OnMessageReceived(memoryChannel, messageBytes, batch, cleanupNeeded);
-                memoryChannel.Start(true);
                 memoryChannels.Add(memoryChannel);
 
                 var taskId = i;

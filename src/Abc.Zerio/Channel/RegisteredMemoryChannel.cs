@@ -1,45 +1,23 @@
 using System;
 using System.Runtime.CompilerServices;
-using System.Threading;
 
 namespace Abc.Zerio.Channel
 {
     public unsafe class RegisteredMemoryChannel
     {
-        private readonly int _partitionSize;
-        private RegisteredMemoryChannelBuffer _buffer;
-        private RegisteredMemoryChannelReader _reader;
-        private RegisteredMemoryChannelWriter _writer;
-
-        private int _isRunning;
-        private Thread _consumerThread;
+        private readonly RegisteredMemoryChannelBuffer _buffer;
+        private readonly RegisteredMemoryChannelReader _reader;
+        private readonly RegisteredMemoryChannelWriter _writer;
 
         public event ChannelMessageReceivedDelegate MessageReceived;
 
         public RegisteredMemoryChannel(int partitionSize = 32 * 1024 * 2014)
         {
-            _partitionSize = partitionSize;
-        }
-
-        public void Start(bool manualPooling)
-        {
-            if (_buffer != null)
-                throw new InvalidOperationException("The channel is already started");
-
-            _buffer = new RegisteredMemoryChannelBuffer(_partitionSize);
+            _buffer = new RegisteredMemoryChannelBuffer(partitionSize);
             _reader = new RegisteredMemoryChannelReader(_buffer.ConsumerPartitionGroup);
             _writer = new RegisteredMemoryChannelWriter(_buffer.ProducerPartitionGroup);
 
             _reader.FrameRead += OnFrameRead;
-            
-            if (Interlocked.Exchange(ref _isRunning, 1) != 0)
-                return;
-
-            if (!manualPooling)
-            {
-                _consumerThread = new Thread(InboundReadThread) { IsBackground = true };
-                _consumerThread.Start();
-            }
         }
 
         public void CleanupPartitions()
@@ -70,24 +48,8 @@ namespace Abc.Zerio.Channel
             }
         }
 
-        private void InboundReadThread()
-        {
-            var spinWait = new SpinWait();
-
-            while (_isRunning == 1)
-            {
-                if (!_reader.TryReadFrameBatch())
-                    spinWait.SpinOnce();
-
-                spinWait.Reset();
-            }
-        }
-
         public bool TryPoll()
         {
-            if (_isRunning == 0)
-                throw new InvalidOperationException();
-
             return _reader.TryReadFrameBatch();
         }
 
@@ -102,12 +64,7 @@ namespace Abc.Zerio.Channel
 
         public void Stop()
         {
-            if (Interlocked.Exchange(ref _isRunning, 0) != 1)
-                return;
-
             _buffer.Dispose();
-
-            _consumerThread?.Join();
         }
     }
 }
