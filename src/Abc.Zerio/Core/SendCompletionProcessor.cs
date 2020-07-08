@@ -1,98 +1,74 @@
 using System;
-using System.Runtime.InteropServices;
 using System.Threading;
 using Abc.Zerio.Interop;
-using Disruptor;
 
 namespace Abc.Zerio.Core
 {
-    internal unsafe class SendCompletionProcessor : IValueEventHandler<SendRequestEntry>, ILifecycleAware, IEventProcessorSequenceAware
+    internal class SendCompletionProcessor
     {
-        private readonly CompletionTracker _completionTracker = new CompletionTracker();
-        private readonly IRioCompletionQueue _sendCompletionQueue;
-        private readonly ICompletionPollingWaitStrategy _waitStrategy;
+        private readonly InternalZerioConfiguration _configuration;
+        private readonly IRioCompletionQueue _receivingCompletionQueue;
+        private readonly ISessionManager _sessionManager;
 
-        private readonly RIO_RESULT[] _completionResults;
-        private readonly RIO_RESULT* _completionResultsPointer;
-        private GCHandle _completionResultsHandle;
+        private bool _isRunning;
+        private Thread _completionWorkerThread;
 
-        private ISequence _entryReleasingSequence;
-
-        public SendCompletionProcessor(InternalZerioConfiguration configuration, IRioCompletionQueue sendCompletionQueue)
+        public SendCompletionProcessor(InternalZerioConfiguration configuration, IRioCompletionQueue receivingCompletionQueue, ISessionManager sessionManager)
         {
-            _sendCompletionQueue = sendCompletionQueue;
-            _completionResults = new RIO_RESULT[configuration.MaxSendCompletionResults];
-            _completionResultsHandle = GCHandle.Alloc(_completionResults, GCHandleType.Pinned);
-            _completionResultsPointer = (RIO_RESULT*)_completionResultsHandle.AddrOfPinnedObject().ToPointer();
-
-            _waitStrategy = CompletionPollingWaitStrategyFactory.Create(configuration.SendCompletionPollingWaitStrategyType);
+            _configuration = configuration;
+            _receivingCompletionQueue = receivingCompletionQueue;
+            _sessionManager = sessionManager;
         }
 
-        public void OnEvent(ref SendRequestEntry entry, long sequence, bool endOfBatch)
+        public void Start()
         {
-            try
+            _isRunning = true;
+            _completionWorkerThread = new Thread(ProcessCompletions) { IsBackground = true };
+            _completionWorkerThread.Start(_receivingCompletionQueue);
+        }
+
+        private unsafe void ProcessCompletions(object state)
+        {
+            Thread.CurrentThread.Name = nameof(ReceiveCompletionProcessor);
+
+            var completionQueue = (IRioCompletionQueue)state;
+            var maxCompletionResults = _configuration.MaxReceiveCompletionResults;
+            var results = stackalloc RIO_RESULT[maxCompletionResults];
+
+            var waitStrategy = CompletionPollingWaitStrategyFactory.Create(_configuration.SendCompletionPollingWaitStrategyType);
+
+            while (_isRunning)
             {
-                if (entry.EntryType != SendRequestEntryType.Send)
+                var resultCount = completionQueue.TryGetCompletionResults(results, maxCompletionResults);
+                if (resultCount == 0)
                 {
-                    _completionTracker.MarkAsCompleted(sequence);
-                    return;
+                    waitStrategy.Wait();
+                    continue;
                 }
 
-                _waitStrategy.Reset();
+                waitStrategy.Reset();
 
-                while (!_completionTracker.IsCompleted(sequence))
+                for (var i = 0; i < resultCount; i++)
                 {
-                    var resultCount = _sendCompletionQueue.TryGetCompletionResults(_completionResultsPointer, _completionResults.Length);
-                    if (resultCount == 0)
-                    {
-                        _waitStrategy.Wait();
-                        continue;
-                    }
+                    var result = results[i];
+                    var sessionId = (int)result.ConnectionCorrelation;
+                    
+                    if (!_sessionManager.TryGetSession(sessionId, out var session))
+                        return;
+                    
+                    var shouldRequestChannelCleanup = result.RequestCorrelation == 1;
 
-                    _waitStrategy.Reset();
-
-                    for (var i = 0; i < resultCount; i++)
-                    {
-                        var result = _completionResultsPointer[i];
-                        _completionTracker.MarkAsCompleted(result.RequestCorrelation);
-                    }
+                    if(shouldRequestChannelCleanup)
+                        session.SendingChannel.CleanupPartitions();
+           
                 }
             }
-            finally
-            {
-                entry.Reset();
-                
-                _entryReleasingSequence.SetValue(sequence);
-            }
         }
 
-        public void OnStart()
+        public void Stop()
         {
-            Thread.CurrentThread.Name = nameof(SendCompletionProcessor);
-        }
-
-        public void SetSequenceCallback(ISequence entryReleasingSequence)
-        {
-            _entryReleasingSequence = entryReleasingSequence;
-        }
-
-        public void OnShutdown()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        private void Dispose(bool disposing)
-        {
-            _completionResultsHandle.Free();
-
-            if (disposing)
-                _sendCompletionQueue?.Dispose();
-        }
-
-        ~SendCompletionProcessor()
-        {
-            Dispose(false);
+            _isRunning = false;
+            _completionWorkerThread.Join(TimeSpan.FromSeconds(2));
         }
     }
 }

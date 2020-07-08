@@ -54,7 +54,7 @@ namespace Abc.Zerio.Tcp
             MessageReceived?.Invoke(message);
         }
 
-        public void Send(ReadOnlySpan<byte> message) => _sender.Send(message);
+        public void Send(ReadOnlySpan<byte> messageBytes) => _sender.Send(messageBytes);
 
         public void Stop()
         {

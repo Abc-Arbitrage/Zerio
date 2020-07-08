@@ -10,7 +10,7 @@ namespace Abc.Zerio.Core
         event Action Disconnected;
         event ClientMessageReceivedDelegate MessageReceived;
 
-        void Send(ReadOnlySpan<byte> message);
+        void Send(ReadOnlySpan<byte> messageBytes);
 
         void Start(string peerId);
         void Stop();

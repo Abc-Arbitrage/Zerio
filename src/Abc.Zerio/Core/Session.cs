@@ -1,6 +1,7 @@
 using System;
 using System.Text;
 using System.Threading;
+using Abc.Zerio.Channel;
 using Abc.Zerio.Interop;
 
 namespace Abc.Zerio.Core
@@ -22,23 +23,22 @@ namespace Abc.Zerio.Core
         public event ServerMessageReceivedDelegate MessageReceived;
         public event Action<string> HandshakeReceived;
         public event Action<ISession> Closed;
-
+        
         public RioRequestQueue RequestQueue => _requestQueue;
-        public SendingRequestConflater Conflater { get; }
-        public SessionSendingBatch SendingBatch { get; }
-
+        public RegisteredMemoryChannel SendingChannel { get; }
+        
         public Session(int sessionId, InternalZerioConfiguration configuration, CompletionQueues completionQueues)
         {
             Id = sessionId;
             _configuration = configuration;
             _completionQueues = completionQueues;
+            
             _receivingBuffer = new UnmanagedRioBuffer<RioBufferSegment>(configuration.ReceivingBufferCount, _configuration.ReceivingBufferLength);
 
             _messageFramer = new MessageFramer(configuration.FramingBufferLength);
             _messageFramer.MessageFramed += OnMessageFramed;
 
-            SendingBatch = new SessionSendingBatch(configuration.SendingBufferLength);
-            Conflater = new SendingRequestConflater(sessionId, configuration.SendingBufferLength);
+            SendingChannel = new RegisteredMemoryChannel();
         }
 
         private void OnMessageFramed(ReadOnlySpan<byte> message)
@@ -54,6 +54,11 @@ namespace Abc.Zerio.Core
             MessageReceived?.Invoke(PeerId, message);
         }
 
+        public void Send(ReadOnlySpan<byte> messageBytes)
+        {
+            SendingChannel.Send(messageBytes);
+        }
+        
         public void Open(IntPtr socket)
         {
             Close();
@@ -111,6 +116,7 @@ namespace Abc.Zerio.Core
         {
             Close();
 
+            SendingChannel?.Stop();
             _receivingBuffer?.Dispose();
         }
     }

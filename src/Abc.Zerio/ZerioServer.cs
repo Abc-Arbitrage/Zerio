@@ -15,7 +15,7 @@ namespace Abc.Zerio
         private readonly int _listeningPort;
         private readonly IntPtr _listeningSocket;
 
-        private readonly SendRequestProcessingEngine _sendRequestProcessingEngine;
+        // private readonly SendRequestProcessingEngine _sendRequestProcessingEngine;
         private readonly ReceiveCompletionProcessor _receiveCompletionProcessor;
 
         private bool _isListening;
@@ -35,7 +35,7 @@ namespace Abc.Zerio
             _completionQueues = CreateCompletionQueues();
             _sessionManager = CreateSessionManager();
 
-            _sendRequestProcessingEngine = CreateSendRequestProcessingEngine();
+            // _sendRequestProcessingEngine = CreateSendRequestProcessingEngine();
             _receiveCompletionProcessor = CreateReceiveCompletionProcessor();
 
             _listeningSocket = CreateListeningSocket();
@@ -97,10 +97,7 @@ namespace Abc.Zerio
             if (!_sessionManager.TryGetSession(peerId, out ISession session))
                 return;
 
-            if(_configuration.ConflateSendRequestsOnEnqueuing)
-                session.Conflater.EnqueueOrMergeSendRequest(message, _sendRequestProcessingEngine);
-            else
-                _sendRequestProcessingEngine.RequestSend(session.Id, message);
+            session.Send(message);
         }
 
         public void Start(string peerId)
@@ -111,7 +108,7 @@ namespace Abc.Zerio
             CheckOnlyStartedOnce();
             
             _receiveCompletionProcessor.Start();
-            _sendRequestProcessingEngine.Start();
+            // _sendRequestProcessingEngine.Start();
 
             StartListening();
 
@@ -125,7 +122,7 @@ namespace Abc.Zerio
             
             StopAcceptLoop();
 
-            _sendRequestProcessingEngine.Stop();
+            // _sendRequestProcessingEngine.Stop();
             _receiveCompletionProcessor.Stop();
 
             IsRunning = false;
@@ -252,11 +249,6 @@ namespace Abc.Zerio
             return serverConfiguration.ToInternalConfiguration();
         }
 
-        private SendRequestProcessingEngine CreateSendRequestProcessingEngine()
-        {
-            return new SendRequestProcessingEngine(_configuration, _completionQueues.SendingQueue, _sessionManager);
-        }
-
         public bool IsRunning { get; private set; }
         public event Action<string> ClientConnected;
         public event Action<string> ClientDisconnected;
@@ -276,7 +268,7 @@ namespace Abc.Zerio
                 Stop();
 
                 _completionQueues?.Dispose();
-                _sendRequestProcessingEngine?.Dispose();
+                // _sendRequestProcessingEngine?.Dispose();
                 _sessionManager?.Dispose();
             }
         }

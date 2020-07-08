@@ -28,6 +28,7 @@ namespace Abc.Zerio.Channel
         public ChannelMemoryPartitionGroup ProducerPartitionGroup { get; set; }
 
         public byte* DataPointer => _dataPointer;
+        public IntPtr RegisteredBufferId => _bufferId;
 
         private byte* AllocateBuffer(int partitionSize)
         {

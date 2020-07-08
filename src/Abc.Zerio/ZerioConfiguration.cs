@@ -66,7 +66,6 @@ namespace Abc.Zerio
             
             configuration.BatchSendRequests = BatchSendRequests; 
             configuration.ConflateSendRequestsOnProcessing = ConflateSendRequestsOnProcessing;
-            configuration.ConflateSendRequestsOnEnqueuing = ConflateSendRequestsOnEnqueuing;
             configuration.MaxConflatedSendRequestCount = MaxConflatedSendRequestCount;
     
             configuration.MaxReceiveCompletionResults = ReceivingBufferCount;

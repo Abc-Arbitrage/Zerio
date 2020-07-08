@@ -1,4 +1,5 @@
 using System;
+using Abc.Zerio.Channel;
 
 namespace Abc.Zerio.Core
 {
@@ -13,11 +14,10 @@ namespace Abc.Zerio.Core
         
         string PeerId { get; }
         int Id { get;  }
-        SendingRequestConflater Conflater { get; }
         RioRequestQueue RequestQueue { get; }
-        SessionSendingBatch SendingBatch { get; }
-        
         event Action<string> HandshakeReceived;
         event Action<ISession> Closed;
+        void Send(ReadOnlySpan<byte> messageBytes);
+        RegisteredMemoryChannel SendingChannel { get; }
     }
 }

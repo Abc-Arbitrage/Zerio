@@ -44,7 +44,7 @@ namespace Abc.Zerio.Core
             }
         }
 
-        public unsafe void Send(long sequence, RIO_BUF* bufferSegmentDescriptor, bool flush)
+        public unsafe void Send(bool requestCleanupOnCompletion, RIO_BUF* bufferSegmentDescriptor, bool flush)
         {
             var lockTaken = false;
             var spinlock = new SpinLock();
@@ -56,7 +56,7 @@ namespace Abc.Zerio.Core
 
                 rioSendFlags |= RIO_SEND_FLAGS.DONT_NOTIFY;
                 
-                if (!WinSock.Extensions.Send(_handle, bufferSegmentDescriptor, 1, rioSendFlags, sequence))
+                if (!WinSock.Extensions.Send(_handle, bufferSegmentDescriptor, 1, rioSendFlags, requestCleanupOnCompletion ? 1 : 0))
                     WinSock.ThrowLastWsaError();
             }
             finally

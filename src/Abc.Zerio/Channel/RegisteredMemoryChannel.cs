@@ -10,7 +10,9 @@ namespace Abc.Zerio.Channel
         private readonly RegisteredMemoryChannelWriter _writer;
 
         public event ChannelMessageReceivedDelegate MessageReceived;
-
+        
+        public IntPtr RegisteredBufferId => _buffer.RegisteredBufferId;
+        
         public RegisteredMemoryChannel(int partitionSize = 32 * 1024 * 2014)
         {
             _buffer = new RegisteredMemoryChannelBuffer(partitionSize);
