@@ -1,14 +1,19 @@
 using System;
 using System.Runtime.CompilerServices;
+using Abc.Zerio.Channel;
 
 namespace Abc.Zerio.Core
 {
     internal class MessageFramer
     {
         private ReadState _readState = ReadState.AccumulatingLength;
+        
         private int _readBytes;
         private int _messageLength;
+        private int _frameLength;
+        
         private readonly byte[] _buffer ;
+        
 
         public event MessageFramedDelegate MessageFramed;
 
@@ -52,6 +57,7 @@ namespace Abc.Zerio.Core
                 return true;
 
             _messageLength = Unsafe.ReadUnaligned<int>(ref _buffer[0]);
+            _frameLength = (int)FrameBlock.GetFrameLength(_messageLength); // Actual frame length we need to accumulate before 
 
             offset += bytesToCopy;
 
@@ -62,11 +68,11 @@ namespace Abc.Zerio.Core
 
         private bool ConsumeMessageBytes(Span<byte> bytes, int bytesTransferred, ref int offset)
         {
-            var bytesToCopy = Math.Min(_messageLength - _readBytes, bytesTransferred - offset);
+            var bytesToCopy = Math.Min(_frameLength - _readBytes, bytesTransferred - offset);
             Unsafe.CopyBlockUnaligned(ref _buffer[_readBytes], ref bytes[offset], (uint)bytesToCopy);
             _readBytes += bytesToCopy;
 
-            if (_readBytes != _messageLength)
+            if (_readBytes != _frameLength)
                 return true;
 
             MessageFramed?.Invoke(new ReadOnlySpan<byte>(_buffer, 0, _messageLength));
@@ -74,6 +80,7 @@ namespace Abc.Zerio.Core
             offset += bytesToCopy;
 
             _messageLength = 0;
+            _frameLength = 0;
             _readState = ReadState.AccumulatingLength;
             _readBytes = 0;
             return false;

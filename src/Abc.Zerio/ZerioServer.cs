@@ -15,14 +15,14 @@ namespace Abc.Zerio
         private readonly int _listeningPort;
         private readonly IntPtr _listeningSocket;
 
-        // private readonly SendRequestProcessingEngine _sendRequestProcessingEngine;
         private readonly ReceiveCompletionProcessor _receiveCompletionProcessor;
+        private readonly SendCompletionProcessor _sendCompletionProcessor;
+        private readonly SendingProcessor _sendingProcessor;
 
         private bool _isListening;
         private Thread _listeningThread;
         private readonly AutoResetEvent _handshakeSignal = new AutoResetEvent(false);
         private int _started;
-
         public int ListeningPort { get; set; }
 
         public ZerioServer(int listeningPort, ZerioServerConfiguration serverConfiguration = null)
@@ -35,9 +35,10 @@ namespace Abc.Zerio
             _completionQueues = CreateCompletionQueues();
             _sessionManager = CreateSessionManager();
 
-            // _sendRequestProcessingEngine = CreateSendRequestProcessingEngine();
             _receiveCompletionProcessor = CreateReceiveCompletionProcessor();
-
+            _sendCompletionProcessor = CreateSendCompletionProcessor();
+            _sendingProcessor = CreateSendingProcessor();
+                
             _listeningSocket = CreateListeningSocket();
         }
 
@@ -52,11 +53,23 @@ namespace Abc.Zerio
         {
             return new CompletionQueues(_configuration);
         }
+        
+        private SendingProcessor CreateSendingProcessor()
+        {
+            var sendingProcessor = new SendingProcessor(_sessionManager);
+            return sendingProcessor;
+        }
 
         private ReceiveCompletionProcessor CreateReceiveCompletionProcessor()
         {
-            var receiver = new ReceiveCompletionProcessor(_configuration, _completionQueues.ReceivingQueue, _sessionManager);
-            return receiver;
+            var receiveCompletionProcessor = new ReceiveCompletionProcessor(_configuration, _completionQueues.ReceivingQueue, _sessionManager);
+            return receiveCompletionProcessor;
+        }
+        
+        private SendCompletionProcessor CreateSendCompletionProcessor()
+        {
+            var sendCompletionProcessor = new SendCompletionProcessor(_configuration, _completionQueues.SendingQueue, _sessionManager);
+            return sendCompletionProcessor;
         }
 
         private unsafe static IntPtr CreateListeningSocket()
@@ -108,8 +121,9 @@ namespace Abc.Zerio
             CheckOnlyStartedOnce();
             
             _receiveCompletionProcessor.Start();
-            // _sendRequestProcessingEngine.Start();
-
+            _sendCompletionProcessor.Start();
+            _sendingProcessor.Start();
+            
             StartListening();
 
             IsRunning = true;
@@ -122,9 +136,10 @@ namespace Abc.Zerio
             
             StopAcceptLoop();
 
-            // _sendRequestProcessingEngine.Stop();
             _receiveCompletionProcessor.Stop();
-
+            _sendCompletionProcessor.Stop();
+            _sendingProcessor.Stop();
+            
             IsRunning = false;
         }
 

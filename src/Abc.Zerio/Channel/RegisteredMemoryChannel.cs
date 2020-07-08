@@ -33,6 +33,12 @@ namespace Abc.Zerio.Channel
         
         public void Send(ReadOnlySpan<byte> messageBytes)
         {
+            // IMPORTANT:
+            // Currently, the protocol leaks to the memory channel, as we have to acquire a frame that is large
+            // enough to contain the length prefixed message bytes. But the acquired frame might be larger than
+            // that, due to alignment constraints. It does mean that the frames that will be read on the other side
+            // of the channel must be handled by a component that is aware of that. (See MessageFramer)
+
             var frameLength = sizeof(int) + messageBytes.Length;
 
             var frame = _writer.AcquireFrame(frameLength);

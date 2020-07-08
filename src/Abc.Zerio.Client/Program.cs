@@ -118,7 +118,7 @@ namespace Abc.Zerio.Client
 
                 case "r":
                 case "rio":
-                    return new ZerioClient(new IPEndPoint(Dns.GetHostAddresses(hostname).First(i => i.AddressFamily == AddressFamily.InterNetwork), Benchmark.TCP_PORT));
+                    return new ZerioClient(new IPEndPoint(Dns.GetHostAddresses(hostname).First(i => i.AddressFamily == AddressFamily.InterNetwork), Benchmark.RIO_PORT));
 
                 default:
                     throw new InvalidOperationException($"Unknown transport type: {transportType}");
