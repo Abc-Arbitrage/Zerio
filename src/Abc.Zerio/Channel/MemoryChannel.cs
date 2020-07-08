@@ -1,22 +1,19 @@
 using System;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using Abc.Zerio.Core;
 
 namespace Abc.Zerio.Channel
 {
     public unsafe class MemoryChannel
     {
         private ChannelMemoryBuffer _buffer;
-        private ChannelMemoryCleaner _cleaner;
         private ChannelMemoryReader _reader;
         private ChannelMemoryWriter _writer;
         
         private int _isRunning;
         private Thread _consumerThread;
 
-        public event ClientMessageReceivedDelegate MessageReceived;
+        public event ChannelMessageReceivedDelegate MessageReceived;
         
         public void Start(bool manualPooling)
         {
@@ -32,8 +29,6 @@ namespace Abc.Zerio.Channel
             if (Interlocked.Exchange(ref _isRunning, 1) != 0)
                 return;
 
-            _cleaner = new ChannelMemoryCleaner(_reader.Partitions);
-
             if (!manualPooling)
             {
                 _consumerThread = new Thread(InboundReadThread) { IsBackground = true };
@@ -41,6 +36,11 @@ namespace Abc.Zerio.Channel
             }
         }
 
+        public void CleanupPartitions()
+        {
+            _reader.CleanupPartition();
+        }
+        
         public void Send(ReadOnlySpan<byte> messageBytes)
         {
             var frameLength = sizeof(int) + messageBytes.Length;
@@ -85,13 +85,13 @@ namespace Abc.Zerio.Channel
             return _reader.TryReadFrameBatch();
         }
         
-        private void OnFrameRead(FrameBlock frame, bool endOfBatch)
+        private void OnFrameRead(FrameBlock frame, bool endOfBatch, bool cleanupNeeded)
         {
             if (frame.DataLength < sizeof(int))
                 throw new InvalidOperationException($"Invalid frame length DataLength: {frame.DataLength} FrameLength: {frame.FrameLength}");
 
             var messageLength = Unsafe.ReadUnaligned<int>(frame.DataPosition);
-            MessageReceived?.Invoke(new ReadOnlySpan<byte>(frame.DataPosition + sizeof(int), messageLength));
+            MessageReceived?.Invoke(new ReadOnlySpan<byte>(frame.DataPosition + sizeof(int), messageLength), endOfBatch, cleanupNeeded);
         }
         
         public void Stop()
@@ -99,7 +99,6 @@ namespace Abc.Zerio.Channel
             if (Interlocked.Exchange(ref _isRunning, 0) != 1)
                 return;
 
-            _cleaner.Dispose();
             _buffer.Dispose();
             
             _consumerThread?.Join();

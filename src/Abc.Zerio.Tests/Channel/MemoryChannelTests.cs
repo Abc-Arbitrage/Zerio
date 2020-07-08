@@ -17,16 +17,19 @@ namespace Abc.Zerio.Tests.Channel
         {
             // Arrange
             const int taskCount = 5;
-            const int messageCountPerTask = 10_000;
+            const int messageCountPerTask = 100_000;
             var countdownSignal = new CountdownEvent(taskCount * messageCountPerTask);
 
             var receivedMessages = new List<string>();
 
             var memoryChannel = new MemoryChannel();
-            memoryChannel.MessageReceived += messageBytes =>
+            memoryChannel.MessageReceived +=  (messageBytes, endOfBatch, cleanupNeeded)  =>
             {
                 receivedMessages.Add(Encoding.ASCII.GetString(messageBytes.ToArray()));
                 countdownSignal.Signal();
+                
+                if(cleanupNeeded)
+                    memoryChannel.CleanupPartitions();
             };
 
             memoryChannel.Start(false);
@@ -72,10 +75,13 @@ namespace Abc.Zerio.Tests.Channel
             var receivedMessages = new List<string>();
 
             var memoryChannel = new MemoryChannel();
-            memoryChannel.MessageReceived += messageBytes =>
+            memoryChannel.MessageReceived += (messageBytes, endOfBatch, cleanupNeeded) =>
             {
                 receivedMessages.Add(Encoding.ASCII.GetString(messageBytes.ToArray()));
                 countdownSignal.Signal();
+                
+                if(cleanupNeeded)
+                    memoryChannel.CleanupPartitions();
             };
 
             memoryChannel.Start(true);
@@ -126,10 +132,13 @@ namespace Abc.Zerio.Tests.Channel
 
             var receivedMessages = new List<string>();
 
-            void OnMessageReceived(ReadOnlySpan<byte> messageBytes)
+            void OnMessageReceived(MemoryChannel memoryChannel, ReadOnlySpan<byte> messageBytes, bool endOfBatch, bool cleanupNeeded) 
             {
                 receivedMessages.Add(Encoding.ASCII.GetString(messageBytes.ToArray()));
                 countdownSignal.Signal();
+                
+                if(cleanupNeeded)
+                    memoryChannel.CleanupPartitions();
             }
 
             var memoryChannels = new List<MemoryChannel>();
@@ -138,7 +147,7 @@ namespace Abc.Zerio.Tests.Channel
             for (var i = 0; i < taskCount; i++)
             {
                 var memoryChannel = new MemoryChannel();
-                memoryChannel.MessageReceived += OnMessageReceived;
+                memoryChannel.MessageReceived += (messageBytes, batch, cleanupNeeded) =>  OnMessageReceived(memoryChannel, messageBytes, batch, cleanupNeeded);
                 memoryChannel.Start(true);
                 memoryChannels.Add(memoryChannel);
 

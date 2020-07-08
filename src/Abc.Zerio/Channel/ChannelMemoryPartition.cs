@@ -16,8 +16,6 @@ namespace Abc.Zerio.Channel
         public int PartitionSize { get; }
         public int DataCapacity => PartitionSize - _dataOffset;
 
-        public event Action ReadComplete;
-
         public ChannelMemoryPartition(ChannelMemoryBuffer buffer, long offset, int size)
         {
             if (sizeof(IntPtr) < sizeof(long))
@@ -82,7 +80,6 @@ namespace Abc.Zerio.Channel
         public void MarkAsReadEnded()
         {
             SwitchStatus(PartitionStatus.ToClean, PartitionStatus.ReadOnly);
-            ReadComplete?.Invoke();
         }
 
         public void CleanIfRequired()

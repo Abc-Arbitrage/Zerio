@@ -10,8 +10,7 @@ namespace Abc.Zerio.Channel
         private readonly long _partitionDataCapacity;
         private long _readPosition;
 
-        public IReadOnlyCollection<ChannelMemoryPartition> Partitions => _partitions;
-        public event Action<FrameBlock, bool> FrameRead;
+        public event Action<FrameBlock, bool, bool> FrameRead;
 
         public ChannelMemoryReader(ChannelMemoryPartitionGroup partitions)
         {
@@ -31,7 +30,7 @@ namespace Abc.Zerio.Channel
                 var partition = _partitions[partitionIndex];
 
                 if (!partition.IsReadyToRead)
-                    return TryRaiseBatch();
+                    return TryFlushBatch(false);
 
                 var frameLength = *(long*)(partition.DataPointer + readOffsetInPartition);
 
@@ -45,13 +44,13 @@ namespace Abc.Zerio.Channel
                 switch (frameLength)
                 {
                     case 0:
-                        return TryRaiseBatch();
+                        return TryFlushBatch(false);
 
                     case FrameBlock.EndOfPartitionMarker:
                         var nextPartitionIndex = (partitionIndex + 1) % _partitions.Length;
                         _readPosition = nextPartitionIndex * _partitionDataCapacity;
-                        TryRaiseBatch();
                         partition.MarkAsReadEnded();
+                        TryFlushBatch(true);
                         continue;
 
                     default:
@@ -61,18 +60,31 @@ namespace Abc.Zerio.Channel
             }
         }
 
-        private bool TryRaiseBatch()
+        private bool TryFlushBatch(bool endOfPartition)
         {
             if (_currentBatch.Count == 0)
                 return false;
 
             for (var i = 0; i < _currentBatch.Count; i++)
             {
-                FrameRead?.Invoke(_currentBatch[i], i == _currentBatch.Count - 1);
+                var endOfBatch = i == _currentBatch.Count - 1;
+                
+                if(!endOfBatch)
+                    FrameRead?.Invoke(_currentBatch[i], false, false);
+                else
+                    FrameRead?.Invoke(_currentBatch[i], true, endOfPartition);
             }
 
             _currentBatch.Clear();
             return true;
+        }
+
+        public void CleanupPartition()
+        {
+            foreach (var memoryPartition in _partitions)
+            {
+                memoryPartition.CleanIfRequired();
+            }
         }
     }
 }
