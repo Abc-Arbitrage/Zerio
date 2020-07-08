@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Abc.Zerio.Channel
 {
-    internal unsafe class ChannelMemoryReader
+    internal unsafe class RegisteredMemoryChannelReader
     {
         private readonly ChannelMemoryPartition[] _partitions;
         private readonly long _partitionDataCapacity;
@@ -12,7 +12,7 @@ namespace Abc.Zerio.Channel
 
         public event Action<FrameBlock, bool, bool> FrameRead;
 
-        public ChannelMemoryReader(ChannelMemoryPartitionGroup partitions)
+        public RegisteredMemoryChannelReader(ChannelMemoryPartitionGroup partitions)
         {
             _partitions = partitions.ToArray();
             _partitionDataCapacity = _partitions[0].DataCapacity;

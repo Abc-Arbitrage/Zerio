@@ -4,19 +4,19 @@ using System.Threading;
 
 namespace Abc.Zerio.Channel
 {
-    public unsafe class MemoryChannel
+    public unsafe class RegisteredMemoryChannel
     {
         private readonly int _partitionSize;
-        private ChannelMemoryBuffer _buffer;
-        private ChannelMemoryReader _reader;
-        private ChannelMemoryWriter _writer;
+        private RegisteredMemoryChannelBuffer _buffer;
+        private RegisteredMemoryChannelReader _reader;
+        private RegisteredMemoryChannelWriter _writer;
 
         private int _isRunning;
         private Thread _consumerThread;
 
         public event ChannelMessageReceivedDelegate MessageReceived;
 
-        public MemoryChannel(int partitionSize = 32 * 1024 * 2014)
+        public RegisteredMemoryChannel(int partitionSize = 32 * 1024 * 2014)
         {
             _partitionSize = partitionSize;
         }
@@ -26,9 +26,9 @@ namespace Abc.Zerio.Channel
             if (_buffer != null)
                 throw new InvalidOperationException("The channel is already started");
 
-            _buffer = new ChannelMemoryBuffer(_partitionSize);
-            _reader = new ChannelMemoryReader(_buffer.ConsumerPartitionGroup);
-            _writer = new ChannelMemoryWriter(_buffer.ProducerPartitionGroup);
+            _buffer = new RegisteredMemoryChannelBuffer(_partitionSize);
+            _reader = new RegisteredMemoryChannelReader(_buffer.ConsumerPartitionGroup);
+            _writer = new RegisteredMemoryChannelWriter(_buffer.ProducerPartitionGroup);
 
             _reader.FrameRead += OnFrameRead;
             

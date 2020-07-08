@@ -9,7 +9,7 @@ namespace Abc.Zerio.Channel
     {
         private readonly ChannelMemoryPartition[] _partitions;
 
-        public ChannelMemoryPartitionGroup(ChannelMemoryBuffer buffer, int partitionCount, int offset, int partitionSize, bool init)
+        public ChannelMemoryPartitionGroup(RegisteredMemoryChannelBuffer buffer, int partitionCount, int offset, int partitionSize, bool init)
         {
             if (partitionCount < 1)
                 throw new ArgumentException("Partitions cannot be empty", nameof(partitionCount));

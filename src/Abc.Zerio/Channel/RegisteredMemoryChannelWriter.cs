@@ -4,7 +4,7 @@ using System.Threading;
 
 namespace Abc.Zerio.Channel
 {
-    internal unsafe class ChannelMemoryWriter
+    internal unsafe class RegisteredMemoryChannelWriter
     {
         private readonly ChannelMemoryPartition[] _partitions;
         private readonly long _partitionDataCapacity;
@@ -12,7 +12,7 @@ namespace Abc.Zerio.Channel
 
         private long _writePosition;
 
-        public ChannelMemoryWriter(ChannelMemoryPartitionGroup partitions)
+        public RegisteredMemoryChannelWriter(ChannelMemoryPartitionGroup partitions)
         {
             _partitions = partitions.ToArray();
             _writePosition = 0;

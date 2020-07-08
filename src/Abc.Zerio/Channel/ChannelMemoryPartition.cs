@@ -16,7 +16,7 @@ namespace Abc.Zerio.Channel
         public int PartitionSize { get; }
         public int DataCapacity => PartitionSize - _dataOffset;
 
-        public ChannelMemoryPartition(ChannelMemoryBuffer buffer, long offset, int size)
+        public ChannelMemoryPartition(RegisteredMemoryChannelBuffer buffer, long offset, int size)
         {
             if (sizeof(IntPtr) < sizeof(long))
                 throw new InvalidOperationException("Buy some real hardware dude");

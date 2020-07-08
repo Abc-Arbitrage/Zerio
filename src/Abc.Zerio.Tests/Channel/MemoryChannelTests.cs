@@ -22,7 +22,7 @@ namespace Abc.Zerio.Tests.Channel
 
             var receivedMessages = new List<string>();
 
-            var memoryChannel = new MemoryChannel();
+            var memoryChannel = new RegisteredMemoryChannel();
             memoryChannel.MessageReceived +=  (messageBytes, endOfBatch, cleanupNeeded)  =>
             {
                 receivedMessages.Add(Encoding.ASCII.GetString(messageBytes.ToArray()));
@@ -74,7 +74,7 @@ namespace Abc.Zerio.Tests.Channel
 
             var receivedMessages = new List<string>();
 
-            var memoryChannel = new MemoryChannel();
+            var memoryChannel = new RegisteredMemoryChannel();
             memoryChannel.MessageReceived += (messageBytes, endOfBatch, cleanupNeeded) =>
             {
                 receivedMessages.Add(Encoding.ASCII.GetString(messageBytes.ToArray()));
@@ -132,7 +132,7 @@ namespace Abc.Zerio.Tests.Channel
 
             var receivedMessages = new List<string>();
 
-            void OnMessageReceived(MemoryChannel memoryChannel, ReadOnlySpan<byte> messageBytes, bool endOfBatch, bool cleanupNeeded) 
+            void OnMessageReceived(RegisteredMemoryChannel memoryChannel, ReadOnlySpan<byte> messageBytes, bool endOfBatch, bool cleanupNeeded) 
             {
                 receivedMessages.Add(Encoding.ASCII.GetString(messageBytes.ToArray()));
                 countdownSignal.Signal();
@@ -141,12 +141,12 @@ namespace Abc.Zerio.Tests.Channel
                     memoryChannel.CleanupPartitions();
             }
 
-            var memoryChannels = new List<MemoryChannel>();
+            var memoryChannels = new List<RegisteredMemoryChannel>();
             var publishingTasks = new List<Task>();
 
             for (var i = 0; i < taskCount; i++)
             {
-                var memoryChannel = new MemoryChannel();
+                var memoryChannel = new RegisteredMemoryChannel();
                 memoryChannel.MessageReceived += (messageBytes, batch, cleanupNeeded) =>  OnMessageReceived(memoryChannel, messageBytes, batch, cleanupNeeded);
                 memoryChannel.Start(true);
                 memoryChannels.Add(memoryChannel);

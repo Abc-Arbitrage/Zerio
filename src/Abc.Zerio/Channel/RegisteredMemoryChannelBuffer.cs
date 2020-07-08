@@ -3,15 +3,16 @@ using Abc.Zerio.Interop;
 
 namespace Abc.Zerio.Channel
 {
-    internal unsafe class ChannelMemoryBuffer : IDisposable
+    internal unsafe class RegisteredMemoryChannelBuffer : IDisposable
     {
         private const int _partitionCount = 3;
         private const int _mainPartitionSize = 32 * 1024 * 1024;
 
         private byte* _dataPointer;
         private IntPtr _buffer;
+        private IntPtr _bufferId;
 
-        public ChannelMemoryBuffer(int partitionSize)
+        public RegisteredMemoryChannelBuffer(int partitionSize)
         {
             _dataPointer = AllocateBuffer(partitionSize);
 
@@ -30,13 +31,19 @@ namespace Abc.Zerio.Channel
 
         private byte* AllocateBuffer(int partitionSize)
         {
-            var bufferSize = _partitionCount * partitionSize;
+            var bufferSize = (uint)(_partitionCount * partitionSize);
             
             const int allocationType = Kernel32.Consts.MEM_COMMIT | Kernel32.Consts.MEM_RESERVE;
-            _buffer = Kernel32.VirtualAlloc(IntPtr.Zero, (uint)bufferSize, allocationType, Kernel32.Consts.PAGE_READWRITE);
+            _buffer = Kernel32.VirtualAlloc(IntPtr.Zero, bufferSize, allocationType, Kernel32.Consts.PAGE_READWRITE);
             if (_buffer == IntPtr.Zero)
                 WinSock.ThrowLastWsaError();
 
+            WinSock.EnsureIsInitialized();
+            
+            _bufferId = WinSock.Extensions.RegisterBuffer(_buffer, bufferSize);
+            if (_bufferId == WinSock.Consts.RIO_INVALID_BUFFERID)
+                WinSock.ThrowLastWsaError();
+            
             return (byte*)_buffer.ToPointer();
         }
         
@@ -44,7 +51,14 @@ namespace Abc.Zerio.Channel
         {
             if (_dataPointer != null)
             {
-                Kernel32.VirtualFree(_buffer, 0, Kernel32.Consts.MEM_RELEASE);
+                try
+                {
+                    WinSock.Extensions.DeregisterBuffer(_bufferId);
+                }
+                finally
+                {
+                    Kernel32.VirtualFree(_buffer, 0, Kernel32.Consts.MEM_RELEASE);
+                }
                 _dataPointer = null;
             }
         }
