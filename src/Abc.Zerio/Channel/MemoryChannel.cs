@@ -18,7 +18,7 @@ namespace Abc.Zerio.Channel
 
         public event ClientMessageReceivedDelegate MessageReceived;
         
-        public void Start()
+        public void Start(bool manualPooling)
         {
             if (_buffer != null)
                 throw new InvalidOperationException("The channel is already started");
@@ -34,8 +34,11 @@ namespace Abc.Zerio.Channel
 
             _cleaner = new ChannelMemoryCleaner(_reader.Partitions);
 
-            _consumerThread = new Thread(InboundReadThread) { IsBackground = true };
-            _consumerThread.Start();
+            if (!manualPooling)
+            {
+                _consumerThread = new Thread(InboundReadThread) { IsBackground = true };
+                _consumerThread.Start();
+            }
         }
 
         public void Send(ReadOnlySpan<byte> messageBytes)
@@ -74,6 +77,14 @@ namespace Abc.Zerio.Channel
             }
         }
 
+        public bool TryPoll()
+        {
+            if(_isRunning == 0)
+                throw new InvalidOperationException();
+
+            return _reader.TryReadFrameBatch();
+        }
+        
         private void OnFrameRead(FrameBlock frame, bool endOfBatch)
         {
             if (frame.DataLength < sizeof(int))
