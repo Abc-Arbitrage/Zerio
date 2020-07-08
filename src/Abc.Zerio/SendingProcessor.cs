@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading;
+using Abc.Zerio.Channel;
 using Abc.Zerio.Core;
 using Abc.Zerio.Interop;
 
@@ -23,7 +24,7 @@ namespace Abc.Zerio
         {
             foreach (var session in sessionManager.Sessions)
             {
-                session.SendingChannel.MessageReceived += (messageBytes, endOfBatch, cleanupNeeded) => OnSendRequest(session, messageBytes, endOfBatch, cleanupNeeded);
+                session.SendingChannel.FrameRead += (messageBytes, endOfBatch, cleanupNeeded) => OnSendRequest(session, messageBytes, endOfBatch, cleanupNeeded);
             }
         }
 
@@ -56,12 +57,10 @@ namespace Abc.Zerio
             }
         }
 
-        private unsafe static void OnSendRequest(ISession session, ReadOnlySpan<byte> messageBytes, bool isEndOfBatch, bool cleanupNeeded)
+        private unsafe static void OnSendRequest(ISession session, ChannelFrame frame, bool isEndOfBatch, bool cleanupNeeded)
         { 
-            var bufferSegmentDescriptor = new RIO_BUF();
-            bufferSegmentDescriptor.BufferId = session.SendingChannel.RegisteredBufferId;
-            bufferSegmentDescriptor.Length = messageBytes.Length;
-                
+            var bufferSegmentDescriptor = session.SendingChannel.CreateBufferSegmentDescriptor(frame);
+      
             session.RequestQueue.Send(cleanupNeeded, &bufferSegmentDescriptor, true);
         }
 

@@ -20,7 +20,7 @@ namespace Abc.Zerio.Channel
 
         public bool IsEmpty => FramePosition == null;
 
-        // Markers must be less than int.MinValue, as nagative sizes are used to skip invalid messages
+        // Markers must be less than int.MinValue, as negative sizes are used to skip invalid messages
         public const long EndOfPartitionMarker = long.MinValue;
         public const long EndOfPartitionMarkerSize = sizeof(long);
 

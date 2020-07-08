@@ -28,8 +28,19 @@ namespace Abc.Zerio.Channel
         public ChannelMemoryPartitionGroup ProducerPartitionGroup { get; set; }
 
         public byte* DataPointer => _dataPointer;
-        public IntPtr RegisteredBufferId => _bufferId;
-
+        
+        public RIO_BUF CreateBufferSegmentDescriptor(ChannelFrame frame)
+        {
+            var bufferSegmentDescriptor = new RIO_BUF
+            {
+                BufferId = _bufferId,
+                Length = (int)frame.DataLength, 
+                Offset = (int)(frame.DataPosition - _dataPointer)
+            };
+            
+            return bufferSegmentDescriptor;
+        }
+        
         private byte* AllocateBuffer(int partitionSize)
         {
             var bufferSize = (uint)(_partitionCount * partitionSize);

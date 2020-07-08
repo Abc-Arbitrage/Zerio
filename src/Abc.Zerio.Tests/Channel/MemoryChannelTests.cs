@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,9 +24,9 @@ namespace Abc.Zerio.Tests.Channel
             var receivedMessages = new List<string>();
 
             var memoryChannel = new RegisteredMemoryChannel();
-            memoryChannel.MessageReceived += (messageBytes, endOfBatch, cleanupNeeded) =>
+            memoryChannel.FrameRead += (frame, endOfBatch, cleanupNeeded) =>
             {
-                receivedMessages.Add(Encoding.ASCII.GetString(messageBytes.ToArray()));
+                receivedMessages.Add(ReadFrameContent(frame));
                 countdownSignal.Signal();
                 
                 if(cleanupNeeded)
@@ -78,9 +79,9 @@ namespace Abc.Zerio.Tests.Channel
 
             var receivedMessages = new List<string>();
 
-            void OnMessageReceived(RegisteredMemoryChannel memoryChannel, ReadOnlySpan<byte> messageBytes, bool endOfBatch, bool cleanupNeeded) 
+            void OnMessageReceived(RegisteredMemoryChannel memoryChannel, ChannelFrame frame, bool endOfBatch, bool cleanupNeeded) 
             {
-                receivedMessages.Add(Encoding.ASCII.GetString(messageBytes.ToArray()));
+                receivedMessages.Add(ReadFrameContent(frame));
                 countdownSignal.Signal();
                 
                 if(cleanupNeeded)
@@ -93,7 +94,7 @@ namespace Abc.Zerio.Tests.Channel
             for (var i = 0; i < taskCount; i++)
             {
                 var memoryChannel = new RegisteredMemoryChannel();
-                memoryChannel.MessageReceived += (messageBytes, batch, cleanupNeeded) =>  OnMessageReceived(memoryChannel, messageBytes, batch, cleanupNeeded);
+                memoryChannel.FrameRead += (frame, batch, cleanupNeeded) =>  OnMessageReceived(memoryChannel, frame, batch, cleanupNeeded);
                 memoryChannels.Add(memoryChannel);
 
                 var taskId = i;
@@ -151,6 +152,18 @@ namespace Abc.Zerio.Tests.Channel
             }
 
             memoryChannels.ForEach(x => x.Stop());
+        }
+
+        private unsafe string ReadFrameContent(ChannelFrame frame)
+        {
+            if (frame.DataLength < sizeof(int))
+                throw new InvalidOperationException($"Invalid frame length DataLength: {frame.DataLength}");
+
+            var messageLength = Unsafe.ReadUnaligned<int>(frame.DataPosition);
+
+            var messageBytes = new Span<byte>(frame.DataPosition + sizeof(int), messageLength);
+
+            return Encoding.ASCII.GetString(messageBytes.ToArray());
         }
     }
 }

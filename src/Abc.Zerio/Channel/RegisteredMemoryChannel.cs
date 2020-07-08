@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using Abc.Zerio.Interop;
 
 namespace Abc.Zerio.Channel
 {
@@ -9,9 +10,7 @@ namespace Abc.Zerio.Channel
         private readonly RegisteredMemoryChannelReader _reader;
         private readonly RegisteredMemoryChannelWriter _writer;
 
-        public event ChannelMessageReceivedDelegate MessageReceived;
-        
-        public IntPtr RegisteredBufferId => _buffer.RegisteredBufferId;
+        public event ChannelFrameReadDelegate FrameRead;
         
         public RegisteredMemoryChannel(int partitionSize = 32 * 1024 * 2014)
         {
@@ -27,6 +26,11 @@ namespace Abc.Zerio.Channel
             _reader.CleanupPartition();
         }
 
+        internal RIO_BUF CreateBufferSegmentDescriptor(ChannelFrame frame)
+        {
+            return _buffer.CreateBufferSegmentDescriptor(frame);
+        }
+        
         public void Send(ReadOnlySpan<byte> messageBytes)
         {
             var frameLength = sizeof(int) + messageBytes.Length;
@@ -57,11 +61,8 @@ namespace Abc.Zerio.Channel
 
         private void OnFrameRead(FrameBlock frame, bool endOfBatch, bool cleanupNeeded)
         {
-            if (frame.DataLength < sizeof(int))
-                throw new InvalidOperationException($"Invalid frame length DataLength: {frame.DataLength} FrameLength: {frame.FrameLength}");
 
-            var messageLength = Unsafe.ReadUnaligned<int>(frame.DataPosition);
-            MessageReceived?.Invoke(new ReadOnlySpan<byte>(frame.DataPosition + sizeof(int), messageLength), endOfBatch, cleanupNeeded);
+            FrameRead?.Invoke(new ChannelFrame(frame.DataPosition, frame.DataLength), endOfBatch, cleanupNeeded);
         }
 
         public void Stop()
