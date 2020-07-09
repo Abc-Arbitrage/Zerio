@@ -8,7 +8,6 @@ namespace Abc.Zerio
         public int ReceivingBufferLength { get; set; }
         public int FramingBufferLength { get; set; }
 
-        public RequestEngineWaitStrategyType RequestEngineWaitStrategyType { get; set; }
         public CompletionPollingWaitStrategyType ReceiveCompletionPollingWaitStrategyType { get; set; }
         public CompletionPollingWaitStrategyType SendCompletionPollingWaitStrategyType { get; set; }
 
@@ -18,9 +17,8 @@ namespace Abc.Zerio
             ReceivingBufferLength = 1 * 1024 * 1024;
             ReceivingBufferCount = 256;
 
-            RequestEngineWaitStrategyType = RequestEngineWaitStrategyType.BusySpinWaitStrategy;
             ReceiveCompletionPollingWaitStrategyType = CompletionPollingWaitStrategyType.BusySpinWaitStrategy;
-            SendCompletionPollingWaitStrategyType = CompletionPollingWaitStrategyType.BusySpinWaitStrategy;
+            SendCompletionPollingWaitStrategyType = CompletionPollingWaitStrategyType.SpinWaitWaitStrategy;
         }
 
         internal virtual InternalZerioConfiguration ToInternalConfiguration()
