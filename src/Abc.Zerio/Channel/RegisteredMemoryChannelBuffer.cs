@@ -6,7 +6,6 @@ namespace Abc.Zerio.Channel
     internal unsafe class RegisteredMemoryChannelBuffer : IDisposable
     {
         private const int _partitionCount = 3;
-        private const int _mainPartitionSize = 32 * 1024 * 1024;
 
         private byte* _dataPointer;
         private IntPtr _buffer;
@@ -20,8 +19,8 @@ namespace Abc.Zerio.Channel
             if (!MemoryUtil.IsAlignedToCacheLine((long)_dataPointer))
                 throw new InvalidOperationException("Invalid shared memory alignment");
 
-            ProducerPartitionGroup = new ChannelMemoryPartitionGroup(this, _partitionCount, 0, _mainPartitionSize, true);
-            ConsumerPartitionGroup = new ChannelMemoryPartitionGroup(this, _partitionCount, 0, _mainPartitionSize, false);
+            ProducerPartitionGroup = new ChannelMemoryPartitionGroup(this, _partitionCount, 0, partitionSize, true);
+            ConsumerPartitionGroup = new ChannelMemoryPartitionGroup(this, _partitionCount, 0, partitionSize, false);
         }
 
         public ChannelMemoryPartitionGroup ConsumerPartitionGroup { get; set; }

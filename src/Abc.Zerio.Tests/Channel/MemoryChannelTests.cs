@@ -23,13 +23,13 @@ namespace Abc.Zerio.Tests.Channel
 
             var receivedMessages = new List<string>();
 
-            var memoryChannel = new RegisteredMemoryChannel();
+            var memoryChannel = new RegisteredMemoryChannel(1024 * 1024, int.MaxValue);
             memoryChannel.FrameRead += (frame, endOfBatch, cleanupNeeded) =>
             {
                 receivedMessages.Add(ReadFrameContent(frame));
                 countdownSignal.Signal();
-                
-                if(cleanupNeeded)
+
+                if (cleanupNeeded)
                     memoryChannel.CleanupPartitions();
             };
 
@@ -79,12 +79,12 @@ namespace Abc.Zerio.Tests.Channel
 
             var receivedMessages = new List<string>();
 
-            void OnMessageReceived(RegisteredMemoryChannel memoryChannel, ChannelFrame frame, bool endOfBatch, bool cleanupNeeded) 
+            void OnMessageReceived(RegisteredMemoryChannel memoryChannel, ChannelFrame frame, bool endOfBatch, bool cleanupNeeded)
             {
                 receivedMessages.Add(ReadFrameContent(frame));
                 countdownSignal.Signal();
-                
-                if(cleanupNeeded)
+
+                if (cleanupNeeded)
                     memoryChannel.CleanupPartitions();
             }
 
@@ -93,8 +93,8 @@ namespace Abc.Zerio.Tests.Channel
 
             for (var i = 0; i < taskCount; i++)
             {
-                var memoryChannel = new RegisteredMemoryChannel();
-                memoryChannel.FrameRead += (frame, batch, cleanupNeeded) =>  OnMessageReceived(memoryChannel, frame, batch, cleanupNeeded);
+                var memoryChannel = new RegisteredMemoryChannel(1024 * 1024, int.MaxValue);
+                memoryChannel.FrameRead += (frame, batch, cleanupNeeded) => OnMessageReceived(memoryChannel, frame, batch, cleanupNeeded);
                 memoryChannels.Add(memoryChannel);
 
                 var taskId = i;
@@ -112,11 +112,11 @@ namespace Abc.Zerio.Tests.Channel
 
             Task.Run(() =>
             {
-                // var spinWait = new SpinWait();
+                var spinWait = new SpinWait();
                 while (receivedMessages.Count < taskCount * messageCountPerTask)
                 {
                     var pollSucceededAtLeastOnce = true;
-                    
+
                     foreach (var memoryChannel in memoryChannels)
                     {
                         pollSucceededAtLeastOnce &= memoryChannel.TryPoll();
@@ -124,11 +124,10 @@ namespace Abc.Zerio.Tests.Channel
 
                     if (!pollSucceededAtLeastOnce)
                     {
-                        // spinWait.SpinOnce();
-                        continue;
+                        spinWait.SpinOnce();
                     }
-                    
-                    // spinWait.Reset();
+
+                    spinWait.Reset();
                 }
             });
 

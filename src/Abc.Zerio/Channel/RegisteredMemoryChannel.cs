@@ -12,10 +12,10 @@ namespace Abc.Zerio.Channel
 
         public event ChannelFrameReadDelegate FrameRead;
         
-        public RegisteredMemoryChannel(int partitionSize = 32 * 1024 * 2014)
+        public RegisteredMemoryChannel(int partitionSize, int maxBatchSize)
         {
             _buffer = new RegisteredMemoryChannelBuffer(partitionSize);
-            _reader = new RegisteredMemoryChannelReader(_buffer.ConsumerPartitionGroup);
+            _reader = new RegisteredMemoryChannelReader(_buffer.ConsumerPartitionGroup, maxBatchSize);
             _writer = new RegisteredMemoryChannelWriter(_buffer.ProducerPartitionGroup);
 
             _reader.FrameRead += OnFrameRead;

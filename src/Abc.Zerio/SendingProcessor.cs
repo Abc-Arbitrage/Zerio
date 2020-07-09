@@ -9,19 +9,21 @@ namespace Abc.Zerio
 {
     internal class SendingProcessor
     {
+        private readonly InternalZerioConfiguration _configuration;
         private bool _isRunning;
         private Thread _sendingThread;
 
         private readonly ISession[] _sessions;
         private static RIO_BUF? _currentBufferSegmentDescriptor;
 
-        public SendingProcessor(ISessionManager sessionManager)
+        public SendingProcessor(InternalZerioConfiguration configuration, ISessionManager sessionManager)
         {
+            _configuration = configuration;
             _sessions = sessionManager.Sessions.ToArray();
             SubscribeToSessionChannels(sessionManager);
         }
 
-        private static void SubscribeToSessionChannels(ISessionManager sessionManager)
+        private void SubscribeToSessionChannels(ISessionManager sessionManager)
         {
             foreach (var session in sessionManager.Sessions)
             {
@@ -58,8 +60,15 @@ namespace Abc.Zerio
             }
         }
         
-        private unsafe static void OnSendRequest(ISession session, ChannelFrame frame, bool isEndOfBatch, bool cleanupNeeded)
+        private unsafe void OnSendRequest(ISession session, ChannelFrame frame, bool isEndOfBatch, bool cleanupNeeded)
         {
+            if (!_configuration.BatchFramesOnSend)
+            {
+                var descriptor = session.SendingChannel.CreateBufferSegmentDescriptor(frame);
+                session.RequestQueue.Send(cleanupNeeded, &descriptor, true);
+                return;
+            }
+                
             if (_currentBufferSegmentDescriptor == null)
             {
                 _currentBufferSegmentDescriptor = session.SendingChannel.CreateBufferSegmentDescriptor(frame);

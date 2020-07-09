@@ -6,19 +6,21 @@ namespace Abc.Zerio.Channel
 {
     internal unsafe class RegisteredMemoryChannelReader
     {
+        private readonly int? _maxBatchSize;
         private readonly ChannelMemoryPartition[] _partitions;
         private readonly long _partitionDataCapacity;
         private long _readPosition;
 
         public event Action<FrameBlock, bool, bool> FrameRead;
 
-        public RegisteredMemoryChannelReader(ChannelMemoryPartitionGroup partitions)
+        public RegisteredMemoryChannelReader(ChannelMemoryPartitionGroup partitions, int maxBatchSize)
         {
+            _maxBatchSize = maxBatchSize;
             _partitions = partitions.ToArray();
             _partitionDataCapacity = _partitions[0].DataCapacity;
         }
 
-        private readonly List<FrameBlock> _currentBatch = new List<FrameBlock>(256);
+        private readonly List<FrameBlock> _currentBatch = new List<FrameBlock>(8192);
         private bool _hasPendingCleaningRequest;
 
         public bool TryReadFrameBatch()
@@ -39,14 +41,20 @@ namespace Abc.Zerio.Channel
                 {
                     _readPosition += frameLength;
                     _currentBatch.Add(new FrameBlock(partition.DataPointer + readOffsetInPartition, frameLength));
+
+                    if (_currentBatch.Count == _maxBatchSize)
+                        TryFlushBatch(false);
+                        
                     continue;
                 }
 
                 switch (frameLength)
                 {
+                    // No more data available, we need to flush the batch
                     case 0:
                         return TryFlushBatch(false);
 
+                    // End of partition, we need to end the batch because frames can't be aggregated across partitions
                     case FrameBlock.EndOfPartitionMarker:
                         var nextPartitionIndex = (partitionIndex + 1) % _partitions.Length;
                         _readPosition = nextPartitionIndex * _partitionDataCapacity;

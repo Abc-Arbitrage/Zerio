@@ -51,7 +51,7 @@ namespace Abc.Zerio
 
         private SendingProcessor CreateSendingProcessor()
         {
-            var sendingProcessor = new SendingProcessor(_sessionManager);
+            var sendingProcessor = new SendingProcessor(_configuration, _sessionManager);
             return sendingProcessor;
         }
 
