@@ -24,7 +24,7 @@ namespace Abc.Zerio.Channel
         public const long EndOfPartitionMarker = long.MinValue;
         public const long EndOfPartitionMarkerSize = sizeof(long);
 
-        private const long _dataOffset = MemoryUtil.CacheLineLength;
+        private const long _dataOffset = sizeof(long); // space needed for the frame length prefix
 
         public static long GetFrameLength(long dataLength)
         {

@@ -49,7 +49,7 @@ namespace Abc.Zerio.Channel
             try
             {
                 Unsafe.Write(frame.DataPosition, messageBytes.Length);
-                var span = new Span<byte>(frame.DataPosition + sizeof(int), (int)frame.DataLength);
+                var span = new Span<byte>(frame.DataPosition + sizeof(int), (int)frame.DataLength - sizeof(int));
                 messageBytes.CopyTo(span);
 
                 isValid = true;
