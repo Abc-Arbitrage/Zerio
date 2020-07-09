@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading;
 using Abc.Zerio.Channel;
 using Abc.Zerio.Core;
+using Abc.Zerio.Interop;
 
 namespace Abc.Zerio
 {
@@ -12,6 +13,7 @@ namespace Abc.Zerio
         private Thread _sendingThread;
 
         private readonly ISession[] _sessions;
+        private static RIO_BUF? _currentBufferSegmentDescriptor;
 
         public SendingProcessor(ISessionManager sessionManager)
         {
@@ -55,12 +57,29 @@ namespace Abc.Zerio
                 spinWait.Reset();
             }
         }
-
+        
         private unsafe static void OnSendRequest(ISession session, ChannelFrame frame, bool isEndOfBatch, bool cleanupNeeded)
-        { 
-            var bufferSegmentDescriptor = session.SendingChannel.CreateBufferSegmentDescriptor(frame);
-      
-            session.RequestQueue.Send(cleanupNeeded, &bufferSegmentDescriptor, true);
+        {
+            if (_currentBufferSegmentDescriptor == null)
+            {
+                _currentBufferSegmentDescriptor = session.SendingChannel.CreateBufferSegmentDescriptor(frame);
+            }
+            else
+            {
+                _currentBufferSegmentDescriptor = new RIO_BUF
+                {
+                    BufferId = _currentBufferSegmentDescriptor.Value.BufferId,
+                    Offset = _currentBufferSegmentDescriptor.Value.Offset,
+                    Length = _currentBufferSegmentDescriptor.Value.Length + (int)frame.DataLength,
+                };
+            }
+
+            if (isEndOfBatch)
+            {
+                var descriptor = _currentBufferSegmentDescriptor.Value;
+                session.RequestQueue.Send(cleanupNeeded, &descriptor, true);
+                _currentBufferSegmentDescriptor = null;
+            }
         }
 
         public void Stop()
