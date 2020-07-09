@@ -19,6 +19,7 @@ namespace Abc.Zerio.Channel
         }
 
         private readonly List<FrameBlock> _currentBatch = new List<FrameBlock>(256);
+        private bool _hasPendingCleaningRequest;
 
         public bool TryReadFrameBatch()
         {
@@ -63,7 +64,18 @@ namespace Abc.Zerio.Channel
         private bool TryFlushBatch(bool endOfPartition)
         {
             if (_currentBatch.Count == 0)
+            {
+                if(endOfPartition)
+                    _hasPendingCleaningRequest = true;
+                
                 return false;
+            }
+
+            if (_hasPendingCleaningRequest)
+            {
+                endOfPartition = true;
+                _hasPendingCleaningRequest = false;
+            }
 
             for (var i = 0; i < _currentBatch.Count; i++)
             {
