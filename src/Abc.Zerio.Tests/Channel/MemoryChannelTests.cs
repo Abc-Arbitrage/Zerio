@@ -112,7 +112,7 @@ namespace Abc.Zerio.Tests.Channel
 
             Task.Run(() =>
             {
-                var spinWait = new SpinWait();
+                // var spinWait = new SpinWait();
                 while (receivedMessages.Count < taskCount * messageCountPerTask)
                 {
                     var pollSucceededAtLeastOnce = true;
@@ -124,11 +124,11 @@ namespace Abc.Zerio.Tests.Channel
 
                     if (!pollSucceededAtLeastOnce)
                     {
-                        spinWait.SpinOnce();
+                        // spinWait.SpinOnce();
                         continue;
                     }
                     
-                    spinWait.Reset();
+                    // spinWait.Reset();
                 }
             });
 

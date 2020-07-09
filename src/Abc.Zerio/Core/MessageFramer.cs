@@ -14,7 +14,6 @@ namespace Abc.Zerio.Core
         
         private readonly byte[] _buffer ;
         
-
         public event MessageFramedDelegate MessageFramed;
 
         public delegate void MessageFramedDelegate(ReadOnlySpan<byte> message);

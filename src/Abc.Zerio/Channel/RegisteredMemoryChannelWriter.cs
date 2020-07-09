@@ -27,7 +27,7 @@ namespace Abc.Zerio.Channel
             if (frameLength > _maxFrameLength)
                 return FrameBlock.Empty;
 
-            var spinWait = new SpinWait();
+            // var spinWait = new SpinWait();
 
             while (true)
             {
@@ -38,7 +38,7 @@ namespace Abc.Zerio.Channel
 
                 if (!partition.IsReadyToWrite)
                 {
-                    spinWait.SpinOnce();
+                    // spinWait.SpinOnce();
                     continue;
                 }
 
@@ -55,7 +55,7 @@ namespace Abc.Zerio.Channel
 
                     if (!nextPartition.IsReadyToStartWrite || !partition.IsReadyToEndWrite)
                     {
-                        spinWait.SpinOnce();
+                        // spinWait.SpinOnce();
                         continue;
                     }
 
