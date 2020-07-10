@@ -4,6 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Disruptor" Version="3.6.0" />
+    <PackageReference Include="Agrona" Version="1.28.2" />
     <PackageReference Include="HdrHistogram" Version="2.5.0" />
   </ItemGroup>
 </Project>

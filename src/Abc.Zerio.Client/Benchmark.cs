@@ -73,7 +73,7 @@ namespace Abc.Zerio.Client
 
         public void Start(int messageSize, int delayMicros = 100, int butst = 1)
         {
-            _startTask = Task.Factory.StartNew(() => StartMemoryChannelLoop(messageSize, delayMicros, butst));
+            _startTask = Task.Factory.StartNew(() => StartMemoryChannelLoopAeron(messageSize, delayMicros, butst));
         }
 
         public void Stop()
@@ -97,6 +97,69 @@ namespace Abc.Zerio.Client
                 Interlocked.Increment(ref _messageCounter);
                 if (needed)
                     channel.CleanupPartitions();
+            };
+
+            var rateReporter = Task.Run(async () =>
+            {
+                var previousCount = 0L;
+
+                while (!_cts.IsCancellationRequested)
+                {
+                    var count = Volatile.Read(ref _messageCounter);
+                    var countPerSec = count - previousCount;
+                    previousCount = count;
+
+                    Console.WriteLine($"Processed messages: {countPerSec:N0}, total: {count:N0} [GC 0:{GC.CollectionCount(0)} 1:{GC.CollectionCount(1)}]");
+                    await Task.Delay(1000);
+                }
+            });
+
+            var poller = Task.Run(() =>
+            {
+                var spinWait = new SpinWait();
+                while (!_cts.IsCancellationRequested)
+                {
+                    if (!channel.TryPoll())
+                        spinWait.SpinOnce();
+                }
+            });
+
+            _messageCounter = 0;
+
+            var buffer = new byte[messageSize];
+            for (var i = 0; i < buffer.Length; i++)
+            {
+                buffer[i] = 42;
+            }
+
+            while (!_cts.IsCancellationRequested)
+            {
+                _sw.Restart();
+
+                for (int i = 0; i < burst; i++)
+                {
+                    Unsafe.WriteUnaligned(ref buffer[0], Stopwatch.GetTimestamp());
+                    channel.Send(buffer);
+                }
+
+                NOP(delayMicros / 1000_000.0);
+            }
+
+            rateReporter.Wait();
+            poller.Wait();
+
+            channel.DisplayStats();
+        }
+        
+        private void StartMemoryChannelLoopAeron(int messageSize, int delayMicros, int burst)
+        {
+            _cts = new CancellationTokenSource();
+            _messageCounter = 0;
+
+            var channel = new RegisteredMemoryChannelAeron();
+            channel.FrameRead += (frame) =>
+            {
+                Interlocked.Increment(ref _messageCounter);
             };
 
             var rateReporter = Task.Run(async () =>
