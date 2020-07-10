@@ -1,5 +1,8 @@
 using System;
+using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 using Abc.Zerio.Channel;
 using Abc.Zerio.Core;
@@ -40,23 +43,12 @@ namespace Abc.Zerio
 
         private void PollSendRequests(object _)
         {
-            var spinWait = new SpinWait();
             while (_isRunning)
             {
-                var pollSucceededAtLeastOnce = true;
-
                 foreach (var session in _sessions)
                 {
-                    pollSucceededAtLeastOnce &= session.SendingChannel.TryPoll();
+                    session.SendingChannel.TryPoll();
                 }
-
-                if (!pollSucceededAtLeastOnce)
-                {
-                    spinWait.SpinOnce();
-                    continue;
-                }
-
-                spinWait.Reset();
             }
         }
         
