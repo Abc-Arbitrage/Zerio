@@ -11,7 +11,7 @@ namespace Abc.Zerio.Channel
         private readonly RegisteredMemoryChannelBuffer _buffer;
         private readonly RegisteredMemoryChannelReader _reader;
         private readonly RegisteredMemoryChannelWriter _writer;
-        private LongHistogram _histogram;
+        private readonly LongHistogram _histogram;
 
         public event ChannelFrameReadDelegate FrameRead;
         

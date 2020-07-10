@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Abc.Zerio.Channel;
 using Abc.Zerio.Core;
 using Abc.Zerio.Tcp;
 using CsvHelper;
@@ -72,7 +73,7 @@ namespace Abc.Zerio.Client
 
         public void Start(int messageSize, int delayMicros = 100, int butst = 1)
         {
-            _startTask = Task.Factory.StartNew(() => StartLoop(messageSize, delayMicros, butst));
+            _startTask = Task.Factory.StartNew(() => StartMemoryChannelLoop(messageSize, delayMicros, butst));
         }
 
         public void Stop()
@@ -83,6 +84,69 @@ namespace Abc.Zerio.Client
             _cts.Cancel();
             _startTask.Wait();
             _cts = null;
+        }
+
+        private void StartMemoryChannelLoop(int messageSize, int delayMicros, int burst)
+        {
+            _cts = new CancellationTokenSource();
+            _messageCounter = 0;
+
+            var channel = new RegisteredMemoryChannel(4 * 1024 * 1024, int.MaxValue);
+            channel.FrameRead += (frame, batch, needed) =>
+            {
+                Interlocked.Increment(ref _messageCounter);
+                if (needed)
+                    channel.CleanupPartitions();
+            };
+
+            var rateReporter = Task.Run(async () =>
+            {
+                var previousCount = 0L;
+
+                while (!_cts.IsCancellationRequested)
+                {
+                    var count = Volatile.Read(ref _messageCounter);
+                    var countPerSec = count - previousCount;
+                    previousCount = count;
+
+                    Console.WriteLine($"Processed messages: {countPerSec:N0}, total: {count:N0} [GC 0:{GC.CollectionCount(0)} 1:{GC.CollectionCount(1)}]");
+                    await Task.Delay(1000);
+                }
+            });
+
+            var poller = Task.Run(() =>
+            {
+                while (!_cts.IsCancellationRequested)
+                {
+                    channel.TryPoll();
+                }
+            });
+
+            _messageCounter = 0;
+
+            var buffer = new byte[messageSize];
+            for (var i = 0; i < buffer.Length; i++)
+            {
+                buffer[i] = 42;
+            }
+
+            while (!_cts.IsCancellationRequested)
+            {
+                _sw.Restart();
+
+                for (int i = 0; i < burst; i++)
+                {
+                    Unsafe.WriteUnaligned(ref buffer[0], Stopwatch.GetTimestamp());
+                    channel.Send(buffer);
+                }
+
+                NOP(delayMicros / 1000_000.0);
+            }
+
+            rateReporter.Wait();
+            poller.Wait();
+
+            channel.DisplayStats();
         }
 
         private void StartLoop(int messageSize, int delayMicros, int burst)
@@ -112,7 +176,7 @@ namespace Abc.Zerio.Client
 
             histogram.Reset();
             (_feedClientManual as ZerioClient)?.ResetSessionChannelStats();
-            
+
             _messageCounter = 0;
 
             var buffer = new byte[messageSize];
@@ -155,7 +219,7 @@ namespace Abc.Zerio.Client
             histogram.OutputPercentileDistribution(Console.Out, 1);
 
             (_feedClientManual as ZerioClient)?.DisplaySessionChannelStats();
-            
+
             using var writer = new StreamWriter(Path.Combine(_outFolder, $"Latency_{messageSize}_{delayMicros}.hgrm"));
             histogram.OutputPercentileDistribution(writer);
         }
@@ -619,7 +683,7 @@ namespace Abc.Zerio.Client
             }
         }
 
-        class MessageCounter
+        private class MessageCounter
         {
             public volatile int Count;
 

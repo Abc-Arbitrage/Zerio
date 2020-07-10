@@ -37,7 +37,7 @@ namespace Abc.Zerio.Client
             var clientsPerServer = 1;
             var suffix = string.Empty;
             const int serverCount = 1;
-
+            
             var p = new OptionSet
             {
                 { "h|host=", "hostname", v => hosts.Add(v) },
@@ -127,19 +127,19 @@ namespace Abc.Zerio.Client
 
         static void ManualBenchmark(IFeedClient client)
         {
-            var connectedMre = new ManualResetEvent(false);
-
-            client.Connected += () => { connectedMre.Set(); };
-
-            Thread.Sleep(3000);
-
-            client.Start($"{client.GetType().Name}");
-
-            if (!connectedMre.WaitOne(1000))
-            {
-                Console.WriteLine("Cannot connect");
-                return;
-            }
+            // var connectedMre = new ManualResetEvent(false);
+            //
+            // client.Connected += () => { connectedMre.Set(); };
+            //
+            // Thread.Sleep(3000);
+            //
+            // client.Start($"{client.GetType().Name}");
+            //
+            // if (!connectedMre.WaitOne(1000))
+            // {
+            //     Console.WriteLine("Cannot connect");
+            //     return;
+            // }
 
             var benchmark = new Benchmark(client);
 

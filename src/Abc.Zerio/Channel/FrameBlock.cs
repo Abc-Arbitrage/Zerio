@@ -1,5 +1,4 @@
 using System.Threading;
-using Abc.Zerio.Interop;
 
 namespace Abc.Zerio.Channel
 {
