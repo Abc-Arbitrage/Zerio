@@ -4,5 +4,6 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Disruptor" Version="3.6.0" />
+    <PackageReference Include="HdrHistogram" Version="2.5.0" />
   </ItemGroup>
 </Project>

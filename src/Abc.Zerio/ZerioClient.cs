@@ -2,6 +2,7 @@ using System;
 using System.Net;
 using System.Text;
 using System.Threading;
+using Abc.Zerio.Channel;
 using Abc.Zerio.Core;
 using Abc.Zerio.Interop;
 
@@ -213,6 +214,16 @@ namespace Abc.Zerio
         ~ZerioClient()
         {
             Dispose(false);
+        }
+
+        public void DisplaySessionChannelStats()
+        { 
+            _session.SendingChannel.DisplayStats();
+        }
+        
+        public void ResetSessionChannelStats()
+        {
+            _session.SendingChannel.ResetStats();
         }
     }
 }

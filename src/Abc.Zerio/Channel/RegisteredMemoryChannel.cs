@@ -1,6 +1,8 @@
 using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Abc.Zerio.Interop;
+using HdrHistogram;
 
 namespace Abc.Zerio.Channel
 {
@@ -9,6 +11,7 @@ namespace Abc.Zerio.Channel
         private readonly RegisteredMemoryChannelBuffer _buffer;
         private readonly RegisteredMemoryChannelReader _reader;
         private readonly RegisteredMemoryChannelWriter _writer;
+        private LongHistogram _histogram;
 
         public event ChannelFrameReadDelegate FrameRead;
         
@@ -19,6 +22,8 @@ namespace Abc.Zerio.Channel
             _writer = new RegisteredMemoryChannelWriter(_buffer.ProducerPartitionGroup);
 
             _reader.FrameRead += OnFrameRead;
+            
+            _histogram = new LongHistogram(TimeSpan.FromSeconds(10).Ticks, 2);
         }
 
         public void CleanupPartitions()
@@ -45,6 +50,8 @@ namespace Abc.Zerio.Channel
             if (frame.IsEmpty)
                 throw new InvalidOperationException($"Unable to acquire frame for message, Length: {messageBytes.Length}");
 
+            Unsafe.WriteUnaligned(frame.DataPosition - sizeof(long), Stopwatch.GetTimestamp());
+            
             var isValid = false;
             try
             {
@@ -67,13 +74,29 @@ namespace Abc.Zerio.Channel
 
         private void OnFrameRead(FrameBlock frame, bool endOfBatch, bool cleanupNeeded)
         {
-
+            // Temporary:
+            var start = Unsafe.ReadUnaligned<long>(frame.DataPosition - sizeof(long));
+            var rrt = Stopwatch.GetTimestamp() - start;
+            var micros = (long)(rrt * 1_000_000.0 / Stopwatch.Frequency);
+            
+            _histogram.RecordValue(micros);
+            
             FrameRead?.Invoke(new ChannelFrame(frame.DataPosition, frame.FrameLength), endOfBatch, cleanupNeeded);
+        }
+
+        public void DisplayStats()
+        {
+            _histogram.OutputPercentileDistribution(Console.Out, 1);
         }
 
         public void Stop()
         {
             _buffer.Dispose();
+        }
+
+        public void ResetStats()
+        {
+            _histogram.Reset();
         }
     }
 }

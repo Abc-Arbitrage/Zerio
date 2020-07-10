@@ -1,4 +1,5 @@
 using System.Threading;
+using Abc.Zerio.Interop;
 
 namespace Abc.Zerio.Channel
 {
@@ -24,7 +25,7 @@ namespace Abc.Zerio.Channel
         public const long EndOfPartitionMarker = long.MinValue;
         public const long EndOfPartitionMarkerSize = sizeof(long);
 
-        private const long _dataOffset = sizeof(long); // space needed for the frame length prefix
+        private const long _dataOffset = sizeof(long) + sizeof(long); // space needed for the frame length prefix + timestamp
 
         public static long GetFrameLength(long dataLength)
         {

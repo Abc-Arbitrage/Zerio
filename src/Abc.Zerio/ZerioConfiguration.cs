@@ -20,8 +20,8 @@ namespace Abc.Zerio
             ReceivingBufferLength = 1 * 1024 * 1024;
             ReceivingBufferCount = 256;
             
-            BatchFramesOnSend = false;
-            MaxFrameBatchSize = 256;
+            BatchFramesOnSend = true;
+            MaxFrameBatchSize = int.MaxValue;
             
             ReceiveCompletionPollingWaitStrategyType = CompletionPollingWaitStrategyType.BusySpinWaitStrategy;
             SendCompletionPollingWaitStrategyType = CompletionPollingWaitStrategyType.SpinWaitWaitStrategy;
@@ -39,14 +39,17 @@ namespace Abc.Zerio
                 SendCompletionPollingWaitStrategyType = SendCompletionPollingWaitStrategyType,
                 FramingBufferLength = FramingBufferLength,
                 MaxReceiveCompletionResults = ReceivingBufferCount,
+                
                 RequestQueueMaxOutstandingReceives = ReceivingBufferCount,
+                RequestQueueMaxOutstandingSends = 65_536,
+                
                 ReceivingCompletionQueueSize = ReceivingBufferCount,
                 BatchFramesOnSend = BatchFramesOnSend,
                 MaxFrameBatchSize = MaxFrameBatchSize,
-                RequestQueueMaxOutstandingSends = 65_536,
+                
                 SendingCompletionQueueSize = 65_536,
                 MaxSendCompletionResults = 65_536,
-                ChannelPartitionSize = 33_554_432,
+                ChannelPartitionSize = 2_554_432,
             };
 
             return configuration;
