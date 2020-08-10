@@ -71,9 +71,9 @@ namespace Abc.Zerio.Client
             _messageCounter = 0L;
         }
 
-        public void Start(int messageSize, int delayMicros = 100, int butst = 1)
+        public void Start(int messageSize, int delayMicros = 100, int burst = 1)
         {
-            _startTask = Task.Factory.StartNew(() => StartMemoryChannelLoopAeron(messageSize, delayMicros, butst));
+            _startTask = Task.Factory.StartNew(() => StartLoop(messageSize, delayMicros, burst));
         }
 
         public void Stop()
@@ -223,9 +223,7 @@ namespace Abc.Zerio.Client
 
                 var count = Interlocked.Increment(ref _messageCounter);
                 if (count <= _warmupSkipCount)
-                {
                     return;
-                }
 
                 var start = Unsafe.ReadUnaligned<long>(ref MemoryMarshal.GetReference(bytes));
                 var rrt = now - start;
@@ -267,7 +265,7 @@ namespace Abc.Zerio.Client
             {
                 _sw.Restart();
 
-                for (int i = 0; i < burst; i++)
+                for (var i = 0; i < burst; i++)
                 {
                     Unsafe.WriteUnaligned(ref buffer[0], Stopwatch.GetTimestamp());
                     _feedClientManual.Send(buffer);

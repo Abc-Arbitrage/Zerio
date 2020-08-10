@@ -1,71 +1,51 @@
 using System;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Threading;
-using Adaptive.Agrona;
-using Adaptive.Agrona.Concurrent;
-using Adaptive.Agrona.Concurrent.RingBuffer;
 using HdrHistogram;
 
 namespace Abc.Zerio.Channel
 {
     public unsafe class RegisteredMemoryChannelAeron
     {
-        private readonly UnsafeBuffer _writeBuffer = new UnsafeBuffer();
         private readonly ManyToOneRingBuffer _ringBuffer;
         private readonly MessageHandler _messageHandler;
         private readonly LongHistogram _histogram;
 
         public event Action<ChannelFrame> FrameRead;
         public event Action EndOfBatch;
-        
+
         public RegisteredMemoryChannelAeron()
         {
-            var bufferSize = BitUtil.FindNextPositivePowerOfTwo(4_000_000) + RingBufferDescriptor.TrailerLength;
-
-            _ringBuffer = new ManyToOneRingBuffer(new UnsafeBuffer(new byte[bufferSize]));
+            _ringBuffer = new ManyToOneRingBuffer(4_000_000);
             _messageHandler = ProcessMessage;
             _histogram = new LongHistogram(TimeSpan.FromSeconds(10).Ticks, 2);
         }
 
-        private void ProcessMessage(int msgTypeId, IMutableDirectBuffer buffer, int index, int length)
+        private void ProcessMessage(int msgTypeId, byte* buffer, int index, int length)
         {
-            var pointer = (byte*)buffer.BufferPointer + index;
+            var pointer = buffer + index;
 
-            // Temporary:
-            //var start = Unsafe.ReadUnaligned<long>(pointer - sizeof(long));
-            var start = buffer.GetLong(index);
+            var start = ManyToOneRingBuffer.GetLong(buffer, index);
             var rrt = Stopwatch.GetTimestamp() - start;
             var micros = (long)(rrt * 1_000_000.0 / Stopwatch.Frequency);
-            
-            _histogram.RecordValue(micros);
-            
-            FrameRead?.Invoke(new ChannelFrame(pointer, length));
-        }
 
-        public void CleanupPartitions()
-        {
-            //_reader.CleanupPartition();
+            _histogram.RecordValue(micros);
+
+            FrameRead?.Invoke(new ChannelFrame(pointer, length));
         }
 
         // internal RIO_BUF CreateBufferSegmentDescriptor(ChannelFrame frame)
         // {
         //     return _buffer.CreateBufferSegmentDescriptor(frame);
         // }
-        
+
         public void Send(ReadOnlySpan<byte> messageBytes)
         {
             var spinWait = new SpinWait();
 
-            fixed (byte* b = &messageBytes.GetPinnableReference())
+            while (!_ringBuffer.Write(messageBytes))
             {
-                _writeBuffer.Wrap(b, messageBytes.Length);
-                _writeBuffer.PutLong(0, Stopwatch.GetTimestamp());
-                
-                while (!_ringBuffer.Write(1, _writeBuffer, 0, messageBytes.Length))
-                {
-                    spinWait.SpinOnce();
-                }
+                spinWait.SpinOnce();
             }
         }
 
@@ -76,9 +56,9 @@ namespace Abc.Zerio.Channel
                 EndOfBatch?.Invoke();
                 return true;
             }
+
             return false;
         }
-   
 
         public void DisplayStats()
         {
@@ -87,7 +67,7 @@ namespace Abc.Zerio.Channel
 
         public void Stop()
         {
-            //_buffer.Dispose();
+            _ringBuffer.Dispose();
         }
 
         public void ResetStats()
