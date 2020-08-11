@@ -42,7 +42,7 @@ namespace Abc.Zerio.Channel
 
         public event ChannelFrameReadDelegate FrameRead;
         private readonly List<ChannelFrame> _currentBatch = new List<ChannelFrame>(1024);
-        
+
         private int _reading;
 
         public ManyToOneRingBuffer(int minimumSize)
@@ -98,7 +98,7 @@ namespace Abc.Zerio.Channel
         {
             if (Interlocked.CompareExchange(ref _reading, 1, 0) != 0)
                 return 0;
-            
+
             var messagesRead = 0;
             var buffer = _bufferStart;
             var head = GetLong(buffer, _headPositionIndex);
@@ -159,11 +159,11 @@ namespace Abc.Zerio.Channel
 
         public void CompleteRead(CompletionToken token)
         {
+            if (token == CompletionToken.Empty)
+                return;
+
             try
             {
-                if (token == CompletionToken.Empty)
-                    return;
-
                 var head = GetLong(_bufferStart, _headPositionIndex);
 
                 var capacity = _capacity;
@@ -176,8 +176,8 @@ namespace Abc.Zerio.Channel
             }
             finally
             {
-                Volatile.Write(ref _reading, 0);   
-            }            
+                Volatile.Write(ref _reading, 0);
+            }
         }
 
         private void CheckMessageLength(int length)

@@ -1,4 +1,0 @@
-namespace Abc.Zerio.Channel
-{
-  
-}
