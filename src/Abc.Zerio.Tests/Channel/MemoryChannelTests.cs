@@ -16,20 +16,18 @@ namespace Abc.Zerio.Tests.Channel
         public void Should_be_manually_polled()
         {
             // Arrange
-            const int taskCount = 5;
+            const int taskCount = 1;
             const int messageCountPerTask = 100000;
             var countdownSignal = new CountdownEvent(taskCount * messageCountPerTask);
 
             var receivedMessages = new List<string>();
 
             var memoryChannel = new RegisteredMemoryChannel(1024 * 1024);
-            memoryChannel.FrameRead += (frame, token) =>
+            memoryChannel.FrameRead += (frame, endOfBatch, token) =>
             {
                 receivedMessages.Add(ReadFrameContent(frame));
                 countdownSignal.Signal();
-
-                if (token.IsEndOfBatch)
-                    memoryChannel.CompleteSend(token);
+                memoryChannel.CompleteSend(token);
             };
 
             Task.Run(() =>
@@ -78,13 +76,11 @@ namespace Abc.Zerio.Tests.Channel
 
             var receivedMessages = new List<string>();
 
-            void OnMessageReceived(RegisteredMemoryChannel memoryChannel, ChannelFrame frame, SendCompletionToken token)
+            void OnMessageReceived(RegisteredMemoryChannel memoryChannel, ChannelFrame frame, bool endOfBatch, SendCompletionToken token)
             {
                 receivedMessages.Add(ReadFrameContent(frame));
                 countdownSignal.Signal();
-
-                if (token.IsEndOfBatch)
-                    memoryChannel.CompleteSend(token);
+                memoryChannel.CompleteSend(token);
             }
 
             var memoryChannels = new List<RegisteredMemoryChannel>();
@@ -93,7 +89,7 @@ namespace Abc.Zerio.Tests.Channel
             for (var i = 0; i < taskCount; i++)
             {
                 var memoryChannel = new RegisteredMemoryChannel(1024 * 1024);
-                memoryChannel.FrameRead += (frame, token) => OnMessageReceived(memoryChannel, frame, token);
+                memoryChannel.FrameRead += (frame, endOfBatch, token) => OnMessageReceived(memoryChannel, frame, endOfBatch, token);
                 memoryChannels.Add(memoryChannel);
 
                 var taskId = i;

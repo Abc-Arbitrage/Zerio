@@ -92,11 +92,10 @@ namespace Abc.Zerio.Client
             _messageCounter = 0;
 
             var channel = new RegisteredMemoryChannel(4000000);
-            channel.FrameRead += (frame, token) =>
+            channel.FrameRead += (frame, endOfBatch, token) =>
             {
                 Interlocked.Increment(ref _messageCounter);
-                if(token.IsEndOfBatch)
-                    channel.CompleteSend(token);
+                channel.CompleteSend(token);
             };
 
             var rateReporter = Task.Run(async () =>

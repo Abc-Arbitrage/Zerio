@@ -15,7 +15,7 @@ namespace Abc.Zerio.Channel
         public RegisteredMemoryChannel(int bufferLength)
         {
             _ringBuffer = new ManyToOneRingBuffer(bufferLength);
-            _ringBuffer.FrameRead += (frame, token) => FrameRead?.Invoke(frame, token);
+            _ringBuffer.FrameRead += (frame, endOfBatch, token) => FrameRead?.Invoke(frame, endOfBatch, token);
             
             _histogram = new LongHistogram(TimeSpan.FromSeconds(10).Ticks, 2);
         }

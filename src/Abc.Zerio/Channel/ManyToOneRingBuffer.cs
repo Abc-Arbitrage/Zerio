@@ -27,7 +27,8 @@ namespace Abc.Zerio.Channel
 
         public event ChannelFrameReadDelegate FrameRead;
         private readonly List<ChannelFrame> _currentBatch = new List<ChannelFrame>(1024);
-        
+        private int _remainingPaddingLengthToSkip;
+
         public ManyToOneRingBuffer(int minimumSize)
         {
             _bufferLength = BitUtil.FindNextPositivePowerOfTwo(minimumSize) + RingBufferDescriptor.TrailerLength;
@@ -51,18 +52,6 @@ namespace Abc.Zerio.Channel
             _tailPositionIndex = _capacity + RingBufferDescriptor.TailPositionOffset;
             _headCachePositionIndex = _capacity + RingBufferDescriptor.HeadCachePositionOffset;
             _headPositionIndex = _capacity + RingBufferDescriptor.HeadPositionOffset;
-        }
-
-        public void Dispose()
-        {
-            try
-            {
-                WinSock.Extensions.DeregisterBuffer(_bufferId);
-            }
-            finally
-            {
-                Kernel32.VirtualFree(_bufferHandle, 0, Kernel32.Consts.MEM_RELEASE);
-            }
         }
 
         public bool Write(ReadOnlySpan<byte> messageBytes)
@@ -127,17 +116,26 @@ namespace Abc.Zerio.Channel
                 _currentBatch.Add(new ChannelFrame(buffer + recordIndex + RecordDescriptor.HeaderLength, recordLength - RecordDescriptor.HeaderLength));
             }
 
-            if (shouldSkipPadding && _currentBatch.Count == 0)
+            if (shouldSkipPadding && messagesRead == 0)
             {
-                // Todo: this should be performed in the same thread as the one which normally calls CompleteSend
-                CompleteSend(new SendCompletionToken(bytesRead, true));
+                _remainingPaddingLengthToSkip = bytesRead;
+                return messagesRead;
             }
+
+            if (messagesRead <= 0)
+                return messagesRead;
             
-            if (_currentBatch.Count > 0)
+            var endOfBatchIndex = messagesRead - 1;
+            for (var i = 0; i < messagesRead; i++)
             {
-                for (var i = 0; i < _currentBatch.Count; i++)
+                if (i != endOfBatchIndex)
                 {
-                    FrameRead?.Invoke(_currentBatch[i], new SendCompletionToken(bytesRead, i == _currentBatch.Count - 1));
+                    FrameRead?.Invoke(_currentBatch[i], false, SendCompletionToken.Empty);
+                }
+                else
+                {
+                    FrameRead?.Invoke(_currentBatch[i], true, new SendCompletionToken(_remainingPaddingLengthToSkip, bytesRead));
+                    _remainingPaddingLengthToSkip = 0;
                 }
             }
 
@@ -146,10 +144,18 @@ namespace Abc.Zerio.Channel
 
         public void CompleteSend(SendCompletionToken token)
         {
-            var byteRead = token.ByteRead;
-            if (byteRead == 0)
+            if (token == SendCompletionToken.Empty)
                 return;
 
+            if(token.RemainingPaddingBytes != 0)
+                AdvanceHead(token.RemainingPaddingBytes);
+            
+            AdvanceHead(token.ByteRead);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void AdvanceHead(int byteRead)
+        {
             var head = GetLong(_bufferStart, _headPositionIndex);
 
             var capacity = _capacity;
@@ -292,6 +298,18 @@ namespace Abc.Zerio.Channel
             };
 
             return bufferSegmentDescriptor;
+        }
+
+        public void Dispose()
+        {
+            try
+            {
+                WinSock.Extensions.DeregisterBuffer(_bufferId);
+            }
+            finally
+            {
+                Kernel32.VirtualFree(_bufferHandle, 0, Kernel32.Consts.MEM_RELEASE);
+            }
         }
     }
 }

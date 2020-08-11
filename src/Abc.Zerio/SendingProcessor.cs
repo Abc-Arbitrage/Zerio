@@ -30,7 +30,7 @@ namespace Abc.Zerio
         {
             foreach (var session in sessionManager.Sessions)
             {
-                session.SendingChannel.FrameRead += (messageBytes, token) => OnSendRequest(session, messageBytes, token);
+                session.SendingChannel.FrameRead += (messageBytes, endOfBatch, token) => OnSendRequest(session, messageBytes, endOfBatch, token);
             }
         }
 
@@ -52,7 +52,7 @@ namespace Abc.Zerio
             }
         }
         
-        private unsafe void OnSendRequest(ISession session, ChannelFrame frame, SendCompletionToken token)
+        private unsafe void OnSendRequest(ISession session, ChannelFrame frame, bool endOfBatch, SendCompletionToken token)
         {
             if (!_configuration.BatchFramesOnSend)
             {
@@ -75,7 +75,7 @@ namespace Abc.Zerio
                 };
             }
 
-            if (token.IsEndOfBatch)
+            if (endOfBatch)
             {
                 var descriptor = _currentBufferSegmentDescriptor.Value;
                 session.RequestQueue.Send(token, &descriptor, true);

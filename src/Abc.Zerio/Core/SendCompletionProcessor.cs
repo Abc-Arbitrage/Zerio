@@ -59,9 +59,7 @@ namespace Abc.Zerio.Core
                     
                     var sendCompletionToken = (SendCompletionToken)result.RequestCorrelation;
 
-                    if(sendCompletionToken.IsEndOfBatch)
-                        session.SendingChannel.CompleteSend(sendCompletionToken);
-           
+                    session.SendingChannel.CompleteSend(sendCompletionToken);           
                 }
             }
         }
