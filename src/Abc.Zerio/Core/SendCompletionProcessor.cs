@@ -57,7 +57,7 @@ namespace Abc.Zerio.Core
                     if (!_sessionManager.TryGetSession(sessionId, out var session))
                         return;
                     
-                    var sendCompletionToken = (SendCompletionToken)result.RequestCorrelation;
+                    var sendCompletionToken = (CompletionToken)result.RequestCorrelation;
 
                     session.SendingChannel.CompleteSend(sendCompletionToken);           
                 }

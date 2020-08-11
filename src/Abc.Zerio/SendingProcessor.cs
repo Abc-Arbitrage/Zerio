@@ -1,8 +1,5 @@
 using System;
-using System.Diagnostics;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Threading;
 using Abc.Zerio.Channel;
 using Abc.Zerio.Core;
@@ -52,7 +49,7 @@ namespace Abc.Zerio
             }
         }
         
-        private unsafe void OnSendRequest(ISession session, ChannelFrame frame, bool endOfBatch, SendCompletionToken token)
+        private unsafe void OnSendRequest(ISession session, ChannelFrame frame, bool endOfBatch, CompletionToken token)
         {
             if (!_configuration.BatchFramesOnSend)
             {
@@ -71,7 +68,7 @@ namespace Abc.Zerio
                 {
                     BufferId = _currentBufferSegmentDescriptor.Value.BufferId,
                     Offset = _currentBufferSegmentDescriptor.Value.Offset,
-                    Length = _currentBufferSegmentDescriptor.Value.Length + (int)frame.DataLength,
+                    Length = _currentBufferSegmentDescriptor.Value.Length + frame.FrameLength,
                 };
             }
 

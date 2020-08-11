@@ -1,5 +1,4 @@
 using System;
-using System.Threading;
 using Abc.Zerio.Interop;
 
 namespace Abc.Zerio.Channel
@@ -23,11 +22,11 @@ namespace Abc.Zerio.Channel
 
         public void Send(ReadOnlySpan<byte> messageBytes)
         {
-            var spinWait = new SpinWait();
+            // var spinWait = new SpinWait();
 
             while (!_ringBuffer.Write(messageBytes))
             {
-                spinWait.SpinOnce();
+                // spinWait.SpinOnce();
             }
         }
 
@@ -41,9 +40,9 @@ namespace Abc.Zerio.Channel
             _ringBuffer.Dispose();
         }
 
-        public void CompleteSend(SendCompletionToken sendCompletionToken)
+        public void CompleteSend(CompletionToken completionToken)
         {
-            _ringBuffer.CompleteSend(sendCompletionToken);
+            _ringBuffer.CompleteRead(completionToken);
         }
     }
 }

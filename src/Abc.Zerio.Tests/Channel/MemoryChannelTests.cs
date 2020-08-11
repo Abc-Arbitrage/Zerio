@@ -80,7 +80,7 @@ namespace Abc.Zerio.Tests.Channel
 
             var receivedMessages = new List<string>();
 
-            void OnMessageReceived(RegisteredMemoryChannel memoryChannel, ChannelFrame frame, bool endOfBatch, SendCompletionToken token)
+            void OnMessageReceived(RegisteredMemoryChannel memoryChannel, ChannelFrame frame, bool endOfBatch, CompletionToken token)
             {
                 if (TryReadFrameContent(frame, out var content))
                 {

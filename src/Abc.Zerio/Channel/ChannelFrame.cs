@@ -20,10 +20,14 @@ namespace Abc.Zerio.Channel
             DataLength = dataLength;
         }
 
-        public static int RecordLength(long header) => (int)header;
+        public static int GetFrameLength(long header) => (int)header;
+        public static int GetAlignedFrameLength(int dataLength) => BitUtil.Align(dataLength, Alignment);
+        public static int GetDataLength(int recordLength) => recordLength - HeaderLength;
+        
         public static long MakeHeader(int length, int frameTypeId) => ((frameTypeId & 0xFFFFFFFFL) << 32) | (length & 0xFFFFFFFFL);
         public static int EncodedDataOffset(int recordOffset) => recordOffset + HeaderLength;
         public static int LengthOffset(int recordOffset) => recordOffset;
-        public static int FrameTypeId(long header) => (int) (long) ((ulong) header >> 32);
+        public static int GetFrameTypeId(long header) => (int) (long) ((ulong) header >> 32);
+
     }
 }
