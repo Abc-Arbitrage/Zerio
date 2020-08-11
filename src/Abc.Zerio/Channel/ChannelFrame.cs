@@ -1,13 +1,19 @@
+using Adaptive.Agrona.Concurrent.Broadcast;
+
 namespace Abc.Zerio.Channel
 {
     public unsafe struct ChannelFrame
     {
-        public byte* DataPosition { get; }
-        public long DataLength { get; }
+        public readonly byte* FrameStart;
+        public readonly int FrameLength;
+        public readonly int DataLength;
+        public byte* DataStart => FrameStart + RecordDescriptor.HeaderLength;
+        public bool IsEmpty => DataLength == 0;
 
-        public ChannelFrame(byte* dataPosition, long dataLength)
+        public ChannelFrame(byte* frameStart, int frameLength, int dataLength)
         {
-            DataPosition = dataPosition;
+            FrameStart = frameStart;
+            FrameLength =  frameLength;
             DataLength = dataLength;
         }
     }

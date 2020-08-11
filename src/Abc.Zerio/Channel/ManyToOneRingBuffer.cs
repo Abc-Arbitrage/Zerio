@@ -27,8 +27,7 @@ namespace Abc.Zerio.Channel
 
         public event ChannelFrameReadDelegate FrameRead;
         private readonly List<ChannelFrame> _currentBatch = new List<ChannelFrame>(1024);
-        private int _remainingPaddingLengthToSkip;
-
+        
         public ManyToOneRingBuffer(int minimumSize)
         {
             _bufferLength = BitUtil.FindNextPositivePowerOfTwo(minimumSize) + RingBufferDescriptor.TrailerLength;
@@ -91,8 +90,6 @@ namespace Abc.Zerio.Channel
 
             _currentBatch.Clear();
 
-            var shouldSkipPadding = false;
-            
             while (bytesRead < maxBlockLength && messagesRead < messageCountLimit)
             {
                 var recordIndex = headIndex + bytesRead;
@@ -102,24 +99,20 @@ namespace Abc.Zerio.Channel
                 if (recordLength <= 0)  
                     break;
 
-                bytesRead += BitUtil.Align(recordLength, RecordDescriptor.Alignment);
-
-                var messageTypeId = RecordDescriptor.MessageTypeId(header);
-                if (messageTypeId == _paddingMessageTypeId)
-                {
-                    shouldSkipPadding = true;
-                    continue;
-                }
+                var frameLength = BitUtil.Align(recordLength, RecordDescriptor.Alignment);
+                bytesRead += frameLength;
 
                 ++messagesRead;
                 
-                _currentBatch.Add(new ChannelFrame(buffer + recordIndex + RecordDescriptor.HeaderLength, recordLength - RecordDescriptor.HeaderLength));
-            }
+                var messageTypeId = RecordDescriptor.MessageTypeId(header);
+                if (messageTypeId == _paddingMessageTypeId)
+                {
+                    // Padding
+                    _currentBatch.Add(new ChannelFrame(buffer + recordIndex, frameLength, 0));
+                    continue;
+                }
 
-            if (shouldSkipPadding && messagesRead == 0)
-            {
-                _remainingPaddingLengthToSkip = bytesRead;
-                return messagesRead;
+                _currentBatch.Add(new ChannelFrame(buffer + recordIndex, frameLength, recordLength - RecordDescriptor.HeaderLength));
             }
 
             if (messagesRead <= 0)
@@ -134,8 +127,7 @@ namespace Abc.Zerio.Channel
                 }
                 else
                 {
-                    FrameRead?.Invoke(_currentBatch[i], true, new SendCompletionToken(_remainingPaddingLengthToSkip, bytesRead));
-                    _remainingPaddingLengthToSkip = 0;
+                    FrameRead?.Invoke(_currentBatch[i], true, new SendCompletionToken(bytesRead));
                 }
             }
 
@@ -147,23 +139,14 @@ namespace Abc.Zerio.Channel
             if (token == SendCompletionToken.Empty)
                 return;
 
-            if(token.RemainingPaddingBytes != 0)
-                AdvanceHead(token.RemainingPaddingBytes);
-            
-            AdvanceHead(token.ByteRead);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void AdvanceHead(int byteRead)
-        {
             var head = GetLong(_bufferStart, _headPositionIndex);
 
             var capacity = _capacity;
             var headIndex = (int)head & (capacity - 1);
             var buffer = _bufferStart;
 
-            SetMemory(buffer, headIndex, byteRead, 0);
-            PutLongOrdered(buffer, _headPositionIndex, head + byteRead);
+            SetMemory(buffer, headIndex, token.ByteRead, 0);
+            PutLongOrdered(buffer, _headPositionIndex, head + token.ByteRead);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -294,7 +277,7 @@ namespace Abc.Zerio.Channel
             {
                 BufferId = _bufferId,
                 Length = (int)frame.DataLength,
-                Offset = (int)(frame.DataPosition - _bufferStart)
+                Offset = (int)(frame.FrameStart - _bufferStart)
             };
 
             return bufferSegmentDescriptor;

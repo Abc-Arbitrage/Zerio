@@ -16,8 +16,8 @@ namespace Abc.Zerio.Tests.Channel
         public void Should_be_manually_polled()
         {
             // Arrange
-            const int taskCount = 1;
-            const int messageCountPerTask = 100000;
+            const int taskCount = 5;
+            const int messageCountPerTask = 100_000;
             var countdownSignal = new CountdownEvent(taskCount * messageCountPerTask);
 
             var receivedMessages = new List<string>();
@@ -25,8 +25,12 @@ namespace Abc.Zerio.Tests.Channel
             var memoryChannel = new RegisteredMemoryChannel(1024 * 1024);
             memoryChannel.FrameRead += (frame, endOfBatch, token) =>
             {
-                receivedMessages.Add(ReadFrameContent(frame));
-                countdownSignal.Signal();
+                if (TryReadFrameContent(frame, out var content))
+                {
+                    receivedMessages.Add(content);
+                    countdownSignal.Signal();
+                }
+                
                 memoryChannel.CompleteSend(token);
             };
 
@@ -78,8 +82,12 @@ namespace Abc.Zerio.Tests.Channel
 
             void OnMessageReceived(RegisteredMemoryChannel memoryChannel, ChannelFrame frame, bool endOfBatch, SendCompletionToken token)
             {
-                receivedMessages.Add(ReadFrameContent(frame));
-                countdownSignal.Signal();
+                if (TryReadFrameContent(frame, out var content))
+                {
+                    receivedMessages.Add(content);
+                    countdownSignal.Signal();
+                }
+
                 memoryChannel.CompleteSend(token);
             }
 
@@ -148,14 +156,15 @@ namespace Abc.Zerio.Tests.Channel
             memoryChannels.ForEach(x => x.Stop());
         }
 
-        private unsafe static string ReadFrameContent(ChannelFrame frame)
+        private unsafe static bool TryReadFrameContent(ChannelFrame frame, out string content)
         {
-            if (frame.DataLength < sizeof(int))
-                throw new InvalidOperationException($"Invalid frame length DataLength: {frame.DataLength}");
-
-            var messageBytes = new Span<byte>(frame.DataPosition, (int)frame.DataLength);
-
-            return Encoding.ASCII.GetString(messageBytes.ToArray());
+            content = default;
+            if (frame.IsEmpty)
+                return false;
+                
+            var messageBytes = new Span<byte>(frame.DataStart, frame.DataLength);
+            content = Encoding.ASCII.GetString(messageBytes.ToArray());
+            return true;
         }
     }
 }
