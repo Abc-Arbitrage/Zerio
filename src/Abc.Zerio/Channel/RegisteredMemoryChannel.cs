@@ -5,12 +5,14 @@ namespace Abc.Zerio.Channel
 {
     public class RegisteredMemoryChannel
     {
+        private readonly int _maxFrameBatchSize;
         private readonly ManyToOneRingBuffer _ringBuffer;
 
         public event ChannelFrameReadDelegate FrameRead;
 
-        public RegisteredMemoryChannel(int bufferLength)
+        public RegisteredMemoryChannel(int bufferLength, int maxFrameBatchSize = int.MaxValue)
         {
+            _maxFrameBatchSize = maxFrameBatchSize;
             _ringBuffer = new ManyToOneRingBuffer(bufferLength);
             _ringBuffer.FrameRead += (frame, endOfBatch, token) => FrameRead?.Invoke(frame, endOfBatch, token);
         }
@@ -32,7 +34,7 @@ namespace Abc.Zerio.Channel
 
         public bool TryPoll()
         {
-            return _ringBuffer.Read() > 0;
+            return _ringBuffer.Read(_maxFrameBatchSize) > 0;
         }
 
         public void Stop()
