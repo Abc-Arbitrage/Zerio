@@ -1,18 +1,33 @@
+/*
+ * Copyright 2014 - 2017 Adaptive Financial Consulting Ltd
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Abc.Zerio.Interop;
-using Adaptive.Agrona;
-using Adaptive.Agrona.Concurrent.RingBuffer;
 
 namespace Abc.Zerio.Channel
 {
+    // This data structure is largely inspired from Agrona ManyToOneRingBuffer. It was modified to use a RIO registered buffer
+    //  as memory space, and a new API that supports deferred head cursor move and batching for reads. 
+    // https://github.com/AdaptiveConsulting/Aeron.NET/blob/master/src/Adaptive.Agrona/Concurrent/RingBuffer/ManyToOneRingBuffer.cs
     public unsafe class ManyToOneRingBuffer : IDisposable
     {
-        private const int _paddingMessageTypeId = -1;
         private const int _insufficientCapacity = -2;
-        private const int _userMessageTypeId = 1;
 
         private readonly int _capacity;
         private readonly int _maxMsgLength;
@@ -27,7 +42,7 @@ namespace Abc.Zerio.Channel
 
         public event ChannelFrameReadDelegate FrameRead;
         private readonly List<ChannelFrame> _currentBatch = new List<ChannelFrame>(1024);
-        
+
         public ManyToOneRingBuffer(int minimumSize)
         {
             _bufferLength = BitUtil.FindNextPositivePowerOfTwo(minimumSize) + RingBufferDescriptor.TrailerLength;
@@ -55,21 +70,21 @@ namespace Abc.Zerio.Channel
 
         public bool Write(ReadOnlySpan<byte> messageBytes)
         {
-            CheckMsgLength(messageBytes.Length);
+            CheckMessageLength(messageBytes.Length);
 
             var isSuccessful = false;
 
             var buffer = _bufferStart;
-            var recordLength = messageBytes.Length + RecordDescriptor.HeaderLength;
-            var requiredCapacity = BitUtil.Align(recordLength, RecordDescriptor.Alignment);
+            var recordLength = messageBytes.Length + ChannelFrame.HeaderLength;
+            var requiredCapacity = BitUtil.Align(recordLength, ChannelFrame.Alignment);
             var recordIndex = ClaimCapacity(buffer, requiredCapacity);
 
             if (_insufficientCapacity != recordIndex)
             {
-                PutLongOrdered(buffer, recordIndex, RecordDescriptor.MakeHeader(-recordLength, _userMessageTypeId));
+                PutLongOrdered(buffer, recordIndex, ChannelFrame.MakeHeader(-recordLength, ChannelFrame.DataFrame));
                 Thread.MemoryBarrier();
-                PutBytes(buffer, RecordDescriptor.EncodedMsgOffset(recordIndex), messageBytes);
-                PutIntOrdered(buffer, RecordDescriptor.LengthOffset(recordIndex), recordLength);
+                PutBytes(buffer, ChannelFrame.EncodedDataOffset(recordIndex), messageBytes);
+                PutIntOrdered(buffer, ChannelFrame.LengthOffset(recordIndex), recordLength);
 
                 isSuccessful = true;
             }
@@ -95,29 +110,28 @@ namespace Abc.Zerio.Channel
                 var recordIndex = headIndex + bytesRead;
                 var header = GetLongVolatile(buffer, recordIndex);
 
-                var recordLength = RecordDescriptor.RecordLength(header);
-                if (recordLength <= 0)  
+                var recordLength = ChannelFrame.RecordLength(header);
+                if (recordLength <= 0)
                     break;
 
-                var frameLength = BitUtil.Align(recordLength, RecordDescriptor.Alignment);
+                var frameLength = BitUtil.Align(recordLength, ChannelFrame.Alignment);
                 bytesRead += frameLength;
 
                 ++messagesRead;
-                
-                var messageTypeId = RecordDescriptor.MessageTypeId(header);
-                if (messageTypeId == _paddingMessageTypeId)
+
+                var messageTypeId = ChannelFrame.FrameTypeId(header);
+                if (messageTypeId == ChannelFrame.PaddingFrame)
                 {
-                    // Padding
                     _currentBatch.Add(new ChannelFrame(buffer + recordIndex, frameLength, 0));
                     continue;
                 }
 
-                _currentBatch.Add(new ChannelFrame(buffer + recordIndex, frameLength, recordLength - RecordDescriptor.HeaderLength));
+                _currentBatch.Add(new ChannelFrame(buffer + recordIndex, frameLength, recordLength - ChannelFrame.HeaderLength));
             }
 
             if (messagesRead <= 0)
                 return messagesRead;
-            
+
             var endOfBatchIndex = messagesRead - 1;
             for (var i = 0; i < messagesRead; i++)
             {
@@ -145,43 +159,17 @@ namespace Abc.Zerio.Channel
             var headIndex = (int)head & (capacity - 1);
             var buffer = _bufferStart;
 
-            SetMemory(buffer, headIndex, token.ByteRead, 0);
+            CheckBounds(headIndex, token.ByteRead);
+            Unsafe.InitBlock(buffer + headIndex, 0, (uint)token.ByteRead);
             PutLongOrdered(buffer, _headPositionIndex, head + token.ByteRead);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SetMemory(byte* buffer, int index, int length, byte value)
-        {
-            CheckBounds(index, length);
-            Unsafe.InitBlock(buffer + index, value, (uint)length);
-        }
-
-        private void CheckMsgLength(int length)
+        private void CheckMessageLength(int length)
         {
             if (length <= _maxMsgLength)
                 return;
 
             throw new ArgumentException($"encoded message exceeds maxMsgLength of {_maxMsgLength:D}, length={length:D}");
-        }
-
-        public static long GetLongVolatile(byte* buffer, int index)
-        {
-            return Volatile.Read(ref *(long*)(buffer + index));
-        }
-
-        public static long GetLong(byte* buffer, int index)
-        {
-            return *(long*)(buffer + index);
-        }
-
-        public static void PutLongOrdered(byte* buffer, long index, long value)
-        {
-            Volatile.Write(ref *(long*)(buffer + index), value);
-        }
-
-        public static void PutIntOrdered(byte* buffer, long index, int value)
-        {
-            Volatile.Write(ref *(int*)(buffer + index), value);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -247,7 +235,7 @@ namespace Abc.Zerio.Channel
 
             if (0 != padding)
             {
-                PutLongOrdered(buffer, tailIndex, RecordDescriptor.MakeHeader(padding, _paddingMessageTypeId));
+                PutLongOrdered(buffer, tailIndex, ChannelFrame.MakeHeader(padding, ChannelFrame.PaddingFrame));
                 tailIndex = 0;
             }
 
@@ -276,7 +264,7 @@ namespace Abc.Zerio.Channel
             var bufferSegmentDescriptor = new RIO_BUF
             {
                 BufferId = _bufferId,
-                Length = (int)frame.DataLength,
+                Length = frame.DataLength,
                 Offset = (int)(frame.FrameStart - _bufferStart)
             };
 
@@ -292,6 +280,38 @@ namespace Abc.Zerio.Channel
             finally
             {
                 Kernel32.VirtualFree(_bufferHandle, 0, Kernel32.Consts.MEM_RELEASE);
+            }
+        }
+
+        public static long GetLongVolatile(byte* buffer, int index) => Volatile.Read(ref *(long*)(buffer + index));
+
+        public static long GetLong(byte* buffer, int index) => *(long*)(buffer + index);
+
+        public static void PutLongOrdered(byte* buffer, long index, long value) => Volatile.Write(ref *(long*)(buffer + index), value);
+
+        public static void PutIntOrdered(byte* buffer, long index, int value) => Volatile.Write(ref *(int*)(buffer + index), value);
+
+        private class RingBufferDescriptor
+        {
+            public static readonly int TailPositionOffset;
+            public static readonly int HeadCachePositionOffset;
+            public static readonly int HeadPositionOffset;
+            public static readonly int TrailerLength;
+
+            static RingBufferDescriptor()
+            {
+                var offset = 0;
+                offset += BitUtil.CacheLineLength * 2;
+                TailPositionOffset = offset;
+
+                offset += BitUtil.CacheLineLength * 2;
+                HeadCachePositionOffset = offset;
+
+                offset += BitUtil.CacheLineLength * 2;
+                HeadPositionOffset = offset;
+
+                offset += BitUtil.CacheLineLength * 2;
+                TrailerLength = offset;
             }
         }
     }

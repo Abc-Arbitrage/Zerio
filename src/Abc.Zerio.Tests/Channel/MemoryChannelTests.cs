@@ -74,7 +74,7 @@ namespace Abc.Zerio.Tests.Channel
         public void Should_manually_poll_multiple_channels()
         {
             // Arrange
-            const int taskCount = 1;
+            const int taskCount = 5;
             const int messageCountPerTask = 100_000;
             var countdownSignal = new CountdownEvent(taskCount * messageCountPerTask);
 

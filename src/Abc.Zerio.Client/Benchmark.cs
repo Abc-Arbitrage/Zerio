@@ -144,8 +144,6 @@ namespace Abc.Zerio.Client
 
             rateReporter.Wait();
             poller.Wait();
-
-            channel.DisplayStats();
         }
 
         private void StartLoop(int messageSize, int delayMicros, int burst)
@@ -172,8 +170,7 @@ namespace Abc.Zerio.Client
             _feedClientManual.MessageReceived += FeedClientOnMessageReceived;
 
             histogram.Reset();
-            (_feedClientManual as ZerioClient)?.ResetSessionChannelStats();
-
+            
             _messageCounter = 0;
 
             var buffer = new byte[messageSize];
@@ -214,8 +211,6 @@ namespace Abc.Zerio.Client
 
             rateReporter.Wait();
             histogram.OutputPercentileDistribution(Console.Out, 1);
-
-            (_feedClientManual as ZerioClient)?.DisplaySessionChannelStats();
 
             using var writer = new StreamWriter(Path.Combine(_outFolder, $"Latency_{messageSize}_{delayMicros}.hgrm"));
             histogram.OutputPercentileDistribution(writer);

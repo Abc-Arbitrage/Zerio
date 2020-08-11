@@ -1,23 +1,19 @@
 using System;
 using System.Threading;
 using Abc.Zerio.Interop;
-using HdrHistogram;
 
 namespace Abc.Zerio.Channel
 {
     public class RegisteredMemoryChannel
     {
         private readonly ManyToOneRingBuffer _ringBuffer;
-        private readonly LongHistogram _histogram;
-        
+
         public event ChannelFrameReadDelegate FrameRead;
-        
+
         public RegisteredMemoryChannel(int bufferLength)
         {
             _ringBuffer = new ManyToOneRingBuffer(bufferLength);
             _ringBuffer.FrameRead += (frame, endOfBatch, token) => FrameRead?.Invoke(frame, endOfBatch, token);
-            
-            _histogram = new LongHistogram(TimeSpan.FromSeconds(10).Ticks, 2);
         }
 
         internal RIO_BUF CreateBufferSegmentDescriptor(ChannelFrame frame)
@@ -40,19 +36,9 @@ namespace Abc.Zerio.Channel
             return _ringBuffer.Read() > 0;
         }
 
-        public void DisplayStats()
-        {
-            _histogram.OutputPercentileDistribution(Console.Out, 1);
-        }
-
         public void Stop()
         {
             _ringBuffer.Dispose();
-        }
-
-        public void ResetStats()
-        {
-            _histogram.Reset();
         }
 
         public void CompleteSend(SendCompletionToken sendCompletionToken)
