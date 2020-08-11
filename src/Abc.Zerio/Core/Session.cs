@@ -38,7 +38,7 @@ namespace Abc.Zerio.Core
             _messageFramer = new MessageFramer(configuration.FramingBufferLength);
             _messageFramer.MessageFramed += OnMessageFramed;
 
-            SendingChannel = new RegisteredMemoryChannel(configuration.ChannelPartitionSize, configuration.MaxFrameBatchSize);
+            SendingChannel = new RegisteredMemoryChannel(configuration.SendingBufferLength);
         }
 
         private void OnMessageFramed(ReadOnlySpan<byte> message)

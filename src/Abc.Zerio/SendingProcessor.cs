@@ -30,7 +30,7 @@ namespace Abc.Zerio
         {
             foreach (var session in sessionManager.Sessions)
             {
-                session.SendingChannel.FrameRead += (messageBytes, endOfBatch, cleanupNeeded) => OnSendRequest(session, messageBytes, endOfBatch, cleanupNeeded);
+                session.SendingChannel.FrameRead += (messageBytes, token) => OnSendRequest(session, messageBytes, token);
             }
         }
 
@@ -52,12 +52,12 @@ namespace Abc.Zerio
             }
         }
         
-        private unsafe void OnSendRequest(ISession session, ChannelFrame frame, bool isEndOfBatch, bool cleanupNeeded)
+        private unsafe void OnSendRequest(ISession session, ChannelFrame frame, SendCompletionToken token)
         {
             if (!_configuration.BatchFramesOnSend)
             {
                 var descriptor = session.SendingChannel.CreateBufferSegmentDescriptor(frame);
-                session.RequestQueue.Send(cleanupNeeded, &descriptor, true);
+                session.RequestQueue.Send(token, &descriptor, true);
                 return;
             }
                 
@@ -75,10 +75,10 @@ namespace Abc.Zerio
                 };
             }
 
-            if (isEndOfBatch)
+            if (token.IsEndOfBatch)
             {
                 var descriptor = _currentBufferSegmentDescriptor.Value;
-                session.RequestQueue.Send(cleanupNeeded, &descriptor, true);
+                session.RequestQueue.Send(token, &descriptor, true);
                 _currentBufferSegmentDescriptor = null;
             }
         }

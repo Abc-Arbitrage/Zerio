@@ -21,6 +21,7 @@ namespace Abc.Zerio.Core
         public int ReceivingCompletionQueueSize { get; set; }
         public bool BatchFramesOnSend { get; set; }
         public int MaxFrameBatchSize { get; set; }
-        public int ChannelPartitionSize { get; set; }
+        
+        public int SendingBufferLength { get; set; }
     }
 }

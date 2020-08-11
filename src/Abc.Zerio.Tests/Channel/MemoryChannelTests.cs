@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,25 +17,25 @@ namespace Abc.Zerio.Tests.Channel
         {
             // Arrange
             const int taskCount = 5;
-            const int messageCountPerTask = 100_000;
+            const int messageCountPerTask = 100000;
             var countdownSignal = new CountdownEvent(taskCount * messageCountPerTask);
 
             var receivedMessages = new List<string>();
 
-            var memoryChannel = new RegisteredMemoryChannel(1024 * 1024, int.MaxValue);
-            memoryChannel.FrameRead += (frame, endOfBatch, cleanupNeeded) =>
+            var memoryChannel = new RegisteredMemoryChannel(1024 * 1024);
+            memoryChannel.FrameRead += (frame, token) =>
             {
                 receivedMessages.Add(ReadFrameContent(frame));
                 countdownSignal.Signal();
 
-                if (cleanupNeeded)
-                    memoryChannel.CleanupPartitions();
+                if (token.IsEndOfBatch)
+                    memoryChannel.CompleteSend(token);
             };
 
             Task.Run(() =>
             {
                 while (receivedMessages.Count < taskCount * messageCountPerTask)
-                    memoryChannel.TryPoll();
+                     memoryChannel.TryPoll();
             });
 
             // Act
@@ -53,7 +52,7 @@ namespace Abc.Zerio.Tests.Channel
 
             // Assert
             countdownSignal.Wait(TimeSpan.FromMilliseconds(500));
-            Assert.AreEqual(receivedMessages.Count, taskCount * messageCountPerTask);
+            Assert.AreEqual(taskCount * messageCountPerTask, receivedMessages.Count);
 
             for (var i = 0; i < taskCount; i++)
             {
@@ -73,19 +72,19 @@ namespace Abc.Zerio.Tests.Channel
         public void Should_manually_poll_multiple_channels()
         {
             // Arrange
-            const int taskCount = 5;
+            const int taskCount = 1;
             const int messageCountPerTask = 100_000;
             var countdownSignal = new CountdownEvent(taskCount * messageCountPerTask);
 
             var receivedMessages = new List<string>();
 
-            void OnMessageReceived(RegisteredMemoryChannel memoryChannel, ChannelFrame frame, bool endOfBatch, bool cleanupNeeded)
+            void OnMessageReceived(RegisteredMemoryChannel memoryChannel, ChannelFrame frame, SendCompletionToken token)
             {
                 receivedMessages.Add(ReadFrameContent(frame));
                 countdownSignal.Signal();
 
-                if (cleanupNeeded)
-                    memoryChannel.CleanupPartitions();
+                if (token.IsEndOfBatch)
+                    memoryChannel.CompleteSend(token);
             }
 
             var memoryChannels = new List<RegisteredMemoryChannel>();
@@ -93,8 +92,8 @@ namespace Abc.Zerio.Tests.Channel
 
             for (var i = 0; i < taskCount; i++)
             {
-                var memoryChannel = new RegisteredMemoryChannel(1024 * 1024, int.MaxValue);
-                memoryChannel.FrameRead += (frame, batch, cleanupNeeded) => OnMessageReceived(memoryChannel, frame, batch, cleanupNeeded);
+                var memoryChannel = new RegisteredMemoryChannel(1024 * 1024);
+                memoryChannel.FrameRead += (frame, token) => OnMessageReceived(memoryChannel, frame, token);
                 memoryChannels.Add(memoryChannel);
 
                 var taskId = i;
@@ -153,14 +152,12 @@ namespace Abc.Zerio.Tests.Channel
             memoryChannels.ForEach(x => x.Stop());
         }
 
-        private unsafe string ReadFrameContent(ChannelFrame frame)
+        private unsafe static string ReadFrameContent(ChannelFrame frame)
         {
             if (frame.DataLength < sizeof(int))
                 throw new InvalidOperationException($"Invalid frame length DataLength: {frame.DataLength}");
 
-            var messageLength = Unsafe.ReadUnaligned<int>(frame.DataPosition);
-
-            var messageBytes = new Span<byte>(frame.DataPosition + sizeof(int), messageLength);
+            var messageBytes = new Span<byte>(frame.DataPosition, (int)frame.DataLength);
 
             return Encoding.ASCII.GetString(messageBytes.ToArray());
         }

@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using Abc.Zerio.Channel;
 using Abc.Zerio.Interop;
 
 namespace Abc.Zerio.Core
@@ -56,10 +57,10 @@ namespace Abc.Zerio.Core
                     if (!_sessionManager.TryGetSession(sessionId, out var session))
                         return;
                     
-                    var shouldRequestChannelCleanup = result.RequestCorrelation == 1;
+                    var sendCompletionToken = (SendCompletionToken)result.RequestCorrelation;
 
-                    if(shouldRequestChannelCleanup)
-                        session.SendingChannel.CleanupPartitions();
+                    if(sendCompletionToken.IsEndOfBatch)
+                        session.SendingChannel.CompleteSend(sendCompletionToken);
            
                 }
             }

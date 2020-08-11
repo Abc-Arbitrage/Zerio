@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Abc.Zerio.Interop;
@@ -24,6 +25,9 @@ namespace Abc.Zerio.Channel
         private readonly IntPtr _bufferId;
         private readonly byte* _bufferStart;
 
+        public event ChannelFrameReadDelegate FrameRead;
+        private readonly List<ChannelFrame> _currentBatch = new List<ChannelFrame>(1024);
+        
         public ManyToOneRingBuffer(int minimumSize)
         {
             _bufferLength = BitUtil.FindNextPositivePowerOfTwo(minimumSize) + RingBufferDescriptor.TrailerLength;
@@ -75,7 +79,6 @@ namespace Abc.Zerio.Channel
             if (_insufficientCapacity != recordIndex)
             {
                 PutLongOrdered(buffer, recordIndex, RecordDescriptor.MakeHeader(-recordLength, _userMessageTypeId));
-                // TODO JPW original: UnsafeAccess.UNSAFE.storeFence();
                 Thread.MemoryBarrier();
                 PutBytes(buffer, RecordDescriptor.EncodedMsgOffset(recordIndex), messageBytes);
                 PutIntOrdered(buffer, RecordDescriptor.LengthOffset(recordIndex), recordLength);
@@ -85,13 +88,8 @@ namespace Abc.Zerio.Channel
 
             return isSuccessful;
         }
-        
-        public int Read(MessageHandler handler)
-        {
-            return Read(handler, int.MaxValue);
-        }
-        
-        public int Read(MessageHandler handler, int messageCountLimit)
+
+        public int Read(int messageCountLimit = int.MaxValue)
         {
             var messagesRead = 0;
             var buffer = _bufferStart;
@@ -102,58 +100,79 @@ namespace Abc.Zerio.Channel
             var maxBlockLength = capacity - headIndex;
             var bytesRead = 0;
 
-            try
+            _currentBatch.Clear();
+
+            var shouldSkipPadding = false;
+            
+            while (bytesRead < maxBlockLength && messagesRead < messageCountLimit)
             {
-                while ((bytesRead < maxBlockLength) && (messagesRead < messageCountLimit))
+                var recordIndex = headIndex + bytesRead;
+                var header = GetLongVolatile(buffer, recordIndex);
+
+                var recordLength = RecordDescriptor.RecordLength(header);
+                if (recordLength <= 0)  
+                    break;
+
+                bytesRead += BitUtil.Align(recordLength, RecordDescriptor.Alignment);
+
+                var messageTypeId = RecordDescriptor.MessageTypeId(header);
+                if (messageTypeId == _paddingMessageTypeId)
                 {
-                    var recordIndex = headIndex + bytesRead;
-                    var header = GetLongVolatile(buffer, recordIndex);
-
-                    var recordLength = RecordDescriptor.RecordLength(header);
-                    if (recordLength <= 0)
-                    {
-                        break;
-                    }
-
-                    bytesRead += BitUtil.Align(recordLength, RecordDescriptor.Alignment);
-
-                    var messageTypeId = RecordDescriptor.MessageTypeId(header);
-                    if (_paddingMessageTypeId == messageTypeId)
-                    {
-                        continue;
-                    }
-
-                    ++messagesRead;
-                    handler(messageTypeId, buffer, recordIndex + RecordDescriptor.HeaderLength, recordLength - RecordDescriptor.HeaderLength);
+                    shouldSkipPadding = true;
+                    continue;
                 }
+
+                ++messagesRead;
+                
+                _currentBatch.Add(new ChannelFrame(buffer + recordIndex + RecordDescriptor.HeaderLength, recordLength - RecordDescriptor.HeaderLength));
             }
-            finally
+
+            if (shouldSkipPadding && _currentBatch.Count == 0)
             {
-                if (bytesRead != 0)
+                // Todo: this should be performed in the same thread as the one which normally calls CompleteSend
+                CompleteSend(new SendCompletionToken(bytesRead, true));
+            }
+            
+            if (_currentBatch.Count > 0)
+            {
+                for (var i = 0; i < _currentBatch.Count; i++)
                 {
-                    SetMemory(buffer, headIndex, bytesRead, 0);
-                    PutLongOrdered(buffer, _headPositionIndex, head + bytesRead);
+                    FrameRead?.Invoke(_currentBatch[i], new SendCompletionToken(bytesRead, i == _currentBatch.Count - 1));
                 }
             }
 
             return messagesRead;
         }
 
+        public void CompleteSend(SendCompletionToken token)
+        {
+            var byteRead = token.ByteRead;
+            if (byteRead == 0)
+                return;
+
+            var head = GetLong(_bufferStart, _headPositionIndex);
+
+            var capacity = _capacity;
+            var headIndex = (int)head & (capacity - 1);
+            var buffer = _bufferStart;
+
+            SetMemory(buffer, headIndex, byteRead, 0);
+            PutLongOrdered(buffer, _headPositionIndex, head + byteRead);
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetMemory(byte* buffer, int index, int length, byte value)
         {
             CheckBounds(index, length);
-            Unsafe.InitBlock(buffer + index, value, (uint) length);            
+            Unsafe.InitBlock(buffer + index, value, (uint)length);
         }
-    
+
         private void CheckMsgLength(int length)
         {
-            if (length > _maxMsgLength)
-            {
-                var msg = $"encoded message exceeds maxMsgLength of {_maxMsgLength:D}, length={length:D}";
+            if (length <= _maxMsgLength)
+                return;
 
-                throw new ArgumentException(msg);
-            }
+            throw new ArgumentException($"encoded message exceeds maxMsgLength of {_maxMsgLength:D}, length={length:D}");
         }
 
         public static long GetLongVolatile(byte* buffer, int index)
@@ -180,16 +199,14 @@ namespace Abc.Zerio.Channel
         public void PutBytes(byte* buffer, int index, ReadOnlySpan<byte> messageBytes)
         {
             if (messageBytes.Length == 0)
-            {
                 return;
-            }
 
             CheckBounds(index, messageBytes.Length);
 
             var destination = new Span<byte>(buffer + index, messageBytes.Length);
             messageBytes.CopyTo(destination);
         }
-        
+
         private int ClaimCapacity(byte* buffer, int requiredCapacity)
         {
             var capacity = _capacity;
@@ -212,9 +229,7 @@ namespace Abc.Zerio.Channel
                     head = GetLongVolatile(buffer, _headPositionIndex);
 
                     if (requiredCapacity > (capacity - (int)(tail - head)))
-                    {
                         return _insufficientCapacity;
-                    }
 
                     PutLongOrdered(buffer, headCachePositionIndex, head);
                 }
@@ -232,9 +247,7 @@ namespace Abc.Zerio.Channel
                         head = GetLongVolatile(buffer, _headPositionIndex);
                         headIndex = (int)head & mask;
                         if (requiredCapacity > headIndex)
-                        {
                             return _insufficientCapacity;
-                        }
 
                         PutLongOrdered(buffer, headCachePositionIndex, head);
                     }
@@ -268,12 +281,17 @@ namespace Abc.Zerio.Channel
             if (index < 0 || resultingPosition > _bufferLength)
                 throw new IndexOutOfRangeException($"index={index}, length={length}, capacity={_capacity}");
         }
-        
+
+        public RIO_BUF CreateBufferSegmentDescriptor(ChannelFrame frame)
+        {
+            var bufferSegmentDescriptor = new RIO_BUF
+            {
+                BufferId = _bufferId,
+                Length = (int)frame.DataLength,
+                Offset = (int)(frame.DataPosition - _bufferStart)
+            };
+
+            return bufferSegmentDescriptor;
+        }
     }
-    
-    public unsafe delegate void MessageHandler(
-        int msgTypeId,
-        byte* buffer,
-        int index,
-        int length);
 }

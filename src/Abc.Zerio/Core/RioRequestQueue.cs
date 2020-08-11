@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using Abc.Zerio.Channel;
 using Abc.Zerio.Interop;
 
 namespace Abc.Zerio.Core
@@ -44,7 +45,7 @@ namespace Abc.Zerio.Core
             }
         }
 
-        public unsafe void Send(bool requestCleanupOnCompletion, RIO_BUF* bufferSegmentDescriptor, bool flush)
+        public unsafe void Send(SendCompletionToken sendCompletionToken, RIO_BUF* bufferSegmentDescriptor, bool flush)
         {
             var lockTaken = false;
             var spinlock = new SpinLock();
@@ -56,7 +57,7 @@ namespace Abc.Zerio.Core
 
                 rioSendFlags |= RIO_SEND_FLAGS.DONT_NOTIFY;
                 
-                if (!WinSock.Extensions.Send(_handle, bufferSegmentDescriptor, 1, rioSendFlags, requestCleanupOnCompletion ? 1 : 0))
+                if (!WinSock.Extensions.Send(_handle, bufferSegmentDescriptor, 1, rioSendFlags, (long)sendCompletionToken))
                     WinSock.ThrowLastWsaError();
             }
             finally

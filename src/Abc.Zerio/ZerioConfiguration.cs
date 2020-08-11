@@ -49,7 +49,7 @@ namespace Abc.Zerio
                 
                 SendingCompletionQueueSize = 65_536,
                 MaxSendCompletionResults = 65_536,
-                ChannelPartitionSize = 2_554_432,
+                SendingBufferLength = 5_108_864,
             };
 
             return configuration;
