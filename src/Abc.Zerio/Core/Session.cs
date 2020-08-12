@@ -33,7 +33,7 @@ namespace Abc.Zerio.Core
             _configuration = configuration;
             _completionQueues = completionQueues;
             
-            _receivingBuffer = new UnmanagedRioBuffer<RioBufferSegment>(configuration.ReceivingBufferCount, _configuration.ReceivingBufferLength);
+            _receivingBuffer = new UnmanagedRioBuffer<RioBufferSegment>(configuration.ReceivingBufferSegmentCount, _configuration.ReceivingBufferSegmentLength);
 
             _messageFramer = new MessageFramer(configuration.FramingBufferLength);
             _messageFramer.MessageFramed += OnMessageFramed;
@@ -82,7 +82,7 @@ namespace Abc.Zerio.Core
 
         public void InitiateReceiving()
         {
-            for (var bufferSegmentId = 0; bufferSegmentId < _configuration.ReceivingBufferCount; bufferSegmentId++)
+            for (var bufferSegmentId = 0; bufferSegmentId < _configuration.ReceivingBufferSegmentCount; bufferSegmentId++)
             {
                 RequestReceive(bufferSegmentId);
             }

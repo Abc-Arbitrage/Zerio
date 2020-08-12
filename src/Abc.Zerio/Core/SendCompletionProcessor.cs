@@ -33,7 +33,7 @@ namespace Abc.Zerio.Core
             Thread.CurrentThread.Name = nameof(ReceiveCompletionProcessor);
 
             var completionQueue = (IRioCompletionQueue)state;
-            var maxCompletionResults = _configuration.MaxReceiveCompletionResults;
+            var maxCompletionResults = _configuration.MaxSendCompletionResults;
             var results = stackalloc RIO_RESULT[maxCompletionResults];
 
             var waitStrategy = CompletionPollingWaitStrategyFactory.Create(_configuration.SendCompletionPollingWaitStrategyType);

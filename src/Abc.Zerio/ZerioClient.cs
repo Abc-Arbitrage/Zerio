@@ -214,5 +214,15 @@ namespace Abc.Zerio
         {
             Dispose(false);
         }
+
+        public void DisplaySessionChannelStats()
+        { 
+            _session.SendingChannel.DisplayStats();
+        }
+        
+        public void ResetSessionChannelStats()
+        {
+            _session.SendingChannel.ResetStats();
+        }
     }
 }

@@ -283,7 +283,6 @@ namespace Abc.Zerio
                 Stop();
 
                 _completionQueues?.Dispose();
-                // _sendRequestProcessingEngine?.Dispose();
                 _sessionManager?.Dispose();
             }
         }

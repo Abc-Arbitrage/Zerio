@@ -4,8 +4,8 @@ namespace Abc.Zerio
 {
     public abstract class ZerioConfiguration
     {
-        public int ReceivingBufferCount { get; set; }
-        public int ReceivingBufferLength { get; set; }
+        public int ReceivingBufferSegmentCount { get; set; }
+        public int ReceivingBufferSegmentLength { get; set; }
         public int FramingBufferLength { get; set; }
 
         public int MaxFrameBatchSize { get; set; }
@@ -17,14 +17,14 @@ namespace Abc.Zerio
         protected ZerioConfiguration()
         {
             FramingBufferLength = 64 * 1024;
-            ReceivingBufferLength = 1 * 1024 * 1024;
-            ReceivingBufferCount = 256;
+            ReceivingBufferSegmentLength = 1 * 1024 * 1024;
+            ReceivingBufferSegmentCount = 256;
             
-            BatchFramesOnSend = true;
+            BatchFramesOnSend = false;
             MaxFrameBatchSize = int.MaxValue;
             
             ReceiveCompletionPollingWaitStrategyType = CompletionPollingWaitStrategyType.BusySpinWaitStrategy;
-            SendCompletionPollingWaitStrategyType = CompletionPollingWaitStrategyType.SpinWaitWaitStrategy;
+            SendCompletionPollingWaitStrategyType = CompletionPollingWaitStrategyType.BusySpinWaitStrategy;
         }
 
         internal virtual InternalZerioConfiguration ToInternalConfiguration()
@@ -33,23 +33,23 @@ namespace Abc.Zerio
 
             var configuration = new InternalZerioConfiguration
             {
-                ReceivingBufferLength = ReceivingBufferLength,
-                ReceivingBufferCount = ReceivingBufferCount,
+                ReceivingBufferSegmentLength = ReceivingBufferSegmentLength,
+                ReceivingBufferSegmentCount = ReceivingBufferSegmentCount,
                 ReceiveCompletionPollingWaitStrategyType = ReceiveCompletionPollingWaitStrategyType,
                 SendCompletionPollingWaitStrategyType = SendCompletionPollingWaitStrategyType,
                 FramingBufferLength = FramingBufferLength,
-                MaxReceiveCompletionResults = ReceivingBufferCount,
+                MaxReceiveCompletionResults = ReceivingBufferSegmentCount,
                 
-                RequestQueueMaxOutstandingReceives = ReceivingBufferCount,
+                RequestQueueMaxOutstandingReceives = ReceivingBufferSegmentCount,
                 RequestQueueMaxOutstandingSends = 65_536,
                 
-                ReceivingCompletionQueueSize = ReceivingBufferCount,
+                ReceivingCompletionQueueSize = ReceivingBufferSegmentCount,
                 BatchFramesOnSend = BatchFramesOnSend,
                 MaxFrameBatchSize = MaxFrameBatchSize,
                 
                 SendingCompletionQueueSize = 65_536,
-                MaxSendCompletionResults = 65_536,
-                SendingBufferLength = 5_108_864,
+                MaxSendCompletionResults = 256,
+                SendingBufferLength = 5_048_576,
             };
 
             return configuration;
