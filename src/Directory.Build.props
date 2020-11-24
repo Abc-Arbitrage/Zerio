@@ -9,6 +9,12 @@
     <DefaultItemExcludes>$(DefaultItemExcludes);*.DotSettings;*.ncrunchproject</DefaultItemExcludes>
     <DebugType>embedded</DebugType>
     <Deterministic>true</Deterministic>
+    <IsPackable>false</IsPackable>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <ContinuousIntegrationBuild Condition="'$(TF_BUILD)' != ''">true</ContinuousIntegrationBuild>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' != ''">true</ContinuousIntegrationBuild>
+    <PackageOutputPath>$(MSBuildThisFileDirectory)..\output</PackageOutputPath>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -17,8 +23,7 @@
     <Description>Basic performance-oriented TCP client/server messaging C# API based on Windows Registered I/O (RIO)</Description>
     <PackageProjectUrl>https://github.com/Abc-Arbitrage/Zerio</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <Copyright>Copyright © ABC arbitrage 2019</Copyright>
-    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <Copyright>Copyright © ABC arbitrage $([System.DateTime]::Now.ToString('yyyy'))</Copyright>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(NCrunch)' == '1'">
@@ -26,13 +31,9 @@
     <EnableSourceControlManagerQueries>false</EnableSourceControlManagerQueries>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(TF_BUILD)' != ''">
-    <DeterministicSourcePaths>true</DeterministicSourcePaths>
-  </PropertyGroup>
-
   <ItemGroup>
-    <PackageReference Include="JetBrains.Annotations" Version="2019.1.3" PrivateAssets="all" />
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0-beta2-19367-01" PrivateAssets="all" />
+    <PackageReference Include="JetBrains.Annotations" Version="2020.1.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>

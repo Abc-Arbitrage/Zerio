@@ -1,6 +1,6 @@
 # Zerio
 
-[![Build Status](https://abc-arbitrage.visualstudio.com/Zerio/_apis/build/status/Abc-Arbitrage.Zerio?branchName=master)](https://abc-arbitrage.visualstudio.com/Zerio/_build/latest?definitionId=7&branchName=master)
+[![Build](https://github.com/Abc-Arbitrage/Zerio/workflows/Build/badge.svg)](https://github.com/Abc-Arbitrage/Zerio/actions?query=workflow%3ABuild)
 
 ## Overview
 
