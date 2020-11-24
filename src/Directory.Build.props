@@ -12,6 +12,9 @@
     <IsPackable>false</IsPackable>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <ContinuousIntegrationBuild Condition="'$(TF_BUILD)' != ''">true</ContinuousIntegrationBuild>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' != ''">true</ContinuousIntegrationBuild>
+    <PackageOutputPath>$(MSBuildThisFileDirectory)..\output</PackageOutputPath>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -26,10 +29,6 @@
   <PropertyGroup Condition="'$(NCrunch)' == '1'">
     <EnableSourceLink>false</EnableSourceLink>
     <EnableSourceControlManagerQueries>false</EnableSourceControlManagerQueries>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(TF_BUILD)' != ''">
-    <DeterministicSourcePaths>true</DeterministicSourcePaths>
   </PropertyGroup>
 
   <ItemGroup>
