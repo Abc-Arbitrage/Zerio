@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <WarningLevel>4</WarningLevel>
-    <LangVersion>8</LangVersion>
+    <LangVersion>9.0</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Prefer32Bit>false</Prefer32Bit>
     <DefaultItemExcludes>$(DefaultItemExcludes);*.DotSettings;*.ncrunchproject</DefaultItemExcludes>
@@ -12,7 +12,6 @@
     <IsPackable>false</IsPackable>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
-    <ContinuousIntegrationBuild Condition="'$(TF_BUILD)' != ''">true</ContinuousIntegrationBuild>
     <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' != ''">true</ContinuousIntegrationBuild>
     <PackageOutputPath>$(MSBuildThisFileDirectory)..\output</PackageOutputPath>
   </PropertyGroup>

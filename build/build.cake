@@ -6,51 +6,56 @@
 //////////////////////////////////////////////////////////////////////
 
 var target = Argument("target", "Default");
-var paths = new {
-    solution = MakeAbsolute(File("./../src/Abc.Zerio.sln")).FullPath,
-    version = MakeAbsolute(File("./../version.yml")).FullPath,
-    assemblyInfo = MakeAbsolute(File("./../src/SharedVersionInfo.cs")).FullPath,
-    output = new {
-        build = MakeAbsolute(Directory("./../output/build")).FullPath,
-        nuget = MakeAbsolute(Directory("./../output/nuget")).FullPath,
-    },
-    nuspec = MakeAbsolute(File("./Abc.Zerio.nuspec")).FullPath,
-};
 
-ReadContext(paths.version);
+var paths = new {
+    src = MakeAbsolute(Directory("./../src")).FullPath,
+    solution = MakeAbsolute(File("./../src/Abc.Zerio.sln")).FullPath,
+    testProject = MakeAbsolute(File("./../src/Abc.Zerio.Tests/Abc.Zerio.Tests.csproj")).FullPath,
+    output = MakeAbsolute(Directory("./../output")).FullPath
+};
 
 //////////////////////////////////////////////////////////////////////
 // TASKS
 //////////////////////////////////////////////////////////////////////
 
-Task("UpdateBuildVersionNumber").Does(() => UpdateAppVeyorBuildVersionNumber());
 Task("Clean").Does(() =>
 {
-    CleanDirectory(paths.output.build);
-    CleanDirectory(paths.output.nuget);
+    CleanDirectories(GetDirectories(paths.src + "/**/bin/Release"));
+    CleanDirectory(paths.output);
 });
-Task("Restore-NuGet-Packages").Does(() => NuGetRestore(paths.solution));
-Task("Create-AssemblyInfo").Does(() => {
-    Information("Assembly Version: {0}", VersionContext.AssemblyVersion);
-    Information("   NuGet Version: {0}", VersionContext.NugetVersion);
-    CreateAssemblyInfo(paths.assemblyInfo, new AssemblyInfoSettings {
-        Version = VersionContext.AssemblyVersion,
-        FileVersion = VersionContext.AssemblyVersion,
-        InformationalVersion = VersionContext.NugetVersion + " Commit: " + VersionContext.Git.Sha
-    });
-});
-Task("MSBuild").Does(() => MSBuild(paths.solution, settings => settings.SetConfiguration("Release")
-                                                                        .SetPlatformTarget(PlatformTarget.MSIL)
-                                                                        .WithProperty("OutDir", paths.output.build)));
-Task("Clean-AssemblyInfo").Does(() => System.IO.File.WriteAllText(paths.assemblyInfo, string.Empty));
-Task("Run-Unit-Tests").Does(() => NUnit3(paths.output.build + "/*.Tests.dll", new NUnit3Settings { NoResults = true }));
-Task("Nuget-Pack").Does(() => 
+
+Task("Restore-NuGet-Packages").Does(() =>
 {
-    NuGetPack(paths.nuspec, new NuGetPackSettings {
-        Version = VersionContext.NugetVersion,
-        BasePath = paths.output.build,
-        OutputDirectory = paths.output.nuget
+    NuGetRestore(paths.solution);
+});
+
+Task("Run-Build").Does(() =>
+{
+    MSBuild(paths.solution, settings => settings
+        .WithTarget("Rebuild")
+        .SetConfiguration("Release")
+        .SetPlatformTarget(PlatformTarget.MSIL)
+        .SetVerbosity(Verbosity.Minimal)
+    );
+});
+
+Task("Run-Tests").Does(() =>
+{
+    DotNetCoreTest(paths.testProject, new DotNetCoreTestSettings {
+        Configuration = "Release",
+        NoBuild = true
     });
+});
+
+Task("NuGet-Pack").Does(() =>
+{
+    MSBuild(paths.solution, settings => settings
+        .WithTarget("Pack")
+        .SetConfiguration("Release")
+        .SetPlatformTarget(PlatformTarget.MSIL)
+        .SetVerbosity(Verbosity.Minimal)
+        .WithProperty("PackageOutputPath", paths.output)
+    );
 });
 
 //////////////////////////////////////////////////////////////////////
@@ -58,27 +63,14 @@ Task("Nuget-Pack").Does(() =>
 //////////////////////////////////////////////////////////////////////
 
 Task("Build")
-    .IsDependentOn("UpdateBuildVersionNumber")
     .IsDependentOn("Clean")
     .IsDependentOn("Restore-NuGet-Packages")
-    .IsDependentOn("Create-AssemblyInfo")
-    .IsDependentOn("MSBuild")
-    .IsDependentOn("Clean-AssemblyInfo");
+    .IsDependentOn("Run-Build")
+    .IsDependentOn("NuGet-Pack");
 
 Task("Test")
     .IsDependentOn("Build")
-    .IsDependentOn("Run-Unit-Tests");
-
-Task("Nuget")
-    .IsDependentOn("Test")
-    .IsDependentOn("Nuget-Pack")
-    .Does(() => {
-        Information("   Nuget package is now ready at location: {0}.", paths.output.nuget);
-        Warning("   Please remember to create and push a tag based on the currently built version.");
-        Information("   You can do so by copying/pasting the following commands:");
-        Information("       git tag v{0}", VersionContext.NugetVersion);
-        Information("       git push origin --tags");
-    });
+    .IsDependentOn("Run-Tests");
 
 //////////////////////////////////////////////////////////////////////
 // EXECUTION
